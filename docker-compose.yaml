@@ -19,59 +19,60 @@ services:
   ################
 
   namenode:
-    image: apache/hadoop:3.4.1
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: namenode
-    networks: [backend]
+    networks:
+      - backend
     ports:
       - "9870:9870"   # NameNode UI
-      - "9000:9000"   # RPC
+      - "9000:9000"   # HDFS RPC
     environment:
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
-      - HDFS_CONF_dfs_replication=3
       - CLUSTER_NAME=mlops-demo
-
-      # UI escuche en 0.0.0.0:9870
-      - CORE_CONF_dfs_namenode_http-address=0.0.0.0:9870
-      # - CORE_CONF_dfs_namenode_https-address=0.0.0.0:9871
-
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - CORE_CONF_dfs_replication=3
+      - CORE_CONF_dfs_namenode_http_address=0.0.0.0:9870
     volumes:
       - nn-data:/hadoop/dfs/name
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://0.0.0.0:9870"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
 
   datanode1:
-    image: apache/hadoop:3.4.1
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: datanode1
-    networks: [backend]
-    depends_on: [namenode]
+    networks:
+      - backend
+    depends_on:
+      - namenode
     environment:
+      - CLUSTER_NAME=mlops-demo
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
-      - HDFS_CONF_dfs_replication=3
+      - CORE_CONF_dfs_replication=3
     volumes:
       - dn1-data:/hadoop/dfs/data
 
   datanode2:
-    image: apache/hadoop:3.4.1
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: datanode2
-    networks: [backend]
-    depends_on: [namenode]
+    networks:
+      - backend
+    depends_on:
+      - namenode
     environment:
+      - CLUSTER_NAME=mlops-demo
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
-      - HDFS_CONF_dfs_replication=3
+      - CORE_CONF_dfs_replication=3
     volumes:
       - dn2-data:/hadoop/dfs/data
 
   datanode3:
-    image: apache/hadoop:3.4.1
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: datanode3
-    networks: [backend]
-    depends_on: [namenode]
+    networks:
+      - backend
+    depends_on:
+      - namenode
     environment:
+      - CLUSTER_NAME=mlops-demo
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
-      - HDFS_CONF_dfs_replication=3
+      - CORE_CONF_dfs_replication=3
     volumes:
       - dn3-data:/hadoop/dfs/data
 
