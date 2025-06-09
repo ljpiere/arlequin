@@ -1,0 +1,10 @@
+bootstrap_servers: ["localhost:9092"]
+topic: inference_raw
+rows: 10000
+batch: 500
+sleep_ms: 100          # tiempo entre lotes
+seed: 42
+drift:
+  type: shift          # shift | variance | outliers | none
+  start_after_pct: 50  # cuándo inyectar drift (porcentaje del flujo)
+  magnitude: 0.5       # 0 = sin cambio, 1 = cambio total
