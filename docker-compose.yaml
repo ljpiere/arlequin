@@ -131,3 +131,34 @@ services:
       - SPARK_WORKER_MEMORY=2G
       - SPARK_WORKER_CORES=2
     depends_on: [spark-master]
+
+##################
+#  KAFKA LAYER   #
+##################
+zookeeper:
+  image: bitnami/zookeeper:3.9
+  container_name: zookeeper
+  networks: [backend]
+  environment:
+    - ALLOW_ANONYMOUS_LOGIN=yes
+  ports:
+    - "2181:2181"
+
+kafka:
+  image: bitnami/kafka:3.7
+  container_name: kafka
+  networks: [backend]
+  depends_on: [zookeeper]
+  ports:
+    - "9092:9092"          # clientes locales
+    - "9093:9093"          # interna cluster
+  environment:
+    - KAFKA_BROKER_ID=1
+    - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+    - KAFKA_CFG_LISTENERS=INTERNAL://kafka:9093,EXTERNAL://0.0.0.0:9092
+    - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9093,EXTERNAL://localhost:9092
+    - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+    - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+    - ALLOW_PLAINTEXT_LISTENER=yes
+    # crea los tres topics al arrancar
+    - KAFKA_CREATE_TOPICS=inference_raw:3:3,metrics:3:3,alerts:3:3
