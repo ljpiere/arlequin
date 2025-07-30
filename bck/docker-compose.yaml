@@ -1,4 +1,4 @@
-version: "3.9"
+# version: "3.9"
 
 x-hadoop-env: &hadoop-common
   CORE_CONF_fs_defaultFS: "hdfs://namenode:9000"
@@ -91,7 +91,10 @@ services:
       - SPARK_MODE=master
       - SPARK_MASTER_HOST=spark-master
       - SPARK_MASTER_PORT=7077
-    depends_on: [namenode]
+      # --- arreglos Ivy ---
+      - HOME=/tmp                     # ruta siempre escribible
+      - SPARK_JARS_IVY=/tmp/.ivy2     # cache Ivy
+    depends_on: [namenode, kafka]
 
   spark-worker-1:
     image: bitnami/spark:3.5.6
@@ -104,6 +107,8 @@ services:
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=2G
       - SPARK_WORKER_CORES=2
+      - HOME=/tmp
+      - SPARK_JARS_IVY=/tmp/.ivy2
     depends_on: [spark-master]
 
   spark-worker-2:
@@ -117,6 +122,8 @@ services:
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=2G
       - SPARK_WORKER_CORES=2
+      - HOME=/tmp
+      - SPARK_JARS_IVY=/tmp/.ivy2
     depends_on: [spark-master]
 
   spark-worker-3:
@@ -130,7 +137,30 @@ services:
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=2G
       - SPARK_WORKER_CORES=2
+      - HOME=/tmp
+      - SPARK_JARS_IVY=/tmp/.ivy2
     depends_on: [spark-master]
+
+  spark-client:
+    image: bitnami/spark:3.5.6
+    container_name: spark-client
+    networks: [backend]
+    depends_on: [spark-master]
+    environment:
+      - SPARK_MODE=client                   # ← lanza un nodo ad-hoc
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      # Caché Ivy simple y escribible
+      - HOME=/tmp
+      - SPARK_JARS_IVY=/tmp/.ivy2
+    volumes:
+      - ./scripts:/workspace
+    # Arranca PySpark con los paquetes requeridos
+    command:
+      - "pyspark"
+      - "--master"
+      - "spark://spark-master:7077"
+      - "--packages"
+      - "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.6,org.apache.spark:spark-avro_2.12:3.5.6"
 
   ##################
   #  KAFKA LAYER   #
@@ -150,8 +180,8 @@ services:
     networks: [backend]
     depends_on: [zookeeper]
     ports:
-      - "9092:9092"          # clientes locales
-      - "9093:9093"          # interna cluster
+      - "9092:9092"
+      - "9093:9093"
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
@@ -160,5 +190,9 @@ services:
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
       - ALLOW_PLAINTEXT_LISTENER=yes
-      # crea los tres topics al arrancar
       - KAFKA_CREATE_TOPICS=inference_raw:3:3,metrics:3:3,alerts:3:3
+      # === Límites ampliados ===
+      - KAFKA_CFG_MESSAGE_MAX_BYTES=10000000        # 10 MB
+      - KAFKA_CFG_REPLICA_FETCH_MAX_BYTES=15000000  # /+
+      - KAFKA_CFG_FETCH_MAX_BYTES=15000000
+      - KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES=15000000

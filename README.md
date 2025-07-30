@@ -19,9 +19,3 @@ faker==25.2
 kafka-python==2.0.2
 pyyaml==6.0
 
-
-
-sudo snap install docker
-git clone https://github.com/ljpiere/arlequin.git
-sudo apt install python3-pip
-pip install faker==25.2, kafka-python==2.0.2, pyyaml==6.0

@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  namenode:
+    build:
+      context: ./hadoop-base
+      dockerfile: Dockerfile
+    hostname: namenode
+    container_name: namenode
+    ports:
+      - "9870:9870" # HDFS NameNode UI
+      - "9000:9000" # HDFS NameNode RPC
+    volumes:
+      - namenode_data:/tmp/hadoop-namenode # Persistencia para NameNode
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop # Mount config
+      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
+    environment:
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    command: ["/bin/bash", "/scripts/start-namenode.sh"]
+    #command: ["/bin/bash"]
+    healthcheck:
+      test: ["CMD", "hdfs", "dfsadmin", "-report"]
+      interval: 10s       # Check every 10 seconds
+      timeout: 5s         # Give the command 5 seconds to respond
+      retries: 10         # Try 10 times (total of 100s after start_period)
+      start_period: 20s   # Wait 20 seconds before starting checks
+
+  datanode1:
+    build:
+      context: ./hadoop-base
+      dockerfile: Dockerfile
+    hostname: datanode1
+    container_name: datanode1
+    ports:
+      - "9864:9864" # HDFS DataNode UI (Only for one, others would change or be omitted)
+    volumes:
+      - datanode1_data:/tmp/hadoop-datanode # Persistencia para DataNode
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop # Mount config
+      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
+    environment:
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    command: ["/bin/bash", "/scripts/start-datanode.sh"]
+    depends_on:
+      namenode:
+        condition: service_healthy
+
+  datanode2:
+    build:
+      context: ./hadoop-base
+      dockerfile: Dockerfile
+    hostname: datanode2
+    container_name: datanode2
+    volumes:
+      - datanode2_data:/tmp/hadoop-datanode
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
+      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
+    environment:
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    command: ["/bin/bash", "/scripts/start-datanode.sh"]
+    depends_on:
+      namenode:
+        condition: service_healthy
+
+  spark-master:
+    build:
+      context: ./spark-base
+      dockerfile: Dockerfile
+    hostname: spark-master
+    container_name: spark-master
+    ports:
+      - "8080:8080" # Spark Master UI
+      - "7077:7077" # Spark Master Port
+    volumes:
+      - ./spark-base/spark-conf:/opt/spark/conf # Mount config
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop # Mount Hadoop config for Spark
+      - ./scripts:/scripts
+    environment:
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    command: ["/bin/bash", "/scripts/start-spark-master.sh"]
+    depends_on:
+      namenode:
+        condition: service_healthy
+    healthcheck: # <--- ADD THIS SECTION
+      test: ["CMD-SHELL", "wget -q http://spark-master:8080/ -O /dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s # Give Spark Master a bit more time to start up before checking
+
+  spark-worker1:
+    build:
+      context: ./spark-base
+      dockerfile: Dockerfile
+    hostname: spark-worker1
+    container_name: spark-worker1
+    ports:
+      - "8081:8081" # Spark Worker UI (you might need to adjust if multiple workers try to use same host port)
+    volumes:
+      - ./spark-base/spark-conf:/opt/spark/conf
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
+      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    command: ["/bin/bash", "/scripts/start-spark-worker.sh"]
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      namenode:
+        condition: service_healthy
+
+  spark-worker2:
+    build:
+      context: ./spark-base
+      dockerfile: Dockerfile
+    hostname: spark-worker2
+    container_name: spark-worker2
+    volumes:
+      - ./spark-base/spark-conf:/opt/spark/conf
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
+      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    command: ["/bin/bash", "/scripts/start-spark-worker.sh"]
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      namenode:
+        condition: service_healthy
+
+  pyspark-client:
+    build:
+      context: ./spark-base
+      dockerfile: Dockerfile
+    hostname: pyspark-client
+    container_name: pyspark-client
+    volumes:
+      - ./spark-base/spark-conf:/opt/spark/conf
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
+      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+      - PYSPARK_PYTHON=python3
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      namenode:
+        condition: service_healthy
+    tty: true
+    stdin_open: true
+
+volumes:
+  namenode_data:
+  datanode1_data:
+  datanode2_data:
