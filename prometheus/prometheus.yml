@@ -1,0 +1,5 @@
+scrape_configs:
+  - job_name: 'drift_watch'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['drift-watch:8010']

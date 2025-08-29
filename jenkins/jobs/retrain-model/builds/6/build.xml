@@ -1,0 +1,312 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-build plugin="workflow-job@1540.v295eccc9778f">
+  <actions>
+    <hudson.model.CauseAction>
+      <causeBag class="linked-hash-map">
+        <entry>
+          <hudson.model.Cause_-UserIdCause/>
+          <int>1</int>
+        </entry>
+      </causeBag>
+    </hudson.model.CauseAction>
+    <org.jenkinsci.plugins.workflow.libs.LibrariesAction plugin="pipeline-groovy-lib@752.vdddedf804e72">
+      <libraries/>
+    </org.jenkinsci.plugins.workflow.libs.LibrariesAction>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.ExecutionModelAction plugin="pipeline-model-definition@2.2265.v140e610fe9d5">
+      <stagesUUID>6106ae61-81e2-4bad-9709-bea283058b29</stagesUUID>
+      <pipelineDefs>
+        <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTPipelineDef plugin="pipeline-model-api@2.2265.v140e610fe9d5">
+          <stages>
+            <stages>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+                <name>Train with Spark (one-shot)</name>
+                <branches>
+                  <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                    <name>default</name>
+                    <steps>
+                      <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                        <name>sh</name>
+                        <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                          <arguments class="linked-hash-map">
+                            <entry>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                                <key>script</key>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                                <value class="string">
+          set -eu
+          echo &quot;whoami=$(id -un) uid=$(id -u)&quot;
+
+          # --- Docker CLI ---
+          if ! command -v docker &gt;/dev/null 2&gt;&amp;1; then
+            echo &quot;[INFO] Installing Docker CLI (Debian repo)…&quot;
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -yq
+            apt-get install -yq docker.io ca-certificates curl gnupg || true
+          fi
+          if ! command -v docker &gt;/dev/null 2&gt;&amp;1; then
+            echo &quot;[INFO] Installing Docker CLI (Docker official repo)…&quot;
+            install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+            echo &quot;deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable&quot; &gt; /etc/apt/sources.list.d/docker.list
+            apt-get update -yq
+            apt-get install -yq docker-ce-cli || true
+          fi
+          command -v docker &gt;/dev/null || { echo &quot;[ERROR] Docker CLI still missing&quot;; exit 1; }
+          docker --version || true
+
+          # --- Compose v2 / v1 detection/installation ---
+          COMPOSE_BIN=&quot;&quot;
+          if docker compose version &gt;/dev/null 2&gt;&amp;1; then
+            COMPOSE_BIN=&quot;docker compose&quot;
+          else
+            echo &quot;[INFO] Trying compose v2 plugin…&quot;
+            apt-get update -yq
+            apt-get install -yq docker-compose-plugin || true
+            if docker compose version &gt;/dev/null 2&gt;&amp;1; then
+              COMPOSE_BIN=&quot;docker compose&quot;
+            else
+              echo &quot;[INFO] Falling back to compose v1…&quot;
+              apt-get install -yq docker-compose || true
+              if command -v docker-compose &gt;/dev/null 2&gt;&amp;1; then
+                COMPOSE_BIN=&quot;docker-compose&quot;
+              fi
+            fi
+          fi
+          [ -n &quot;$COMPOSE_BIN&quot; ] || { echo &quot;[ERROR] No compose (v2/v1) available&quot;; exit 1; }
+          echo &quot;[OK] Using: $COMPOSE_BIN&quot;
+
+          # --- Docker socket ---
+          [ -S /var/run/docker.sock ] || { echo &quot;[ERROR] /var/run/docker.sock not mounted&quot;; exit 2; }
+
+          # --- Build spark-submit command ---
+          CMD=&quot;spark-submit --master ${SPARK_MASTER_URL}                 --conf spark.hadoop.fs.defaultFS=${HDFS_URI}                 ${TRAIN_SCRIPT}&quot;
+
+          # --- Exec via compose if compose file exists; else fallback to docker exec ---
+          if [ -f &quot;${COMPOSE_FILE_PATH}&quot; ]; then
+            echo &quot;[RUN] $COMPOSE_BIN -f ${COMPOSE_FILE_PATH} exec -T pyspark-client bash -lc &quot;$CMD&quot;&quot;
+            $COMPOSE_BIN -f &quot;${COMPOSE_FILE_PATH}&quot; exec -T pyspark-client bash -lc &quot;$CMD&quot;
+          else
+            echo &quot;[WARN] ${COMPOSE_FILE_PATH} not found; trying docker exec → pyspark-client&quot;
+            CID=&quot;$(docker ps -qf &apos;name=pyspark-client&apos;)&quot;
+            [ -n &quot;$CID&quot; ] || { echo &quot;[ERROR] container &apos;pyspark-client&apos; not running&quot;; exit 3; }
+            docker exec -i &quot;$CID&quot; bash -lc &quot;$CMD&quot;
+          fi
+        </value>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                            </entry>
+                          </arguments>
+                        </args>
+                      </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                    </steps>
+                  </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                </branches>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+            </stages>
+            <uuid>6106ae61-81e2-4bad-9709-bea283058b29</uuid>
+          </stages>
+          <postBuild>
+            <conditions>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBuildCondition>
+                <condition>always</condition>
+                <branch>
+                  <name>default</name>
+                  <steps>
+                    <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                      <name>echo</name>
+                      <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                        <arguments class="linked-hash-map">
+                          <entry>
+                            <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <key>message</key>
+                            </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                            <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                              <value class="string">Done.</value>
+                            </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                          </entry>
+                        </arguments>
+                      </args>
+                    </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                  </steps>
+                </branch>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBuildCondition>
+            </conditions>
+          </postBuild>
+          <environment>
+            <variables class="linked-hash-map">
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>COMPOSE_FILE_PATH</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">/workspace/docker-compose.yml</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>SPARK_MASTER_URL</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">spark://spark-master:7077</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>HDFS_URI</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">hdfs://namenode:9000</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>TRAIN_SCRIPT</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">/scripts/train_model.py</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+            </variables>
+          </environment>
+          <agent>
+            <agentType>
+              <key>any</key>
+            </agentType>
+          </agent>
+        </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTPipelineDef>
+      </pipelineDefs>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.ExecutionModelAction>
+  </actions>
+  <queueId>12</queueId>
+  <timestamp>1756439685084</timestamp>
+  <startTime>1756439685132</startTime>
+  <result>FAILURE</result>
+  <duration>9377</duration>
+  <charset>UTF-8</charset>
+  <keepLog>false</keepLog>
+  <execution class="org.jenkinsci.plugins.workflow.cps.CpsFlowExecution">
+    <result>FAILURE</result>
+    <script>pipeline {
+  agent any
+
+  environment {
+    COMPOSE_FILE_PATH = &apos;/workspace/docker-compose.yml&apos;   // ajusta si tu compose está en otra ruta dentro del contenedor jenkins
+    SPARK_MASTER_URL  = &apos;spark://spark-master:7077&apos;
+    HDFS_URI          = &apos;hdfs://namenode:9000&apos;
+    TRAIN_SCRIPT      = &apos;/scripts/train_model.py&apos;
+  }
+
+  stages {
+    stage(&apos;Train with Spark (one-shot)&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          echo &quot;whoami=$(id -un) uid=$(id -u)&quot;
+
+          # --- Docker CLI ---
+          if ! command -v docker &gt;/dev/null 2&gt;&amp;1; then
+            echo &quot;[INFO] Installing Docker CLI (Debian repo)…&quot;
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -yq
+            apt-get install -yq docker.io ca-certificates curl gnupg || true
+          fi
+          if ! command -v docker &gt;/dev/null 2&gt;&amp;1; then
+            echo &quot;[INFO] Installing Docker CLI (Docker official repo)…&quot;
+            install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+            echo &quot;deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable&quot; &gt; /etc/apt/sources.list.d/docker.list
+            apt-get update -yq
+            apt-get install -yq docker-ce-cli || true
+          fi
+          command -v docker &gt;/dev/null || { echo &quot;[ERROR] Docker CLI still missing&quot;; exit 1; }
+          docker --version || true
+
+          # --- Compose v2 / v1 detection/installation ---
+          COMPOSE_BIN=&quot;&quot;
+          if docker compose version &gt;/dev/null 2&gt;&amp;1; then
+            COMPOSE_BIN=&quot;docker compose&quot;
+          else
+            echo &quot;[INFO] Trying compose v2 plugin…&quot;
+            apt-get update -yq
+            apt-get install -yq docker-compose-plugin || true
+            if docker compose version &gt;/dev/null 2&gt;&amp;1; then
+              COMPOSE_BIN=&quot;docker compose&quot;
+            else
+              echo &quot;[INFO] Falling back to compose v1…&quot;
+              apt-get install -yq docker-compose || true
+              if command -v docker-compose &gt;/dev/null 2&gt;&amp;1; then
+                COMPOSE_BIN=&quot;docker-compose&quot;
+              fi
+            fi
+          fi
+          [ -n &quot;$COMPOSE_BIN&quot; ] || { echo &quot;[ERROR] No compose (v2/v1) available&quot;; exit 1; }
+          echo &quot;[OK] Using: $COMPOSE_BIN&quot;
+
+          # --- Docker socket ---
+          [ -S /var/run/docker.sock ] || { echo &quot;[ERROR] /var/run/docker.sock not mounted&quot;; exit 2; }
+
+          # --- Build spark-submit command ---
+          CMD=&quot;spark-submit --master ${SPARK_MASTER_URL} \
+                --conf spark.hadoop.fs.defaultFS=${HDFS_URI} \
+                ${TRAIN_SCRIPT}&quot;
+
+          # --- Exec via compose if compose file exists; else fallback to docker exec ---
+          if [ -f &quot;${COMPOSE_FILE_PATH}&quot; ]; then
+            echo &quot;[RUN] $COMPOSE_BIN -f ${COMPOSE_FILE_PATH} exec -T pyspark-client bash -lc \&quot;$CMD\&quot;&quot;
+            $COMPOSE_BIN -f &quot;${COMPOSE_FILE_PATH}&quot; exec -T pyspark-client bash -lc &quot;$CMD&quot;
+          else
+            echo &quot;[WARN] ${COMPOSE_FILE_PATH} not found; trying docker exec → pyspark-client&quot;
+            CID=&quot;$(docker ps -qf &apos;name=pyspark-client&apos;)&quot;
+            [ -n &quot;$CID&quot; ] || { echo &quot;[ERROR] container &apos;pyspark-client&apos; not running&quot;; exit 3; }
+            docker exec -i &quot;$CID&quot; bash -lc &quot;$CMD&quot;
+          fi
+        &apos;&apos;&apos;
+      }
+    }
+  }
+
+  post { always { echo &apos;Done.&apos; } }
+}
+</script>
+    <loadedScripts class="linked-hash-map"/>
+    <durabilityHint>MAX_SURVIVABILITY</durabilityHint>
+    <timings class="map">
+      <entry>
+        <string>flowNode</string>
+        <long>1247780384</long>
+      </entry>
+      <entry>
+        <string>classLoad</string>
+        <long>164583452</long>
+      </entry>
+      <entry>
+        <string>runQueue</string>
+        <long>8782404635</long>
+      </entry>
+      <entry>
+        <string>run</string>
+        <long>7160339116</long>
+      </entry>
+      <entry>
+        <string>parse</string>
+        <long>48373774</long>
+      </entry>
+      <entry>
+        <string>saveProgram</string>
+        <long>5115522304</long>
+      </entry>
+    </timings>
+    <internalCalls class="sorted-set">
+      <string>hudson.model.Result.fromString</string>
+      <string>org.jenkinsci.plugins.workflow.job.WorkflowRun.result</string>
+    </internalCalls>
+    <sandbox>true</sandbox>
+    <iota>21</iota>
+    <head>1:21</head>
+    <done>true</done>
+    <resumeBlocked>false</resumeBlocked>
+    <storageDir>workflow-completed</storageDir>
+  </execution>
+  <completed>true</completed>
+  <checkouts class="hudson.util.PersistedList"/>
+</flow-build>

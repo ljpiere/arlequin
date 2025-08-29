@@ -1,0 +1,6 @@
+numpy
+scipy
+pandas
+prometheus-client
+requests
+pyspark==3.5.1

@@ -1,0 +1,360 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-build plugin="workflow-job@1540.v295eccc9778f">
+  <actions>
+    <hudson.model.CauseAction>
+      <causeBag class="linked-hash-map">
+        <entry>
+          <hudson.model.Cause_-UserIdCause/>
+          <int>1</int>
+        </entry>
+      </causeBag>
+    </hudson.model.CauseAction>
+    <org.jenkinsci.plugins.workflow.libs.LibrariesAction plugin="pipeline-groovy-lib@752.vdddedf804e72">
+      <libraries/>
+    </org.jenkinsci.plugins.workflow.libs.LibrariesAction>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.ExecutionModelAction plugin="pipeline-model-definition@2.2265.v140e610fe9d5">
+      <stagesUUID>720b8e3d-0fc9-4e99-b05c-95a24cae8b30</stagesUUID>
+      <pipelineDefs>
+        <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTPipelineDef plugin="pipeline-model-api@2.2265.v140e610fe9d5">
+          <stages>
+            <stages>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+                <name>Sanity check</name>
+                <branches>
+                  <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                    <name>default</name>
+                    <steps>
+                      <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                        <name>sh</name>
+                        <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                          <arguments class="linked-hash-map">
+                            <entry>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                                <key>script</key>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                                <value class="string">
+          set -eu
+          # docker + compose disponibles
+          docker --version
+          if docker compose version &gt;/dev/null 2&gt;&amp;1; then
+            COMPOSE=&quot;docker compose&quot;
+          elif command -v docker-compose &gt;/dev/null 2&gt;&amp;1; then
+            COMPOSE=&quot;docker-compose&quot;
+          else
+            echo &quot;[ERROR] No hay docker compose&quot;; exit 1
+          fi
+          echo &quot;$COMPOSE&quot; &gt; .cb
+
+          # socket y compose.yml visibles
+          [ -S /var/run/docker.sock ]
+          [ -f &quot;$COMPOSE_FILE&quot; ] || { echo &quot;No existe $COMPOSE_FILE&quot;; exit 1; }
+          $COMPOSE -f &quot;$COMPOSE_FILE&quot; ps
+
+          # MLflow accesible desde pyspark-client (10 intentos suaves)
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            $COMPOSE -f &quot;$COMPOSE_FILE&quot; exec -T pyspark-client sh -lc &quot;curl -sS -I ${MLFLOW_URL} &gt;/dev/null 2&gt;&amp;1&quot; &amp;&amp; break || sleep 3
+            [ &quot;$i&quot; -eq 10 ] &amp;&amp; { echo &quot;[ERROR] MLflow no responde en ${MLFLOW_URL}&quot;; exit 2; }
+          done
+        </value>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                            </entry>
+                          </arguments>
+                        </args>
+                      </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                    </steps>
+                  </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                </branches>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+                <name>Train with Spark</name>
+                <branches>
+                  <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                    <name>default</name>
+                    <steps>
+                      <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                        <name>sh</name>
+                        <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                          <arguments class="linked-hash-map">
+                            <entry>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                                <key>script</key>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                                <value class="string">
+          set -eu
+          COMPOSE=&quot;$(cat .cb)&quot;
+          CMD=&quot;spark-submit --master ${SPARK_MASTER_URL}                --conf spark.hadoop.fs.defaultFS=${HDFS_URI}                ${TRAIN_SCRIPT}&quot;
+
+          # deps de Python dentro de pyspark-client (instala si faltan)
+          $COMPOSE -f &quot;$COMPOSE_FILE&quot; exec -T pyspark-client sh -lc &apos;
+            python3 - &lt;&lt;PY
+try:
+  import mlflow, sklearn, pandas, numpy
+  print(&quot;deps OK&quot;)
+except Exception as e:
+  raise SystemExit(1)
+PY
+          &apos; || $COMPOSE -f &quot;$COMPOSE_FILE&quot; exec -T pyspark-client sh -lc &apos;
+            python3 -m pip install --no-cache-dir -r /scripts/requirements.txt
+          &apos;
+
+          # ejecutar entrenamiento con MLflow
+          set +e
+          $COMPOSE -f &quot;$COMPOSE_FILE&quot; exec -T pyspark-client sh -lc &quot;export MLFLOW_TRACKING_URI=${MLFLOW_URL}; ${CMD}&quot;
+          rc=$?
+          set -e
+          if [ $rc -ne 0 ]; then
+            echo &quot;[ERR] spark-submit falló (rc=$rc). Últimas 200 líneas del contenedor pyspark-client:&quot;
+            $COMPOSE -f &quot;$COMPOSE_FILE&quot; logs --tail=200 pyspark-client || true
+            exit $rc
+          fi
+        </value>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                            </entry>
+                          </arguments>
+                        </args>
+                      </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                    </steps>
+                  </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                </branches>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+            </stages>
+            <uuid>720b8e3d-0fc9-4e99-b05c-95a24cae8b30</uuid>
+          </stages>
+          <postBuild>
+            <conditions>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBuildCondition>
+                <condition>success</condition>
+                <branch>
+                  <name>default</name>
+                  <steps>
+                    <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                      <name>echo</name>
+                      <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                        <arguments class="linked-hash-map">
+                          <entry>
+                            <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <key>message</key>
+                            </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                            <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                              <value class="string">✅ Entrenamiento OK — revisa el run en MLflow.</value>
+                            </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                          </entry>
+                        </arguments>
+                      </args>
+                    </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                  </steps>
+                </branch>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBuildCondition>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBuildCondition>
+                <condition>failure</condition>
+                <branch>
+                  <name>default</name>
+                  <steps>
+                    <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                      <name>echo</name>
+                      <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                        <arguments class="linked-hash-map">
+                          <entry>
+                            <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <key>message</key>
+                            </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                            <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                              <value class="string">❌ Falló — revisa los logs arriba.</value>
+                            </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                          </entry>
+                        </arguments>
+                      </args>
+                    </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                  </steps>
+                </branch>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBuildCondition>
+            </conditions>
+          </postBuild>
+          <environment>
+            <variables class="linked-hash-map">
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>COMPOSE_FILE</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">/workspace/docker-compose.yml</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>SPARK_MASTER_URL</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">spark://spark-master:7077</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>HDFS_URI</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">hdfs://namenode:9000</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>TRAIN_SCRIPT</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">/scripts/train_model.py</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>MLFLOW_URL</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">http://mlflow:5000</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+            </variables>
+          </environment>
+          <agent>
+            <agentType>
+              <key>any</key>
+            </agentType>
+          </agent>
+        </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTPipelineDef>
+      </pipelineDefs>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.ExecutionModelAction>
+  </actions>
+  <queueId>14</queueId>
+  <timestamp>1756443304646</timestamp>
+  <startTime>1756443304725</startTime>
+  <result>FAILURE</result>
+  <duration>53540</duration>
+  <charset>UTF-8</charset>
+  <keepLog>false</keepLog>
+  <execution class="org.jenkinsci.plugins.workflow.cps.CpsFlowExecution">
+    <result>FAILURE</result>
+    <script>pipeline {
+  agent any
+  environment {
+    COMPOSE_FILE = &apos;/workspace/docker-compose.yml&apos;   // &lt;-- esta ruta debe existir en el contenedor jenkins
+    SPARK_MASTER_URL = &apos;spark://spark-master:7077&apos;
+    HDFS_URI = &apos;hdfs://namenode:9000&apos;
+    TRAIN_SCRIPT = &apos;/scripts/train_model.py&apos;
+    MLFLOW_URL = &apos;http://mlflow:5000&apos;
+  }
+  stages {
+    stage(&apos;Sanity check&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          # docker + compose disponibles
+          docker --version
+          if docker compose version &gt;/dev/null 2&gt;&amp;1; then
+            COMPOSE=&quot;docker compose&quot;
+          elif command -v docker-compose &gt;/dev/null 2&gt;&amp;1; then
+            COMPOSE=&quot;docker-compose&quot;
+          else
+            echo &quot;[ERROR] No hay docker compose&quot;; exit 1
+          fi
+          echo &quot;$COMPOSE&quot; &gt; .cb
+
+          # socket y compose.yml visibles
+          [ -S /var/run/docker.sock ]
+          [ -f &quot;$COMPOSE_FILE&quot; ] || { echo &quot;No existe $COMPOSE_FILE&quot;; exit 1; }
+          $COMPOSE -f &quot;$COMPOSE_FILE&quot; ps
+
+          # MLflow accesible desde pyspark-client (10 intentos suaves)
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            $COMPOSE -f &quot;$COMPOSE_FILE&quot; exec -T pyspark-client sh -lc &quot;curl -sS -I ${MLFLOW_URL} &gt;/dev/null 2&gt;&amp;1&quot; &amp;&amp; break || sleep 3
+            [ &quot;$i&quot; -eq 10 ] &amp;&amp; { echo &quot;[ERROR] MLflow no responde en ${MLFLOW_URL}&quot;; exit 2; }
+          done
+        &apos;&apos;&apos;
+      }
+    }
+
+    stage(&apos;Train with Spark&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          COMPOSE=&quot;$(cat .cb)&quot;
+          CMD=&quot;spark-submit --master ${SPARK_MASTER_URL} \
+               --conf spark.hadoop.fs.defaultFS=${HDFS_URI} \
+               ${TRAIN_SCRIPT}&quot;
+
+          # deps de Python dentro de pyspark-client (instala si faltan)
+          $COMPOSE -f &quot;$COMPOSE_FILE&quot; exec -T pyspark-client sh -lc &apos;
+            python3 - &lt;&lt;PY
+try:
+  import mlflow, sklearn, pandas, numpy
+  print(&quot;deps OK&quot;)
+except Exception as e:
+  raise SystemExit(1)
+PY
+          &apos; || $COMPOSE -f &quot;$COMPOSE_FILE&quot; exec -T pyspark-client sh -lc &apos;
+            python3 -m pip install --no-cache-dir -r /scripts/requirements.txt
+          &apos;
+
+          # ejecutar entrenamiento con MLflow
+          set +e
+          $COMPOSE -f &quot;$COMPOSE_FILE&quot; exec -T pyspark-client sh -lc &quot;export MLFLOW_TRACKING_URI=${MLFLOW_URL}; ${CMD}&quot;
+          rc=$?
+          set -e
+          if [ $rc -ne 0 ]; then
+            echo &quot;[ERR] spark-submit falló (rc=$rc). Últimas 200 líneas del contenedor pyspark-client:&quot;
+            $COMPOSE -f &quot;$COMPOSE_FILE&quot; logs --tail=200 pyspark-client || true
+            exit $rc
+          fi
+        &apos;&apos;&apos;
+      }
+    }
+  }
+  post {
+    success { echo &apos;✅ Entrenamiento OK — revisa el run en MLflow.&apos; }
+    failure { echo &apos;❌ Falló — revisa los logs arriba.&apos; }
+  }
+}
+</script>
+    <loadedScripts class="linked-hash-map"/>
+    <durabilityHint>MAX_SURVIVABILITY</durabilityHint>
+    <timings class="map">
+      <entry>
+        <string>flowNode</string>
+        <long>1922837549</long>
+      </entry>
+      <entry>
+        <string>classLoad</string>
+        <long>7990702240</long>
+      </entry>
+      <entry>
+        <string>runQueue</string>
+        <long>14074964808</long>
+      </entry>
+      <entry>
+        <string>run</string>
+        <long>18480730736</long>
+      </entry>
+      <entry>
+        <string>parse</string>
+        <long>1326535643</long>
+      </entry>
+      <entry>
+        <string>saveProgram</string>
+        <long>10358941887</long>
+      </entry>
+    </timings>
+    <internalCalls class="sorted-set">
+      <string>hudson.model.Result.fromString</string>
+      <string>org.jenkinsci.plugins.pipeline.StageStatus.TAG_NAME</string>
+      <string>org.jenkinsci.plugins.workflow.job.WorkflowRun.result</string>
+    </internalCalls>
+    <sandbox>true</sandbox>
+    <iota>26</iota>
+    <head>1:26</head>
+    <done>true</done>
+    <resumeBlocked>false</resumeBlocked>
+    <storageDir>workflow-completed</storageDir>
+  </execution>
+  <completed>true</completed>
+  <checkouts class="hudson.util.PersistedList"/>
+</flow-build>

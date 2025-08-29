@@ -1,0 +1,91 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1540.v295eccc9778f">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2265.v140e610fe9d5"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2265.v140e610fe9d5">
+      <jobProperties/>
+      <triggers/>
+      <parameters/>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description>Retain model pipeline</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@4183.v94b_6fd39da_c1">
+    <script>pipeline {
+  agent any
+  environment {
+    SPARK_MASTER_URL = &apos;spark://spark-master:7077&apos;
+    HDFS_URI         = &apos;hdfs://namenode:9000&apos;
+    TRAIN_SCRIPT     = &apos;/scripts/train_model.py&apos;
+    MLFLOW_URL       = &apos;http://mlflow:5000&apos;
+  }
+  stages {
+    stage(&apos;Resolver contenedores&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          CID_PY=$(docker ps -qf &quot;label=com.docker.compose.service=pyspark-client&quot; || true)
+          if [ -z &quot;$CID_PY&quot; ]; then CID_PY=$(docker ps -qf &quot;name=pyspark-client&quot;); fi
+          [ -n &quot;$CID_PY&quot; ] || { echo &quot;[ERROR] No se encontró el contenedor pyspark-client&quot;; docker ps; exit 1; }
+          echo &quot;$CID_PY&quot; &gt; .cid_py
+        &apos;&apos;&apos;
+      }
+    }
+    stage(&apos;Esperar MLflow y deps&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          CID_PY=$(cat .cid_py)
+
+          # Espera MLflow (hasta 20 intentos)
+          for i in $(seq 1 20); do
+            if docker exec -i &quot;$CID_PY&quot; sh -lc &quot;curl -sS -I ${MLFLOW_URL} &gt;/dev/null 2&gt;&amp;1&quot;; then
+              echo &quot;[OK] MLflow responde&quot;; break
+            fi
+            echo &quot;[wait] MLflow aún no responde (${i}/20)&quot;; sleep 3
+            [ $i -eq 20 ] &amp;&amp; { echo &quot;[ERROR] MLflow no responde en ${MLFLOW_URL}&quot;; exit 2; }
+          done
+
+          # Instala deps si faltan
+          docker exec -i &quot;$CID_PY&quot; sh -lc &apos;
+            python3 - &lt;&lt;PY
+try:
+  import mlflow, sklearn, pandas, numpy
+  print(&quot;deps OK&quot;)
+except Exception:
+  raise SystemExit(1)
+PY
+          &apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;
+            apt-get update &amp;&amp; apt-get install -y --no-install-recommends procps curl || true
+            python3 -m pip install --no-cache-dir -r /scripts/requirements.txt
+          &apos;
+        &apos;&apos;&apos;
+      }
+    }
+    stage(&apos;Train with Spark&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          CID_PY=$(cat .cid_py)
+          CMD=&quot;export MLFLOW_TRACKING_URI=${MLFLOW_URL}; \
+               spark-submit --master ${SPARK_MASTER_URL} \
+                 --conf spark.hadoop.fs.defaultFS=${HDFS_URI} \
+                 ${TRAIN_SCRIPT}&quot;
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;$CMD&quot;
+        &apos;&apos;&apos;
+      }
+    }
+  }
+  post {
+    success { echo &apos;✅ Entrenamiento OK — revisa el run en MLflow.&apos; }
+    failure { echo &apos;❌ Falló — mira los logs arriba.&apos; }
+  }
+}
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
