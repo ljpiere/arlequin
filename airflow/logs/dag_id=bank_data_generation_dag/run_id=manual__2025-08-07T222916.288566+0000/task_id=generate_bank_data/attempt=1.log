@@ -1,0 +1,2 @@
+[2025-08-07T23:42:39.241+0000] {taskinstance.py:1946} INFO - Dependencies not met for <TaskInstance: bank_data_generation_dag.generate_bank_data manual__2025-08-07T22:29:16.288566+00:00 [failed]>, dependency 'Task Instance State' FAILED: Task is in the 'failed' state.
+[2025-08-07T23:42:39.274+0000] {local_task_job_runner.py:160} INFO - Task is not able to be run

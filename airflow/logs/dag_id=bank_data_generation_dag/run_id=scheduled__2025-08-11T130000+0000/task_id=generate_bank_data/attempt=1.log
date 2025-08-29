@@ -1,0 +1,340 @@
+[2025-08-11T14:02:01.124+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: bank_data_generation_dag.generate_bank_data scheduled__2025-08-11T13:00:00+00:00 [queued]>
+[2025-08-11T14:02:01.140+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: bank_data_generation_dag.generate_bank_data scheduled__2025-08-11T13:00:00+00:00 [queued]>
+[2025-08-11T14:02:01.141+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2025-08-11T14:02:01.173+0000] {taskinstance.py:2191} INFO - Executing <Task(DockerOperator): generate_bank_data> on 2025-08-11 13:00:00+00:00
+[2025-08-11T14:02:01.207+0000] {standard_task_runner.py:60} INFO - Started process 49 to run task
+[2025-08-11T14:02:01.218+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'bank_data_generation_dag', 'generate_bank_data', 'scheduled__2025-08-11T13:00:00+00:00', '--job-id', '2', '--raw', '--subdir', 'DAGS_FOLDER/bank_data_dag.py', '--cfg-path', '/tmp/tmpoqk8_ff5']
+[2025-08-11T14:02:01.223+0000] {standard_task_runner.py:88} INFO - Job 2: Subtask generate_bank_data
+[2025-08-11T14:02:01.730+0000] {warnings.py:109} WARNING - /home/***/.local/lib/python3.9/site-packages/***/settings.py:194: DeprecationWarning: The sql_alchemy_conn option in [core] has been moved to the sql_alchemy_conn option in [database] - the old setting has been used, but please update your config.
+  SQL_ALCHEMY_CONN = conf.get("database", "SQL_ALCHEMY_CONN")
+
+[2025-08-11T14:02:01.952+0000] {task_command.py:423} INFO - Running <TaskInstance: bank_data_generation_dag.generate_bank_data scheduled__2025-08-11T13:00:00+00:00 [running]> on host 1f7d4c077c22
+[2025-08-11T14:02:02.186+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='bank_data_generation_dag' AIRFLOW_CTX_TASK_ID='generate_bank_data' AIRFLOW_CTX_EXECUTION_DATE='2025-08-11T13:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-08-11T13:00:00+00:00'
+[2025-08-11T14:02:02.447+0000] {docker.py:359} INFO - Starting docker container from image arlequin-pyspark-client
+[2025-08-11T14:02:02.596+0000] {docker.py:367} WARNING - Using remote engine or docker-in-docker and mounting temporary volume from host is not supported. Falling back to `mount_tmp_dir=False` mode. You can set `mount_tmp_dir` parameter to False to disable mounting and remove the warning
+[2025-08-11T14:02:09.849+0000] {docker.py:429} INFO - /opt/spark/bin/load-spark-env.sh: line 68: ps: command not found
+[2025-08-11T14:02:28.188+0000] {docker.py:429} INFO - Traceback (most recent call last):
+  File "/scripts/generate_data.py", line 6, in <module>
+[2025-08-11T14:02:28.194+0000] {docker.py:429} INFO - from faker import Faker
+ModuleNotFoundError: No module named 'faker'
+[2025-08-11T14:02:28.235+0000] {docker.py:429} INFO - 25/08/11 14:02:28 INFO ShutdownHookManager: Shutdown hook called
+[2025-08-11T14:02:28.240+0000] {docker.py:429} INFO - 25/08/11 14:02:28 INFO ShutdownHookManager: Deleting directory /tmp/spark-500ad1bc-10b3-4083-807f-3512d2764ce0
+[2025-08-11T14:02:29.226+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/client.py", line 265, in _raise_for_status
+    response.raise_for_status()
+  File "/home/airflow/.local/lib/python3.9/site-packages/requests/models.py", line 1021, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 400 Client Error: Bad Request for url: http+docker://localhost/v1.51/containers/create
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 364, in _run_image
+    return self._run_image_with_mounts([*self.mounts, tmp_mount], add_tmp_variable=True)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 391, in _run_image_with_mounts
+    self.container = self.cli.create_container(
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/container.py", line 439, in create_container
+    return self.create_container_from_config(config, name, platform)
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/container.py", line 456, in create_container_from_config
+    return self._result(res, True)
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/client.py", line 271, in _result
+    self._raise_for_status(response)
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/client.py", line 267, in _raise_for_status
+    raise create_api_error_from_http_exception(e) from e
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/errors.py", line 39, in create_api_error_from_http_exception
+    raise cls(e, response=response, explanation=explanation) from e
+docker.errors.APIError: 400 Client Error for http+docker://localhost/v1.51/containers/create: Bad Request ("invalid mount config for type "bind": bind source path does not exist: /tmp/airflowtmp0w9knqa1")
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 502, in execute
+    return self._run_image()
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 373, in _run_image
+    return self._run_image_with_mounts(self.mounts, add_tmp_variable=False)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 437, in _run_image_with_mounts
+    raise DockerContainerFailedException(f"Docker container failed: {result!r}", logs=log_lines)
+airflow.providers.docker.exceptions.DockerContainerFailedException: Docker container failed: {'StatusCode': 1}
+[2025-08-11T14:02:29.232+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=bank_data_generation_dag, task_id=generate_bank_data, execution_date=20250811T130000, start_date=20250811T140201, end_date=20250811T140229
+[2025-08-11T14:02:29.262+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 2 for task generate_bank_data (Docker container failed: {'StatusCode': 1}; 49)
+[2025-08-11T14:02:29.307+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-08-11T14:02:29.332+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-08-11T14:45:49.495+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: bank_data_generation_dag.generate_bank_data scheduled__2025-08-11T13:00:00+00:00 [queued]>
+[2025-08-11T14:45:49.525+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: bank_data_generation_dag.generate_bank_data scheduled__2025-08-11T13:00:00+00:00 [queued]>
+[2025-08-11T14:45:49.526+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2025-08-11T14:45:49.577+0000] {taskinstance.py:2191} INFO - Executing <Task(DockerOperator): generate_bank_data> on 2025-08-11 13:00:00+00:00
+[2025-08-11T14:45:49.596+0000] {standard_task_runner.py:60} INFO - Started process 49 to run task
+[2025-08-11T14:45:49.609+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'bank_data_generation_dag', 'generate_bank_data', 'scheduled__2025-08-11T13:00:00+00:00', '--job-id', '2', '--raw', '--subdir', 'DAGS_FOLDER/bank_data_dag.py', '--cfg-path', '/tmp/tmpmd8ev72k']
+[2025-08-11T14:45:49.616+0000] {standard_task_runner.py:88} INFO - Job 2: Subtask generate_bank_data
+[2025-08-11T14:45:49.699+0000] {warnings.py:109} WARNING - /home/***/.local/lib/python3.9/site-packages/***/settings.py:194: DeprecationWarning: The sql_alchemy_conn option in [core] has been moved to the sql_alchemy_conn option in [database] - the old setting has been used, but please update your config.
+  SQL_ALCHEMY_CONN = conf.get("database", "SQL_ALCHEMY_CONN")
+
+[2025-08-11T14:45:49.996+0000] {task_command.py:423} INFO - Running <TaskInstance: bank_data_generation_dag.generate_bank_data scheduled__2025-08-11T13:00:00+00:00 [running]> on host dac0489f31c3
+[2025-08-11T14:45:50.793+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='bank_data_generation_dag' AIRFLOW_CTX_TASK_ID='generate_bank_data' AIRFLOW_CTX_EXECUTION_DATE='2025-08-11T13:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-08-11T13:00:00+00:00'
+[2025-08-11T14:45:50.911+0000] {docker.py:359} INFO - Starting docker container from image arlequin-pyspark-client
+[2025-08-11T14:45:55.126+0000] {docker.py:429} INFO - /opt/spark/bin/load-spark-env.sh: line 68: ps: command not found
+[2025-08-11T14:46:09.772+0000] {docker.py:429} INFO - 25/08/11 14:46:09 INFO SparkContext: Running Spark version 3.5.1
+[2025-08-11T14:46:09.776+0000] {docker.py:429} INFO - 25/08/11 14:46:09 INFO SparkContext: OS info Linux, 5.15.153.1-microsoft-standard-WSL2, amd64
+[2025-08-11T14:46:09.778+0000] {docker.py:429} INFO - 25/08/11 14:46:09 INFO SparkContext: Java version 11.0.16
+[2025-08-11T14:46:09.936+0000] {docker.py:429} INFO - 25/08/11 14:46:09 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+[2025-08-11T14:46:10.217+0000] {docker.py:429} INFO - 25/08/11 14:46:10 INFO ResourceUtils: ==============================================================
+[2025-08-11T14:46:10.219+0000] {docker.py:429} INFO - 25/08/11 14:46:10 INFO ResourceUtils: No custom resources configured for spark.driver.
+[2025-08-11T14:46:10.221+0000] {docker.py:429} INFO - 25/08/11 14:46:10 INFO ResourceUtils: ==============================================================
+[2025-08-11T14:46:10.223+0000] {docker.py:429} INFO - 25/08/11 14:46:10 INFO SparkContext: Submitted application: BankDataGenerator
+[2025-08-11T14:46:10.303+0000] {docker.py:429} INFO - 25/08/11 14:46:10 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+[2025-08-11T14:46:10.337+0000] {docker.py:429} INFO - 25/08/11 14:46:10 INFO ResourceProfile: Limiting resource is cpu
+[2025-08-11T14:46:10.338+0000] {docker.py:429} INFO - 25/08/11 14:46:10 INFO ResourceProfileManager: Added ResourceProfile id: 0
+[2025-08-11T14:46:11.066+0000] {docker.py:429} INFO - 25/08/11 14:46:11 INFO SecurityManager: Changing view acls to: root
+[2025-08-11T14:46:11.068+0000] {docker.py:429} INFO - 25/08/11 14:46:11 INFO SecurityManager: Changing modify acls to: root
+[2025-08-11T14:46:11.070+0000] {docker.py:429} INFO - 25/08/11 14:46:11 INFO SecurityManager: Changing view acls groups to:
+[2025-08-11T14:46:11.071+0000] {docker.py:429} INFO - 25/08/11 14:46:11 INFO SecurityManager: Changing modify acls groups to:
+[2025-08-11T14:46:11.073+0000] {docker.py:429} INFO - 25/08/11 14:46:11 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root; groups with view permissions: EMPTY; users with modify permissions: root; groups with modify permissions: EMPTY
+[2025-08-11T14:46:12.272+0000] {docker.py:429} INFO - 25/08/11 14:46:12 INFO Utils: Successfully started service 'sparkDriver' on port 37151.
+[2025-08-11T14:46:12.697+0000] {docker.py:429} INFO - 25/08/11 14:46:12 INFO SparkEnv: Registering MapOutputTracker
+[2025-08-11T14:46:12.839+0000] {docker.py:429} INFO - 25/08/11 14:46:12 INFO SparkEnv: Registering BlockManagerMaster
+[2025-08-11T14:46:12.898+0000] {docker.py:429} INFO - 25/08/11 14:46:12 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+[2025-08-11T14:46:12.901+0000] {docker.py:429} INFO - 25/08/11 14:46:12 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+[2025-08-11T14:46:12.910+0000] {docker.py:429} INFO - 25/08/11 14:46:12 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+[2025-08-11T14:46:13.005+0000] {docker.py:429} INFO - 25/08/11 14:46:13 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-2b4f9e33-51b0-4d55-8d19-ef8b80026501
+[2025-08-11T14:46:13.070+0000] {docker.py:429} INFO - 25/08/11 14:46:13 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+[2025-08-11T14:46:13.123+0000] {docker.py:429} INFO - 25/08/11 14:46:13 INFO SparkEnv: Registering OutputCommitCoordinator
+[2025-08-11T14:46:13.455+0000] {docker.py:429} INFO - 25/08/11 14:46:13 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+[2025-08-11T14:46:13.615+0000] {docker.py:429} INFO - 25/08/11 14:46:13 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+[2025-08-11T14:46:14.319+0000] {docker.py:429} INFO - 25/08/11 14:46:14 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+[2025-08-11T14:46:14.512+0000] {docker.py:429} INFO - 25/08/11 14:46:14 WARN StandaloneAppClient$ClientEndpoint: Failed to connect to master spark-master:7077
+org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:56)
+	at org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:310)
+	at org.apache.spark.rpc.RpcTimeout.awaitResult(RpcTimeout.scala:75)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRefByURI(RpcEnv.scala:102)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRef(RpcEnv.scala:110)
+	at org.apache.spark.deploy.client.StandaloneAppClient$ClientEndpoint$$anon$1.run(StandaloneAppClient.scala:108)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Unknown Source)
+	at java.base/java.util.concurrent.FutureTask.run(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+Caused by: java.io.IOException: Failed to connect to spark-master:7077
+	at org.apache.spark.network.client.TransportClientFactory.createClient(TransportClientFactory.java:294)
+	at org.apache.spark.network.client.TransportClientFactory.createClient(TransportClientFactory.java:214)
+	at org.apache.spark.network.client.TransportClientFactory.createClient(TransportClientFactory.java:226)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.createClient(NettyRpcEnv.scala:204)
+	at org.apache.spark.rpc.netty.Outbox$$anon$1.call(Outbox.scala:202)
+	at org.apache.spark.rpc.netty.Outbox$$anon$1.call(Outbox.scala:198)
+	... 4 more
+Caused by: java.net.UnknownHostException: spark-master
+	at java.base/java.net.InetAddress$CachedAddresses.get(Unknown Source)
+	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+	at java.base/java.net.InetAddress.getByName(Unknown Source)
+	at io.netty.util.internal.SocketUtils$8.run(SocketUtils.java:156)
+	at io.netty.util.internal.SocketUtils$8.run(SocketUtils.java:153)
+	at java.base/java.security.AccessController.doPrivileged(Native Method)
+	at io.netty.util.internal.SocketUtils.addressByName(SocketUtils.java:153)
+	at io.netty.resolver.DefaultNameResolver.doResolve(DefaultNameResolver.java:41)
+	at io.netty.resolver.SimpleNameResolver.resolve(SimpleNameResolver.java:61)
+	at io.netty.resolver.SimpleNameResolver.resolve(SimpleNameResolver.java:53)
+	at io.netty.resolver.InetSocketAddressResolver.doResolve(InetSocketAddressResolver.java:55)
+	at io.netty.resolver.InetSocketAddressResolver.doResolve(InetSocketAddressResolver.java:31)
+	at io.netty.resolver.AbstractAddressResolver.resolve(AbstractAddressResolver.java:106)
+	at io.netty.bootstrap.Bootstrap.doResolveAndConnect0(Bootstrap.java:220)
+	at io.netty.bootstrap.Bootstrap.access$000(Bootstrap.java:46)
+	at io.netty.bootstrap.Bootstrap$1.operationComplete(Bootstrap.java:189)
+	at io.netty.bootstrap.Bootstrap$1.operationComplete(Bootstrap.java:175)
+	at io.netty.util.concurrent.DefaultPromise.notifyListener0(DefaultPromise.java:590)
+	at io.netty.util.concurrent.DefaultPromise.notifyListenersNow(DefaultPromise.java:557)
+	at io.netty.util.concurrent.DefaultPromise.notifyListeners(DefaultPromise.java:492)
+	at io.netty.util.concurrent.DefaultPromise.setValue0(DefaultPromise.java:636)
+	at io.netty.util.concurrent.DefaultPromise.setSuccess0(DefaultPromise.java:625)
+	at io.netty.util.concurrent.DefaultPromise.trySuccess(DefaultPromise.java:105)
+	at io.netty.channel.DefaultChannelPromise.trySuccess(DefaultChannelPromise.java:84)
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.safeSetSuccess(AbstractChannel.java:990)
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.register0(AbstractChannel.java:516)
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.access$200(AbstractChannel.java:429)
+	at io.netty.channel.AbstractChannel$AbstractUnsafe$1.run(AbstractChannel.java:486)
+	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:174)
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:167)
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:470)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	... 1 more
+[2025-08-11T14:46:34.331+0000] {docker.py:429} INFO - 25/08/11 14:46:34 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+[2025-08-11T14:46:34.367+0000] {docker.py:429} INFO - 25/08/11 14:46:34 WARN StandaloneAppClient$ClientEndpoint: Failed to connect to master spark-master:7077
+org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at org.apache.spark.util.SparkThreadUtils$.awaitResult(SparkThreadUtils.scala:56)
+	at org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:310)
+	at org.apache.spark.rpc.RpcTimeout.awaitResult(RpcTimeout.scala:75)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRefByURI(RpcEnv.scala:102)
+	at org.apache.spark.rpc.RpcEnv.setupEndpointRef(RpcEnv.scala:110)
+	at org.apache.spark.deploy.client.StandaloneAppClient$ClientEndpoint$$anon$1.run(StandaloneAppClient.scala:108)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Unknown Source)
+	at java.base/java.util.concurrent.FutureTask.run(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+Caused by: java.io.IOException: Failed to connect to spark-master/172.20.0.11:7077
+	at org.apache.spark.network.client.TransportClientFactory.createClient(TransportClientFactory.java:294)
+	at org.apache.spark.network.client.TransportClientFactory.createClient(TransportClientFactory.java:214)
+	at org.apache.spark.network.client.TransportClientFactory.createClient(TransportClientFactory.java:226)
+	at org.apache.spark.rpc.netty.NettyRpcEnv.createClient(NettyRpcEnv.scala:204)
+	at org.apache.spark.rpc.netty.Outbox$$anon$1.call(Outbox.scala:202)
+	at org.apache.spark.rpc.netty.Outbox$$anon$1.call(Outbox.scala:198)
+	... 4 more
+Caused by: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: spark-master/172.20.0.11:7077
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at java.base/sun.nio.ch.SocketChannelImpl.finishConnect(Unknown Source)
+	at io.netty.channel.socket.nio.NioSocketChannel.doFinishConnect(NioSocketChannel.java:337)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:334)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Unknown Source)
+[2025-08-11T14:46:54.361+0000] {docker.py:429} INFO - 25/08/11 14:46:54 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+[2025-08-11T14:46:54.462+0000] {docker.py:429} INFO - 25/08/11 14:46:54 INFO TransportClientFactory: Successfully created connection to spark-master/172.20.0.11:7077 after 5 ms (0 ms spent in bootstraps)
+[2025-08-11T14:46:58.474+0000] {docker.py:429} INFO - 25/08/11 14:46:58 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20250811144658-0000
+[2025-08-11T14:46:58.516+0000] {docker.py:429} INFO - 25/08/11 14:46:58 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 41937.
+[2025-08-11T14:46:58.517+0000] {docker.py:429} INFO - 25/08/11 14:46:58 INFO NettyBlockTransferService: Server created on c0255abf6631:41937
+[2025-08-11T14:46:58.522+0000] {docker.py:429} INFO - 25/08/11 14:46:58 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+[2025-08-11T14:46:58.561+0000] {docker.py:429} INFO - 25/08/11 14:46:58 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, c0255abf6631, 41937, None)
+[2025-08-11T14:46:58.582+0000] {docker.py:429} INFO - 25/08/11 14:46:58 INFO BlockManagerMasterEndpoint: Registering block manager c0255abf6631:41937 with 434.4 MiB RAM, BlockManagerId(driver, c0255abf6631, 41937, None)
+[2025-08-11T14:46:58.783+0000] {docker.py:429} INFO - 25/08/11 14:46:58 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, c0255abf6631, 41937, None)
+[2025-08-11T14:46:58.787+0000] {docker.py:429} INFO - 25/08/11 14:46:58 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, c0255abf6631, 41937, None)
+[2025-08-11T14:46:59.301+0000] {docker.py:429} INFO - 25/08/11 14:46:59 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+[2025-08-11T14:47:00.210+0000] {docker.py:429} INFO - Iniciando la generación y escritura de datos en HDFS...
+[2025-08-11T14:47:23.293+0000] {job.py:213} ERROR - Job heartbeat got an exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 3371, in _wrap_pool_connect
+    return fn()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 327, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 894, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 493, in checkout
+    rec = pool._do_get()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/impl.py", line 256, in _do_get
+    return self._create_connection()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 273, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 388, in __init__
+    self.__connect()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 691, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/util/langhelpers.py", line 70, in __exit__
+    compat.raise_(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/util/compat.py", line 211, in raise_
+    raise exception
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 686, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/create.py", line 574, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/default.py", line 598, in connect
+    return self.dbapi.connect(*cargs, **cparams)
+  File "/home/airflow/.local/lib/python3.9/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: could not translate host name "postgres" to address: Temporary failure in name resolution
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/jobs/job.py", line 187, in heartbeat
+    self._merge_from(Job._fetch_from_db(self, session))
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/api_internal/internal_api_call.py", line 114, in wrapper
+    return func(*args, **kwargs)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/utils/session.py", line 76, in wrapper
+    return func(*args, **kwargs)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/jobs/job.py", line 308, in _fetch_from_db
+    session.merge(job)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 3056, in merge
+    return self._merge(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 3136, in _merge
+    merged = self.get(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 2853, in get
+    return self._get_impl(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 2975, in _get_impl
+    return db_load_fn(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/orm/loading.py", line 530, in load_on_pk_identity
+    session.execute(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 1716, in execute
+    conn = self._connection_for_bind(bind)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 1555, in _connection_for_bind
+    return self._transaction._connection_for_bind(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 750, in _connection_for_bind
+    conn = bind.connect()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/future/engine.py", line 412, in connect
+    return super(Engine, self).connect()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 3325, in connect
+    return self._connection_cls(self, close_with_result=close_with_result)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 96, in __init__
+    else engine.raw_connection()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 3404, in raw_connection
+    return self._wrap_pool_connect(self.pool.connect, _connection)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 3374, in _wrap_pool_connect
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 2208, in _handle_dbapi_exception_noconnection
+    util.raise_(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/util/compat.py", line 211, in raise_
+    raise exception
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 3371, in _wrap_pool_connect
+    return fn()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 327, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 894, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 493, in checkout
+    rec = pool._do_get()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/impl.py", line 256, in _do_get
+    return self._create_connection()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 273, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 388, in __init__
+    self.__connect()
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 691, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/util/langhelpers.py", line 70, in __exit__
+    compat.raise_(
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/util/compat.py", line 211, in raise_
+    raise exception
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/pool/base.py", line 686, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/create.py", line 574, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/airflow/.local/lib/python3.9/site-packages/sqlalchemy/engine/default.py", line 598, in connect
+    return self.dbapi.connect(*cargs, **cparams)
+  File "/home/airflow/.local/lib/python3.9/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) could not translate host name "postgres" to address: Temporary failure in name resolution
+
+(Background on this error at: https://sqlalche.me/e/14/e3q8)
+[2025-08-11T14:47:23.445+0000] {job.py:221} ERROR - Job heartbeat failed with error. Scheduler is in unhealthy state
+[2025-08-11T14:47:39.616+0000] {job.py:221} ERROR - Job heartbeat failed with error. Scheduler is in unhealthy state
+[2025-08-11T14:48:45.657+0000] {job.py:221} ERROR - Job heartbeat failed with error. Scheduler is in unhealthy state
+[2025-08-11T14:50:49.775+0000] {job.py:221} ERROR - Job heartbeat failed with error. Scheduler is in unhealthy state
+[2025-08-11T14:51:10.295+0000] {job.py:221} ERROR - Job heartbeat failed with error. Scheduler is in unhealthy state
+[2025-08-11T14:51:27.500+0000] {job.py:216} ERROR - Job heartbeat failed with error. Scheduler may go into unhealthy state
+[2025-08-11T14:51:54.340+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 502, in execute
+    return self._run_image()
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 376, in _run_image
+    return self._run_image_with_mounts(self.mounts, add_tmp_variable=False)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 437, in _run_image_with_mounts
+    raise DockerContainerFailedException(f"Docker container failed: {result!r}", logs=log_lines)
+airflow.providers.docker.exceptions.DockerContainerFailedException: Docker container failed: {'StatusCode': 137}
+[2025-08-11T14:51:54.452+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=bank_data_generation_dag, task_id=generate_bank_data, execution_date=20250811T130000, start_date=20250811T144549, end_date=20250811T145154
+[2025-08-11T14:51:54.799+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 2 for task generate_bank_data (Docker container failed: {'StatusCode': 137}; 49)
+[2025-08-11T14:51:55.013+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-08-11T14:51:55.472+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check

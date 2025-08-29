@@ -1,0 +1,39 @@
+[2025-08-07T20:53:21.059+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: bank_data_generation_and_ml.generate_bank_data scheduled__2025-08-07T19:00:00+00:00 [queued]>
+[2025-08-07T20:53:21.102+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: bank_data_generation_and_ml.generate_bank_data scheduled__2025-08-07T19:00:00+00:00 [queued]>
+[2025-08-07T20:53:21.103+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2025-08-07T20:53:21.132+0000] {taskinstance.py:2191} INFO - Executing <Task(DockerOperator): generate_bank_data> on 2025-08-07 19:00:00+00:00
+[2025-08-07T20:53:21.147+0000] {standard_task_runner.py:60} INFO - Started process 50 to run task
+[2025-08-07T20:53:21.199+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'bank_data_generation_and_ml', 'generate_bank_data', 'scheduled__2025-08-07T19:00:00+00:00', '--job-id', '3', '--raw', '--subdir', 'DAGS_FOLDER/bank_data_dag.py', '--cfg-path', '/tmp/tmpfjcn_kcv']
+[2025-08-07T20:53:21.218+0000] {standard_task_runner.py:88} INFO - Job 3: Subtask generate_bank_data
+[2025-08-07T20:53:21.282+0000] {warnings.py:109} WARNING - /home/***/.local/lib/python3.9/site-packages/***/settings.py:194: DeprecationWarning: The sql_alchemy_conn option in [core] has been moved to the sql_alchemy_conn option in [database] - the old setting has been used, but please update your config.
+  SQL_ALCHEMY_CONN = conf.get("database", "SQL_ALCHEMY_CONN")
+
+[2025-08-07T20:53:21.338+0000] {task_command.py:423} INFO - Running <TaskInstance: bank_data_generation_and_ml.generate_bank_data scheduled__2025-08-07T19:00:00+00:00 [running]> on host 26b22780456f
+[2025-08-07T20:53:21.668+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='bank_data_generation_and_ml' AIRFLOW_CTX_TASK_ID='generate_bank_data' AIRFLOW_CTX_EXECUTION_DATE='2025-08-07T19:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-08-07T19:00:00+00:00'
+[2025-08-07T20:53:22.043+0000] {docker.py:486} INFO - Pulling docker image arlequin_pyspark-client
+[2025-08-07T20:53:23.744+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/client.py", line 265, in _raise_for_status
+    response.raise_for_status()
+  File "/home/airflow/.local/lib/python3.9/site-packages/requests/models.py", line 1021, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 404 Client Error: Not Found for url: http+docker://localhost/v1.51/images/create?tag=latest&fromImage=arlequin_pyspark-client
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 488, in execute
+    for output in self.cli.pull(self.image, stream=True, decode=True):
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/image.py", line 429, in pull
+    self._raise_for_status(response)
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/client.py", line 267, in _raise_for_status
+    raise create_api_error_from_http_exception(e) from e
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/errors.py", line 39, in create_api_error_from_http_exception
+    raise cls(e, response=response, explanation=explanation) from e
+docker.errors.ImageNotFound: 404 Client Error for http+docker://localhost/v1.51/images/create?tag=latest&fromImage=arlequin_pyspark-client: Not Found ("pull access denied for arlequin_pyspark-client, repository does not exist or may require 'docker login': denied: requested access to the resource is denied")
+[2025-08-07T20:53:23.778+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=bank_data_generation_and_ml, task_id=generate_bank_data, execution_date=20250807T190000, start_date=20250807T205321, end_date=20250807T205323
+[2025-08-07T20:53:23.826+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 3 for task generate_bank_data (404 Client Error for http+docker://localhost/v1.51/images/create?tag=latest&fromImage=arlequin_pyspark-client: Not Found ("pull access denied for arlequin_pyspark-client, repository does not exist or may require 'docker login': denied: requested access to the resource is denied"); 50)
+[2025-08-07T20:53:23.886+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-08-07T20:53:23.924+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check

@@ -1,0 +1,18 @@
+[2025-08-13T21:28:13.818+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: bank_data_generation_dag.generate_bank_data scheduled__2025-08-13T20:00:00+00:00 [queued]>
+[2025-08-13T21:28:13.831+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: bank_data_generation_dag.generate_bank_data scheduled__2025-08-13T20:00:00+00:00 [queued]>
+[2025-08-13T21:28:13.833+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2025-08-13T21:28:13.857+0000] {taskinstance.py:2191} INFO - Executing <Task(DockerOperator): generate_bank_data> on 2025-08-13 20:00:00+00:00
+[2025-08-13T21:28:13.866+0000] {standard_task_runner.py:60} INFO - Started process 49 to run task
+[2025-08-13T21:28:13.871+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'bank_data_generation_dag', 'generate_bank_data', 'scheduled__2025-08-13T20:00:00+00:00', '--job-id', '7', '--raw', '--subdir', 'DAGS_FOLDER/bank_data_dag.py', '--cfg-path', '/tmp/tmpgpdi1k2p']
+[2025-08-13T21:28:13.873+0000] {standard_task_runner.py:88} INFO - Job 7: Subtask generate_bank_data
+[2025-08-13T21:28:13.937+0000] {task_command.py:423} INFO - Running <TaskInstance: bank_data_generation_dag.generate_bank_data scheduled__2025-08-13T20:00:00+00:00 [running]> on host 66c6c8a2fbc8
+[2025-08-13T21:28:14.040+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='bank_data_generation_dag' AIRFLOW_CTX_TASK_ID='generate_bank_data' AIRFLOW_CTX_EXECUTION_DATE='2025-08-13T20:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-08-13T20:00:00+00:00'
+[2025-08-13T21:28:14.088+0000] {docker.py:359} INFO - Starting docker container from image arlequin-pyspark-client
+[2025-08-13T21:28:16.093+0000] {docker.py:429} INFO - /opt/spark/bin/load-spark-env.sh: line 68: ps: command not found
+[2025-08-13T21:28:19.384+0000] {local_task_job_runner.py:121} ERROR - Received SIGTERM. Terminating subprocesses
+[2025-08-13T21:28:19.388+0000] {process_utils.py:131} INFO - Sending 15 to group 49. PIDs of all processes in the group: [49]
+[2025-08-13T21:28:19.390+0000] {process_utils.py:86} INFO - Sending the signal 15 to group 49
+[2025-08-13T21:28:19.391+0000] {taskinstance.py:2450} ERROR - Received SIGTERM. Terminating subprocesses.
+[2025-08-13T21:28:19.399+0000] {docker.py:521} INFO - Stopping docker container
+[2025-08-13T21:28:22.700+0000] {local_task_job_runner.py:121} ERROR - Received SIGTERM. Terminating subprocesses
+[2025-08-13T21:28:22.703+0000] {process_utils.py:131} INFO - Sending 15 to group 49. PIDs of all processes in the group: [49]

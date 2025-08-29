@@ -1,0 +1,1 @@
+[2025-08-07T21:38:24.811+0000] {scheduler_job_runner.py:781} ERROR - Executor reports task instance <TaskInstance: bank_data_generation_dag.generate_bank_data manual__2025-08-07T21:31:46.463438+00:00 [queued]> finished (failed) although the task says it's queued. (Info: None) Was the task killed externally?

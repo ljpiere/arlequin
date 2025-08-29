@@ -1,0 +1,64 @@
+[2025-08-11T13:30:35.042+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: bank_data_generation_dag.generate_bank_data manual__2025-08-11T13:25:42.963469+00:00 [queued]>
+[2025-08-11T13:30:35.059+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: bank_data_generation_dag.generate_bank_data manual__2025-08-11T13:25:42.963469+00:00 [queued]>
+[2025-08-11T13:30:35.060+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 1
+[2025-08-11T13:30:35.087+0000] {taskinstance.py:2191} INFO - Executing <Task(DockerOperator): generate_bank_data> on 2025-08-11 13:25:42.963469+00:00
+[2025-08-11T13:30:35.095+0000] {standard_task_runner.py:60} INFO - Started process 48 to run task
+[2025-08-11T13:30:35.099+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'bank_data_generation_dag', 'generate_bank_data', 'manual__2025-08-11T13:25:42.963469+00:00', '--job-id', '19', '--raw', '--subdir', 'DAGS_FOLDER/bank_data_dag.py', '--cfg-path', '/tmp/tmp7l05f1vj']
+[2025-08-11T13:30:35.102+0000] {standard_task_runner.py:88} INFO - Job 19: Subtask generate_bank_data
+[2025-08-11T13:30:35.152+0000] {warnings.py:109} WARNING - /home/***/.local/lib/python3.9/site-packages/***/settings.py:194: DeprecationWarning: The sql_alchemy_conn option in [core] has been moved to the sql_alchemy_conn option in [database] - the old setting has been used, but please update your config.
+  SQL_ALCHEMY_CONN = conf.get("database", "SQL_ALCHEMY_CONN")
+
+[2025-08-11T13:30:35.237+0000] {task_command.py:423} INFO - Running <TaskInstance: bank_data_generation_dag.generate_bank_data manual__2025-08-11T13:25:42.963469+00:00 [running]> on host 26b22780456f
+[2025-08-11T13:30:35.504+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='bank_data_generation_dag' AIRFLOW_CTX_TASK_ID='generate_bank_data' AIRFLOW_CTX_EXECUTION_DATE='2025-08-11T13:25:42.963469+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-08-11T13:25:42.963469+00:00'
+[2025-08-11T13:30:36.939+0000] {docker.py:359} INFO - Starting docker container from image arlequin-pyspark-client
+[2025-08-11T13:30:37.057+0000] {docker.py:367} WARNING - Using remote engine or docker-in-docker and mounting temporary volume from host is not supported. Falling back to `mount_tmp_dir=False` mode. You can set `mount_tmp_dir` parameter to False to disable mounting and remove the warning
+[2025-08-11T13:30:39.552+0000] {docker.py:429} INFO - /opt/spark/bin/load-spark-env.sh: line 68: ps: command not found
+[2025-08-11T13:30:47.190+0000] {docker.py:429} INFO - Traceback (most recent call last):
+  File "/scripts/generate_data.py", line 6, in <module>
+[2025-08-11T13:30:47.199+0000] {docker.py:429} INFO - from faker import Faker
+ModuleNotFoundError: No module named 'faker'
+[2025-08-11T13:30:47.252+0000] {docker.py:429} INFO - 25/08/11 13:30:47 INFO ShutdownHookManager: Shutdown hook called
+[2025-08-11T13:30:47.256+0000] {docker.py:429} INFO - 25/08/11 13:30:47 INFO ShutdownHookManager: Deleting directory /tmp/spark-ea781699-bac8-41df-9045-a0903e6392e1
+[2025-08-11T13:30:48.267+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/client.py", line 265, in _raise_for_status
+    response.raise_for_status()
+  File "/home/airflow/.local/lib/python3.9/site-packages/requests/models.py", line 1021, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 400 Client Error: Bad Request for url: http+docker://localhost/v1.51/containers/create
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 364, in _run_image
+    return self._run_image_with_mounts([*self.mounts, tmp_mount], add_tmp_variable=True)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 391, in _run_image_with_mounts
+    self.container = self.cli.create_container(
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/container.py", line 439, in create_container
+    return self.create_container_from_config(config, name, platform)
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/container.py", line 456, in create_container_from_config
+    return self._result(res, True)
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/client.py", line 271, in _result
+    self._raise_for_status(response)
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/api/client.py", line 267, in _raise_for_status
+    raise create_api_error_from_http_exception(e) from e
+  File "/home/airflow/.local/lib/python3.9/site-packages/docker/errors.py", line 39, in create_api_error_from_http_exception
+    raise cls(e, response=response, explanation=explanation) from e
+docker.errors.APIError: 400 Client Error for http+docker://localhost/v1.51/containers/create: Bad Request ("invalid mount config for type "bind": bind source path does not exist: /tmp/airflowtmpjp9uijbi")
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 502, in execute
+    return self._run_image()
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 373, in _run_image
+    return self._run_image_with_mounts(self.mounts, add_tmp_variable=False)
+  File "/home/airflow/.local/lib/python3.9/site-packages/airflow/providers/docker/operators/docker.py", line 437, in _run_image_with_mounts
+    raise DockerContainerFailedException(f"Docker container failed: {result!r}", logs=log_lines)
+airflow.providers.docker.exceptions.DockerContainerFailedException: Docker container failed: {'StatusCode': 1}
+[2025-08-11T13:30:48.291+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=bank_data_generation_dag, task_id=generate_bank_data, execution_date=20250811T132542, start_date=20250811T133035, end_date=20250811T133048
+[2025-08-11T13:30:48.418+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 19 for task generate_bank_data (Docker container failed: {'StatusCode': 1}; 48)
+[2025-08-11T13:30:48.505+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-08-11T13:30:48.706+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check
