@@ -27,12 +27,148 @@ x-airflow-common:
     - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
 
 services:
+  #-----------------------------------------------------------------
+  # TRACKING PARA ML
+  #-----------------------------------------------------------------
+  # MLflow Tracking Server (simple, filesystem backend)
+  mlflow:
+    image: python:3.11-slim
+    container_name: mlflow
+    environment:
+      MLFLOW_GUNICORN_CMD_ARGS: --bind 0.0.0.0:5000    # <- fuerza gunicorn a 0.0.0.0
+    command: ["/bin/sh","-lc",
+      "set -e; \
+       pip install --no-cache-dir mlflow==2.14.* && \
+       exec mlflow server \
+         --backend-store-uri sqlite:////mlflow/mlflow.db \
+         --default-artifact-root file:/mlflow/artifacts \
+         --host 0.0.0.0 --port 5000"
+    ]
+    volumes:
+      - ./mlflow:/mlflow
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    networks: [default]
+  #-----------------------------------------------------------------
+  # Jenkins LTS (ejecutará spark-submit dentro de pyspark-client)
+  #-----------------------------------------------------------------
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    user: root
+    ports:
+      - "8085:8080"               # UI: http://localhost:8085
+      - "50000:50000"
+    volumes:
+      - ./jenkins:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts:/scripts
+      - ./:/workspace  
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    networks: [default]
+  #-----------------------------------------------------------------
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks: [default]
+  #-----------------------------------------------------------------
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/var/lib/grafana
+    depends_on: [prometheus]
+    networks: [default]
+  #-----------------------------------------------------------------
+  # Servicio “drift-watch” (exporta métricas /metrics y dispara Jenkins)
+  drift-watch:
+    image: python:3.11-slim
+    container_name: drift-watch
+    working_dir: /app
+    environment:
+      SPARK_MASTER_URL: "spark://spark-master:7077"
+      HDFS_URI: "hdfs://namenode:9000"
+      DATA_PATH: "hdfs:///datalake/raw/bank_transactions"
+      MLFLOW_TRACKING_URI: "http://mlflow:5000"
+      JENKINS_URL: "http://jenkins:8080"
+      JENKINS_JOB: "retrain-model"
+      JENKINS_TOKEN: "mytoken123"
+      DRIFT_ALPHA: "0.01"
+      LOOKBACK_HOURS: "1"
+      REF_HOURS: "6"
+      EXPORTER_PORT: "8010"
+      JAVA_HOME: "/usr/lib/jvm/java-21-openjdk-amd64"
+      PYSPARK_PYTHON: "/usr/local/bin/python"   # usa la ruta real del binario
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./scripts:/app
+    command: >
+      sh -lc '
+        set -euo pipefail
+        export DEBIAN_FRONTEND=noninteractive
+
+        # PATH “seguro” + Java
+        export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$JAVA_HOME/bin"
+
+        apt-get update &&
+        apt-get install -y --no-install-recommends openjdk-21-jre-headless curl procps ca-certificates &&
+        rm -rf /var/lib/apt/lists/*
+
+        # Asegura que exista el alias python3 si alguna lib lo necesita
+        [ -x /usr/local/bin/python3 ] || ln -s /usr/local/bin/python /usr/local/bin/python3
+
+        # Instala deps si existe el requirements
+        [ -f /app/requirements-drift.txt ] && /usr/local/bin/python -m pip install --no-cache-dir -r /app/requirements-drift.txt
+
+        # Checks
+        java -version
+        ps --version || true
+        /usr/local/bin/python -V
+        which /usr/local/bin/python || true
+        which python3 || true
+        echo "PATH=$PATH"
+
+        exec /usr/local/bin/python /app/drift_watch.py
+      '
+    ports:
+      - "8010:8010"
+    depends_on:
+      - spark-master
+      - mlflow
+      - jenkins
+    # restart: unless-stopped  # déjalo comentado mientras depuras
+    networks: [default]
+
+
+
+
+
+  #-----------------------------------------------------------------
+  # TRACKING BIG DATA ARCHITECTURA
+  #-----------------------------------------------------------------
+  # Contenedor temporal: Copia de scripts
   scripts-init:
     image: alpine
     command: ["/bin/sh", "-c", "mkdir -p /dst && cp -r /src/* /dst/ || true && ls -l /dst"]
     volumes:
       - ./scripts:/src:ro
       - scripts_data:/dst
+  #-----------------------------------------------------------------
+  # NAMENODE: Configuracion base Hadoop
   namenode:
     build:
       context: ./hadoop-base
@@ -57,6 +193,8 @@ services:
       start_period: 20s
     networks: [default]
 
+  #-----------------------------------------------------------------
+  # DATANODE: Inicio del datanode
   datanode:
     build:
       context: ./hadoop-base
@@ -73,7 +211,8 @@ services:
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     command: ["/bin/bash", "-c", "/opt/hadoop/bin/hdfs --daemon start datanode && sleep infinity"]
     networks: [default]
-
+  #-----------------------------------------------------------------
+  # Nodo principal de Spark
   spark-master:
     build:
       context: ./spark-base
@@ -103,7 +242,8 @@ services:
       retries: 5
       start_period: 10s
     networks: [default]
-
+  #-----------------------------------------------------------------
+  # Worker 1 para Spark
   spark-worker:
     build:
       context: ./spark-base
@@ -124,7 +264,8 @@ services:
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     command: ["/bin/bash", "-c", "/opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077 && sleep infinity"]
     networks: [default]
-      
+  #-----------------------------------------------------------------
+  # Cliente de PySpark
   pyspark-client:
     image: arlequin-pyspark-client
     build:
@@ -136,10 +277,20 @@ services:
       - ./spark-base/spark-conf:/opt/spark/conf
       - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
       - ./scripts:/scripts
+    command: >
+      bash -lc "
+        apt-get update &&
+        apt-get install -y --no-install-recommends procps curl &&
+        rm -rf /var/lib/apt/lists/* &&
+        python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel &&
+        python3 -m pip install --no-cache-dir -r /scripts/requirements.txt &&
+        sleep infinity
+      "
     environment:
       - SPARK_MASTER=spark://spark-master:7077
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
       - PYSPARK_PYTHON=python3
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     depends_on:
       spark-master:
         condition: service_healthy
@@ -148,7 +299,8 @@ services:
     tty: true
     stdin_open: true
     networks: [default]
-
+  #-----------------------------------------------------------------
+  # Cliente Postgres: Para metadatos de Airflow
   postgres:
     image: postgres:13
     hostname: postgres
@@ -168,7 +320,8 @@ services:
       retries: 5
       start_period: 10s
     networks: [default]
-
+  #-----------------------------------------------------------------
+  # Redis: Config de Airflow
   redis:
     image: redis:latest
     hostname: redis
@@ -176,7 +329,8 @@ services:
     ports:
       - "6379:6379"
     networks: [default]
-
+  #-----------------------------------------------------------------
+  # Init Airflow: Disparador
   airflow-init:
     <<: *airflow-common
     container_name: airflow_init
@@ -188,7 +342,8 @@ services:
       postgres:
         condition: service_healthy
     networks: [default]
-
+  #-----------------------------------------------------------------
+  # UI Airflow
   airflow-webserver:
     <<: *airflow-common
     container_name: airflow_webserver
@@ -207,7 +362,8 @@ services:
       postgres:
         condition: service_healthy
     networks: [default]
-
+  #-----------------------------------------------------------------
+  # Airflow scheduler
   airflow-scheduler:
     <<: *airflow-common
     container_name: airflow_scheduler
@@ -218,7 +374,8 @@ services:
       postgres:
         condition: service_healthy
     networks: [default]
-
+  #-----------------------------------------------------------------
+  # Worker de airflow
   airflow-worker:
     <<: *airflow-common
     container_name: airflow_worker
@@ -238,7 +395,8 @@ services:
       postgres:
         condition: service_healthy
     networks: [default]
-
+#-----------------------------------------------------------------
+# Volumenes para archivos
 volumes:
   namenode_data:
   datanode1_data:
@@ -248,6 +406,8 @@ volumes:
     name: scripts_data
   spark_data:
 
+#-----------------------------------------------------------------
+# Conexión global
 networks:
   default:
     name: arlequin_default
