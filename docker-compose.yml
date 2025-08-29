@@ -1,6 +1,38 @@
-version: '3.8'
+# version: '3.8'
+
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:2.8.1-python3.9
+  environment:
+    AIRFLOW_HOME: /opt/airflow
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+
+    # NUEVO nombre de clave (sección [database])
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+
+    # Usa las claves correctas para Celery
+    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+
+    DOCKER_HOST: unix:///var/run/docker.sock
+    DOCKER_API_VERSION: "1.45"
+
+
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/plugins:/opt/airflow/plugins
+    - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
 
 services:
+  scripts-init:
+    image: alpine
+    command: ["/bin/sh", "-c", "mkdir -p /dst && cp -r /src/* /dst/ || true && ls -l /dst"]
+    volumes:
+      - ./scripts:/src:ro
+      - scripts_data:/dst
   namenode:
     build:
       context: ./hadoop-base
@@ -8,58 +40,39 @@ services:
     hostname: namenode
     container_name: namenode
     ports:
-      - "9870:9870" # HDFS NameNode UI
-      - "9000:9000" # HDFS NameNode RPC
+      - "9870:9870"
+      - "9000:9000"
     volumes:
-      - namenode_data:/tmp/hadoop-namenode # Persistencia para NameNode
-      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop # Mount config
-      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
+      - namenode_data:/tmp/hadoop-namenode
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
+      - ./scripts:/scripts
     environment:
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
-    command: ["/bin/bash", "/scripts/start-namenode.sh"]
-    #command: ["/bin/bash"]
+    command: ["/bin/bash", "-c", "/scripts/start-namenode.sh && sleep infinity"]
     healthcheck:
       test: ["CMD", "hdfs", "dfsadmin", "-report"]
-      interval: 10s       # Check every 10 seconds
-      timeout: 5s         # Give the command 5 seconds to respond
-      retries: 10         # Try 10 times (total of 100s after start_period)
-      start_period: 20s   # Wait 20 seconds before starting checks
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [default]
 
-  datanode1:
+  datanode:
     build:
       context: ./hadoop-base
       dockerfile: Dockerfile
-    hostname: datanode1
-    container_name: datanode1
-    ports:
-      - "9864:9864" # HDFS DataNode UI (Only for one, others would change or be omitted)
-    volumes:
-      - datanode1_data:/tmp/hadoop-datanode # Persistencia para DataNode
-      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop # Mount config
-      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
-    environment:
-      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
-    command: ["/bin/bash", "/scripts/start-datanode.sh"]
+    hostname: datanode
+    container_name: datanode
     depends_on:
       namenode:
         condition: service_healthy
-
-  datanode2:
-    build:
-      context: ./hadoop-base
-      dockerfile: Dockerfile
-    hostname: datanode2
-    container_name: datanode2
     volumes:
-      - datanode2_data:/tmp/hadoop-datanode
+      - datanode1_data:/tmp/hadoop-datanode
       - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
-      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
     environment:
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
-    command: ["/bin/bash", "/scripts/start-datanode.sh"]
-    depends_on:
-      namenode:
-        condition: service_healthy
+    command: ["/bin/bash", "-c", "/opt/hadoop/bin/hdfs --daemon start datanode && sleep infinity"]
+    networks: [default]
 
   spark-master:
     build:
@@ -68,71 +81,52 @@ services:
     hostname: spark-master
     container_name: spark-master
     ports:
-      - "8080:8080" # Spark Master UI
-      - "7077:7077" # Spark Master Port
+      - "8080:8080"
+      - "7077:7077"
     volumes:
-      - ./spark-base/spark-conf:/opt/spark/conf # Mount config
-      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop # Mount Hadoop config for Spark
+      - ./spark-base/spark-conf:/opt/spark/conf
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
       - ./scripts:/scripts
     environment:
       - SPARK_MASTER_HOST=spark-master
       - SPARK_MASTER_PORT=7077
       - SPARK_MASTER_WEBUI_PORT=8080
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
-    command: ["/bin/bash", "/scripts/start-spark-master.sh"]
+    command: ["/bin/bash", "-c", "/scripts/start-spark-master.sh && sleep infinity"]
     depends_on:
       namenode:
         condition: service_healthy
-    healthcheck: # <--- ADD THIS SECTION
+    healthcheck:
       test: ["CMD-SHELL", "wget -q http://spark-master:8080/ -O /dev/null || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 5
-      start_period: 10s # Give Spark Master a bit more time to start up before checking
+      start_period: 10s
+    networks: [default]
 
-  spark-worker1:
+  spark-worker:
     build:
       context: ./spark-base
       dockerfile: Dockerfile
-    hostname: spark-worker1
-    container_name: spark-worker1
-    ports:
-      - "8081:8081" # Spark Worker UI (you might need to adjust if multiple workers try to use same host port)
-    volumes:
-      - ./spark-base/spark-conf:/opt/spark/conf
-      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
-      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
-    environment:
-      - SPARK_MASTER=spark://spark-master:7077
-      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
-    command: ["/bin/bash", "/scripts/start-spark-worker.sh"]
+    hostname: spark-worker
+    container_name: spark-worker
     depends_on:
       spark-master:
         condition: service_healthy
-      namenode:
-        condition: service_healthy
-
-  spark-worker2:
-    build:
-      context: ./spark-base
-      dockerfile: Dockerfile
-    hostname: spark-worker2
-    container_name: spark-worker2
     volumes:
       - ./spark-base/spark-conf:/opt/spark/conf
       - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
-      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
+      - ./scripts:/scripts 
     environment:
-      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1g
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
-    command: ["/bin/bash", "/scripts/start-spark-worker.sh"]
-    depends_on:
-      spark-master:
-        condition: service_healthy
-      namenode:
-        condition: service_healthy
-
+    command: ["/bin/bash", "-c", "/opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077 && sleep infinity"]
+    networks: [default]
+      
   pyspark-client:
+    image: arlequin-pyspark-client
     build:
       context: ./spark-base
       dockerfile: Dockerfile
@@ -141,7 +135,7 @@ services:
     volumes:
       - ./spark-base/spark-conf:/opt/spark/conf
       - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
-      - ./scripts:/scripts # <--- AGREGAR ESTA LÍNEA
+      - ./scripts:/scripts
     environment:
       - SPARK_MASTER=spark://spark-master:7077
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
@@ -153,8 +147,108 @@ services:
         condition: service_healthy
     tty: true
     stdin_open: true
+    networks: [default]
+
+  postgres:
+    image: postgres:13
+    hostname: postgres
+    container_name: postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks: [default]
+
+  redis:
+    image: redis:latest
+    hostname: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks: [default]
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+    user: "root"
+    volumes:
+      - ./scripts:/scripts
+    command: bash -c "sleep 10 && airflow db migrate && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [default]
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow_webserver
+    command: airflow webserver
+    ports:
+      - "8082:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    networks: [default]
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow_scheduler
+    command: airflow scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    networks: [default]
+
+  airflow-worker:
+    <<: *airflow-common
+    container_name: airflow_worker
+    command: airflow celery worker
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./hadoop-base/hadoop-conf:/opt/hadoop/etc/hadoop
+      - scripts_data:/opt/airflow/scripts
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      airflow-scheduler:
+        condition: service_started
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    networks: [default]
 
 volumes:
   namenode_data:
   datanode1_data:
   datanode2_data:
+  pg_data:
+  scripts_data:
+    name: scripts_data
+  spark_data:
+
+networks:
+  default:
+    name: arlequin_default
+    driver: bridge
