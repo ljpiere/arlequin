@@ -11,7 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-server \
     net-tools \
     vim \
+    procps \
+    rsync \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Descarga e instala Hadoop
 WORKDIR /opt
