@@ -1,0 +1,19 @@
+Manifest-Version: 1.0
+Created-By: Maven Archiver 3.5.2
+Build-Jdk-Spec: 11
+Specification-Title: Build Authorization Token Root Plugin
+Specification-Version: 0.0
+Implementation-Title: Build Authorization Token Root Plugin
+Implementation-Version: 151.va_e52fe3215fc
+Group-Id: org.jenkins-ci.plugins
+Short-Name: build-token-root
+Long-Name: Build Authorization Token Root Plugin
+Url: https://github.com/jenkinsci/build-token-root-plugin
+Plugin-Version: 151.va_e52fe3215fc
+Hudson-Version: 2.249.1
+Jenkins-Version: 2.249.1
+Plugin-Developers: Jesse Glick:jglick:jglick@cloudbees.com
+Plugin-License-Name: MIT License
+Plugin-License-Url: https://opensource.org/licenses/MIT
+Plugin-ScmUrl: https://github.com/jenkinsci/build-token-root-plugin
+

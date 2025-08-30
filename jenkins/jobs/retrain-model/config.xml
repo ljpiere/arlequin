@@ -87,5 +87,6 @@ PY
     <sandbox>true</sandbox>
   </definition>
   <triggers/>
+  <authToken>123456</authToken>
   <disabled>false</disabled>
 </flow-definition>
