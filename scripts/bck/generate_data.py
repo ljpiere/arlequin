@@ -1,54 +1,4 @@
 # scripts/generate_data.py
-"""
-Generador de datos bancarios sintéticos con drift y escritura particionada en HDFS (Parquet).
-
-Descripción general
--------------------
-Este módulo crea un flujo simple de generación de transacciones bancarias sintéticas y las
-escribe en HDFS en formato Parquet, particionando por la columna `timestamp`. El objetivo es
-proveer datos de ejemplo para pruebas de pipelines de datos, validación de esquemas y
-experimentos de detección de drift.
-
-Componentes clave
------------------
-- **Faker**: para generar campos de identidad, ubicación y comercio.
-- **Spark**: creación de `SparkSession` y escritura particionada en HDFS (Parquet, modo append).
-- **Drift**: factor probabilístico que eleva montos y probabilidad de transacciones sospechosas.
-
-Esquema de datos
-----------------
-Las columnas incluyen identificadores, marcas de tiempo, datos del cliente, tipo de cuenta,
-tipo de transacción, montos, comercio, ubicación y flag de transacción sospechosa. Ver la
-variable `schema` para detalles.
-
-Particionado
-------------
-Se escribe en `hdfs:///user/bank_data/bank_transactions`, particionado por `timestamp`.
-**Nota**: particionar por una columna de alta cardinalidad (timestamp de evento) puede generar
-muchas particiones pequeñas. Es adecuado para demos controladas; en escenarios reales se suele
-particionar por granularidades derivadas (p.ej., `dt` = fecha, `hour`), o por campos de negocio.
-
-Ejecución típica (docker-compose)
----------------------------------
-spark-submit \\
-  --master spark://spark-master:7077 \\
-  --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000 \\
-  scripts/generate_data.py
-
-Parámetros principales
-----------------------
-- `num_records_per_batch` (int): registros por lote.
-- `interval_seconds` (int): pausa entre lotes.
-- `drift_change_interval_minutes` (int): cada cuántos minutos se actualiza el drift.
-- `num_batches` (int): número de lotes a generar.
-
-Consideraciones
----------------
-- `wait_for_spark_master` bloquea hasta que el master esté listo (útil en orquestación).
-- Se usan tamaños moderados de memoria en driver/executor (1g) para entornos de dev.
-- Manejo básico de errores al escribir en HDFS con log del problema y corte del bucle.
-"""
-
 import json
 import time
 import random
@@ -61,7 +11,7 @@ from pyspark.sql.functions import lit
 
 # Configuración de HDFS
 HDFS_OUTPUT_PATH = "hdfs:///user/bank_data"
-TABLE_NAME = "bank_transactions"  # Nombre lógico para la tabla en HDFS
+TABLE_NAME = "bank_transactions" # Nombre lógico para la tabla en HDFS
 
 # Inicializar Faker
 fake = Faker('es_ES')
@@ -83,14 +33,7 @@ schema = StructType([
 ])
 
 def get_base_transaction_amount():
-    """Genera un monto base con estacionalidad simple por día del mes.
-
-    La estacionalidad se modela alterando los rangos de valores aleatorios en
-    función del día actual (`datetime.now().day`).
-
-    Returns:
-        float: Monto base de la transacción (sin drift ni comisiones).
-    """
+    """Genera un monto base de transacción, que puede variar a lo largo del tiempo."""
     today = datetime.now().day
     if 5 <= today <= 10:
         return random.uniform(20.0, 500.0)
@@ -100,23 +43,9 @@ def get_base_transaction_amount():
         return random.uniform(10.0, 1000.0)
 
 def generate_single_record(record_timestamp, drift_factor=0):
-    """Construye un registro transaccional sintético con posible drift.
-
-    El drift se aplica de forma probabilística sobre el monto para simular cambios
-    de distribución. Adicionalmente incrementa la probabilidad de marcar la transacción
-    como sospechosa cuando los montos son altos.
-
-    Args:
-        record_timestamp (datetime): Marca de tiempo del registro (campo `timestamp`).
-        drift_factor (float): Intensidad del drift en [0, 1]; mayor valor produce
-            montos más altos con mayor probabilidad.
-
-    Returns:
-        dict: Registro con todas las claves definidas en `schema`.
-    """
+    """Genera una única transacción bancaria como un diccionario."""
     transaction_amount = get_base_transaction_amount()
 
-    # Drift: magnifica el monto con probabilidad proporcional al drift_factor
     if random.random() < drift_factor:
         transaction_amount *= random.uniform(1.5, 5.0)
 
@@ -143,26 +72,7 @@ def generate_single_record(record_timestamp, drift_factor=0):
     }
 
 def generate_and_write_data(spark, num_records_per_batch=1000, interval_seconds=10, drift_change_interval_minutes=5, num_batches=3):
-    """Genera datos por lotes y los escribe en HDFS particionados por `timestamp`.
-
-    Por cada lote:
-      1) Actualiza el `drift_factor` si pasó `drift_change_interval_minutes`.
-      2) Genera `num_records_per_batch` registros con el timestamp actual.
-      3) Crea un DataFrame de Spark con el `schema` definido.
-      4) Escribe en modo `append` en Parquet en `HDFS_OUTPUT_PATH/TABLE_NAME`,
-         particionando por `timestamp`.
-
-    Args:
-        spark (SparkSession): Sesión de Spark activa.
-        num_records_per_batch (int): Registros por lote.
-        interval_seconds (int): Pausa (segundos) entre lotes.
-        drift_change_interval_minutes (int): Intervalo (minutos) para actualizar el drift.
-        num_batches (int): Número total de lotes a escribir.
-
-    Side effects:
-        - Escritura de archivos Parquet en HDFS.
-        - Mensajes informativos por consola (progreso y cambios de drift).
-    """
+    """Genera datos en un número limitado de lotes y los escribe en HDFS."""
     print("Iniciando la generación y escritura de datos en HDFS...")
     
     start_time_drift_cycle = datetime.now()
@@ -184,8 +94,6 @@ def generate_and_write_data(spark, num_records_per_batch=1000, interval_seconds=
         write_path = f"{HDFS_OUTPUT_PATH}/{TABLE_NAME}"
         
         try:
-            # Nota: particionar por `timestamp` (alta cardinalidad) es útil para demos,
-            # pero puede fragmentar excesivamente en producción.
             df.write \
               .mode("append") \
               .partitionBy("timestamp") \
@@ -199,21 +107,9 @@ def generate_and_write_data(spark, num_records_per_batch=1000, interval_seconds=
 
     print("Generación de datos finalizada.")
 
+
 def wait_for_spark_master(host, port, timeout=120):
-    """Bloquea hasta que el Spark master esté accesible por TCP.
-
-    Realiza intentos periódicos de conexión al maestro de Spark hasta `timeout`.
-    Útil en despliegues con Docker Compose/Kubernetes donde los servicios inician
-    en distinto orden.
-
-    Args:
-        host (str): Hostname o IP del Spark master.
-        port (int): Puerto donde escucha el Spark master (típicamente 7077).
-        timeout (int): Tiempo máximo de espera en segundos.
-
-    Raises:
-        TimeoutError: Si no hay conexión antes de agotar el tiempo.
-    """
+    """Espera a que el maestro de Spark esté disponible en el puerto especificado."""
     start_time = time.time()
     print(f"⏳ Esperando que el maestro de Spark esté disponible en {host}:{port}...")
     while True:
@@ -227,8 +123,8 @@ def wait_for_spark_master(host, port, timeout=120):
         except (socket.timeout, ConnectionRefusedError):
             time.sleep(5)
 
+
 if __name__ == "__main__":
-    # Parámetros de conexión al Spark master (coinciden con docker-compose por defecto)
     spark_master_host = "spark-master"
     spark_master_port = 7077
 
@@ -236,7 +132,7 @@ if __name__ == "__main__":
         # 1. Esperar a que el maestro de Spark esté disponible
         wait_for_spark_master(spark_master_host, spark_master_port)
 
-        # 2. Inicializar SparkSession para HDFS y Parquet
+        # 2. Inicializar SparkSession
         spark = SparkSession.builder \
             .appName("BankDataGenerator") \
             .master(f"spark://{spark_master_host}:{spark_master_port}") \

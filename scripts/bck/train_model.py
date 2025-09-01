@@ -1,52 +1,4 @@
 # /scripts/train_model.py
-"""
-Entrenamiento de modelo de fraude bancario con Spark + MLflow + scikit-learn.
-
-Descripción general
--------------------
-Este módulo:
-  1) Lee datos particionados desde HDFS con Spark.
-  2) Asegura una etiqueta binaria razonable para entrenamiento (reutiliza
-     `is_suspicious` si es válida o crea una etiqueta sintética mediante reglas).
-  3) Selecciona features candidatas, convierte a pandas y entrena un modelo
-     `LogisticRegression` (scikit-learn) con `class_weight="balanced"`.
-  4) Evalúa con F1 en un hold-out (train_test_split) y registra artefactos,
-     parámetros y métricas en MLflow.
-
-Integraciones
--------------
-- **Spark**: lectura desde HDFS y preparación de datos.
-- **scikit-learn**: entrenamiento de modelo supervisado (Logistic Regression).
-- **MLflow**: tracking de experimentos (params, metrics y artefacto del modelo).
-
-Variables de entorno
---------------------
-- SPARK_MASTER_URL (str): URL del Spark master (por defecto: "spark://spark-master:7077").
-- HDFS_URI (str): URI de HDFS (por defecto: "hdfs://namenode:9000").
-- DATA_PATH (str): Ruta parquet con datos (por defecto: "hdfs:///datalake/raw/bank_transactions").
-- MLFLOW_TRACKING_URI (str): URI del servidor MLflow (por defecto: "http://mlflow:5000").
-
-Hiperparámetros y convenciones
-------------------------------
-- EXPERIMENT_NAME: nombre del experimento en MLflow ("bank-fraud").
-- FEATURES_CANDIDATES: columnas numéricas candidatas a features.
-- Etiquetado:
-  - Si `is_suspicious` existe y contiene ambas clases → se usa como `label`.
-  - Si no, se genera `label` con regla OR:
-      (risk_score >= 0.80) OR (amount_usd >= p95 de amount_usd).
-  - Se registra `label_strategy` en MLflow.
-
-Métricas
---------
-- F1 (conjunto de test): métrica principal registrada en MLflow.
-
-Notas operativas
-----------------
-- Si después del etiquetado solo hay una clase, se registra la corrida en MLflow
-  y se omite el entrenamiento (retorna 0 para no fallar pipelines).
-- El uso de `.toPandas()` supone un dataset manejable tras filtros y selección.
-"""
-
 import os, sys, time
 from datetime import datetime
 os.environ.setdefault("GIT_PYTHON_REFRESH", "quiet")  # silencia el warning de git en MLflow
@@ -60,7 +12,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score
 import numpy as np
 
-# ========= Configuración por entorno =========
 SPARK_MASTER = os.getenv("SPARK_MASTER_URL","spark://spark-master:7077")
 HDFS_URI     = os.getenv("HDFS_URI","hdfs://namenode:9000")
 DATA_PATH    = os.getenv("DATA_PATH","hdfs:///datalake/raw/bank_transactions")
@@ -70,15 +21,6 @@ EXPERIMENT_NAME = "bank-fraud"
 FEATURES_CANDIDATES = ["amount","fee","amount_usd","risk_score"]
 
 def get_spark():
-    """Crea y retorna una SparkSession adecuada para lectura desde HDFS.
-
-    Configura:
-      - `spark.master` con `SPARK_MASTER`.
-      - `spark.hadoop.fs.defaultFS` con `HDFS_URI`.
-
-    Returns:
-        pyspark.sql.SparkSession: Sesión Spark lista para leer Parquet.
-    """
     return (SparkSession.builder
             .appName("TrainModel")
             .master(SPARK_MASTER)
@@ -86,25 +28,10 @@ def get_spark():
             .getOrCreate())
 
 def ensure_label(sdf):
-    """Garantiza una columna de etiqueta binaria para entrenamiento.
-
-    Estrategia:
-      1) Si existe `is_suspicious` y hay presencia de ambas clases (0/1),
-         se usa directamente como `label`.
-      2) En caso contrario, se genera `label` con la regla:
-         (risk_score >= 0.80) OR (amount_usd >= p95(amount_usd)),
-         y se dejan únicamente las columnas de `FEATURES_CANDIDATES`
-         que existan más `label`.
-
-    Args:
-        sdf (pyspark.sql.DataFrame): DataFrame de Spark de entrada.
-
-    Returns:
-        tuple[pyspark.sql.DataFrame, str]:
-            - DataFrame con columnas de features existentes + `label`.
-            - Nombre de la estrategia utilizada:
-                * "existing_is_suspicious"
-                * "synthetic_rule_risk_or_p95"
+    """
+    Garantiza una etiqueta binaria razonable:
+    1) Si existe is_suspicious y tiene positivos -> úsala
+    2) Si no, crea etiqueta por regla: risk_score>=0.8 o amount_usd >= p95
     """
     cols = set(sdf.columns)
     if "is_suspicious" in cols:
@@ -121,10 +48,9 @@ def ensure_label(sdf):
 
     p95 = None
     if has_amount_usd:
-        # percentil aproximado para estabilidad en grandes volúmenes
         p95 = sdf.selectExpr("percentile_approx(amount_usd, 0.95) as p95").first()["p95"]
         if p95 is None:
-            p95 = 1e9  # evita etiquetar por p95 si viene None
+            p95 = 1e9  # algo enorme para no etiquetar por p95 si viene None
 
     rule = lit(False)
     if has_risk:
@@ -140,20 +66,6 @@ def ensure_label(sdf):
     return labeled, "synthetic_rule_risk_or_p95"
 
 def main():
-    """Punto de entrada: entrena el modelo y registra resultados en MLflow.
-
-    Flujo:
-      1) Configura MLflow (tracking URI y experimento).
-      2) Crea SparkSession y carga los datos desde `DATA_PATH`.
-      3) Asegura etiqueta con `ensure_label` y verifica balance de clases.
-      4) Selecciona features existentes, convierte a pandas y separa train/test
-         (estratificado cuando hay más de una clase).
-      5) Entrena `LogisticRegression(class_weight="balanced")`.
-      6) Calcula F1 en test y registra parámetros, métricas y artefacto en MLflow.
-
-    Returns:
-        int: 0 si ejecuta correctamente (incluye omitir entrenamiento por clase única).
-    """
     mlflow.set_tracking_uri(MLFLOW_URI)
     mlflow.set_experiment(EXPERIMENT_NAME)
 
@@ -179,7 +91,6 @@ def main():
         mlflow.log_metric("negatives", neg)
 
         if pos == 0 or neg == 0:
-            # Evita fallar pipelines cuando no hay ambas clases
             mlflow.log_param("skip_reason", "single_class_after_labeling")
             print(f"[SKIP] Solo una clase (pos={pos}, neg={neg}). Run registrado en MLflow, pero sin entrenar.")
             spark.stop()

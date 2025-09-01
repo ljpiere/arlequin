@@ -1,64 +1,4 @@
 # /scripts/drift_watch.py
-"""
-DriftWatch: Monitoreo de drift de datos y disparo de reentrenos (Spark + HDFS + Prometheus + Jenkins).
-
-Este módulo ejecuta un bucle continuo que:
-  1) Lee datos de HDFS mediante Spark.
-  2) Muestra aleatoria estable (acotada) a pandas para columnas numéricas y categóricas.
-  3) Evalúa drift por columna:
-       - Numéricas: Kolmogorov–Smirnov (KS).
-       - Categóricas: Chi-cuadrado (tabla de contingencia).
-  4) Calcula PSI (Population Stability Index) sobre una columna de score.
-  5) Expone métricas Prometheus (p-values, flags de drift, PSI, ratio de positivos).
-  6) Dispara un job de Jenkins para reentrenar el modelo si el drift supera umbrales,
-     con política de enfriamiento (cooldown) y anti-retigger por “borde” (EDGE_ONLY).
-
-Arquitectura
-------------
-- Spark: lectura/parquet desde HDFS y muestreo controlado.
-- Prometheus: servidor HTTP embebido para scrapeo.
-- Jenkins: integración con autenticación por API Token/Crumb.
-
-Métricas Prometheus
--------------------
-- drift_score_psi{model}: PSI de la columna de score (float).
-- predicted_positive_ratio{model}: proporción de predicciones positivas (0–1).
-- jenkins_retrain_triggers_total{model}: contador de triggers enviados a Jenkins.
-- drift_detected{col}: 1 si hay drift por columna, 0 en caso contrario.
-- pvalue{col}: valor-p por columna (KS o Chi-cuadrado según tipo).
-
-Variables de Entorno (principales)
-----------------------------------
-- SPARK_MASTER_URL (str): URL del Spark Master (p.ej. "spark://spark-master:7077").
-- HDFS_URI (str): URI del HDFS (p.ej. "hdfs://namenode:9000").
-- DATA_PATH (str): Ruta parquet en HDFS (p.ej. "hdfs:///datalake/raw/bank_transactions").
-- DRIFT_ALPHA (float): Umbral de significancia para p-values (default: 0.01).
-- EXPORTER_PORT (int): Puerto del exporter Prometheus (default: 8010).
-- LOOP_SECONDS (int): Periodicidad del loop principal en segundos (default: 30).
-- DRIFT_COOLDOWN_SECONDS (int): Enfriamiento entre triggers (default: 300).
-- TRIGGER_EDGE_ONLY ("1"/"0"): Evita retriggers mientras se mantenga el estado de alerta (default: "1").
-- DRIFT_CLEAR_STREAK (int): Rachas sin drift para “rearmar” el trigger (default: 3).
-- MODEL_NAME (str): Etiqueta de modelo para métricas (default: "fraud").
-- SCORE_COL (str): Nombre preferido de la columna de score (default: "score").
-- POSITIVE_THRESHOLD (float): Umbral para positivos (default: 0.5).
-- PSI_ALERT (float): Umbral de alerta para PSI (default: 0.2).
-- SAMPLE_MAX (int): Techo de filas para muestras pandas (default: 1000).
-
-Jenkins
--------
-- JENKINS_URL (str): Base URL de Jenkins (p.ej. "http://jenkins:8080").
-- JENKINS_JOB (str): Nombre del job a disparar (p.ej. "retrain-model").
-- JENKINS_USER (str) y JENKINS_API_TOKEN (str): Autenticación recomendada.
-- JENKINS_TOKEN (str): Modo legacy (no recomendado).
-
-Notas operativas
-----------------
-- El muestreo usa `sample(...).limit(n)` para estabilidad y techo duro de filas.
-- Si no se encuentra `SCORE_COL`, se intenta auto-detección; si falla, PSI queda en NaN.
-- EDGE_ONLY evita retriggers continuos: se dispara al “flanco de subida” y se re-arma
-  tras `DRIFT_CLEAR_STREAK` ciclos sin drift.
-"""
-
 import os
 import time
 import numpy as np
@@ -116,17 +56,6 @@ _clear_ok_streak = 0         # rachas sin drift para rearmar
 
 # ========= Spark =========
 def get_spark():
-    """Crea y retorna una sesión de Spark configurada para DriftWatch.
-
-    La configuración incluye:
-      - spark.master desde `SPARK_MASTER_URL` (o "local[1]" por defecto).
-      - fs.defaultFS para acceso a HDFS desde `HDFS_URI`.
-      - Deshabilita UI de Spark para reducir overhead.
-      - Parámetros conservadores de memoria/timeout para estabilidad en contenedores.
-
-    Returns:
-        pyspark.sql.SparkSession: Sesión de Spark lista para leer parquet desde HDFS.
-    """
     master = os.getenv("SPARK_MASTER_URL", "local[1]")
     conf = (
         SparkConf()
@@ -142,49 +71,15 @@ def get_spark():
 
 # ========= Utils =========
 def numeric_columns(sdf):
-    """Devuelve los nombres de columnas numéricas relevantes (excluye year/month/day/hour).
-
-    Args:
-        sdf (pyspark.sql.DataFrame): DataFrame de Spark.
-
-    Returns:
-        list[str]: Lista de nombres de columnas numéricas útiles para pruebas KS/PSI.
-    """
     return [
         f.name for f in sdf.schema.fields
         if isinstance(f.dataType, NumericType) and f.name not in ("year", "month", "day", "hour")
     ]
 
 def string_columns(sdf):
-    """Devuelve los nombres de columnas categóricas (tipo StringType).
-
-    Args:
-        sdf (pyspark.sql.DataFrame): DataFrame de Spark.
-
-    Returns:
-        list[str]: Lista de nombres de columnas de tipo string para Chi-cuadrado.
-    """
     return [f.name for f in sdf.schema.fields if isinstance(f.dataType, StringType)]
 
 def to_pdf_sample(sdf, cols, n=SAMPLE_MAX, seed=42):
-    """Extrae una muestra estable (acotada) a pandas para un subconjunto de columnas.
-
-    El muestreo combina `sample(False, 0.2, seed)` con `limit(n)` para:
-      - Evitar dependencia de fracciones exactas.
-      - Poner un techo duro de filas (n).
-      - Mejorar la estabilidad en escenarios distribuidos.
-
-    Si algo falla, aplica un fallback con `limit(min(200, n))`.
-
-    Args:
-        sdf (pyspark.sql.DataFrame): DataFrame de Spark fuente.
-        cols (list[str]): Columnas a seleccionar (se filtran a las existentes).
-        n (int): Máximo de filas a retornar.
-        seed (int): Semilla pseudoaleatoria para `sample`.
-
-    Returns:
-        pandas.DataFrame: Subconjunto en pandas sin nulos para las columnas requeridas.
-    """
     cols = [c for c in cols if c in sdf.columns]
     if not cols or n <= 0:
         return pd.DataFrame()
@@ -204,17 +99,6 @@ def to_pdf_sample(sdf, cols, n=SAMPLE_MAX, seed=42):
     return pdf
 
 def ks_num(a, b):
-    """Calcula el p-valor de Kolmogorov–Smirnov para dos muestras numéricas.
-
-    Si alguna muestra tiene < 20 observaciones, retorna 1.0 (sin evidencia de diferencia).
-
-    Args:
-        a (array-like): Muestra de referencia.
-        b (array-like): Muestra reciente/comparativa.
-
-    Returns:
-        float: p-valor de KS (0–1). Valores < ALPHA sugieren drift.
-    """
     a = np.asarray(a)
     b = np.asarray(b)
     if len(a) < 20 or len(b) < 20:
@@ -222,18 +106,6 @@ def ks_num(a, b):
     return float(ks_2samp(a, b).pvalue)
 
 def chi2_cat(a, b):
-    """Calcula el p-valor de Chi-cuadrado para variables categóricas.
-
-    Construye una tabla de contingencia a partir de las frecuencias en cada muestra.
-    Si hay pocas observaciones o cardinalidad insuficiente, retorna 1.0.
-
-    Args:
-        a (iterable): Valores categóricos referencia.
-        b (iterable): Valores categóricos recientes.
-
-    Returns:
-        float: p-valor del test Chi-cuadrado (0–1). Valores < ALPHA sugieren drift.
-    """
     sa = pd.Series(list(a), dtype="string")
     sb = pd.Series(list(b), dtype="string")
     if len(sa) < 20 or len(sb) < 20:
@@ -248,20 +120,6 @@ def chi2_cat(a, b):
     return float(p)
 
 def psi(ref, cur, bins=10, eps=1e-6):
-    """Calcula el Population Stability Index (PSI) entre dos distribuciones numéricas.
-
-    La discretización de bins usa cuantiles de la referencia; si no es viable,
-    usa partición lineal. Aplica recorte por `eps` para evitar log(0).
-
-    Args:
-        ref (array-like): Serie de referencia (histórica/entrenamiento).
-        cur (array-like): Serie reciente (producción/actual).
-        bins (int): Número de intervalos de discretización.
-        eps (float): Mínimo permitido para proporciones.
-
-    Returns:
-        float: PSI acumulado. Regla práctica: > 0.2 alerta; > 0.3 severo.
-    """
     ref = pd.Series(ref, dtype="float64").dropna()
     cur = pd.Series(cur, dtype="float64").dropna()
     if len(ref) < 50 or len(cur) < 50:
@@ -285,17 +143,6 @@ def psi(ref, cur, bins=10, eps=1e-6):
     return float(np.sum((ref_prop - cur_prop) * np.log(ref_prop / cur_prop)))
 
 def find_score_column(num_cols):
-    """Intenta localizar el nombre de la columna de score entre columnas numéricas.
-
-    Prioriza `SCORE_COL` (por entorno) y alias comunes. Si no encuentra match,
-    retorna la primera columna numérica disponible.
-
-    Args:
-        num_cols (list[str]): Lista de nombres de columnas numéricas.
-
-    Returns:
-        str|None: Nombre de columna de score o `None` si no hay columnas.
-    """
     candidates = [
         SCORE_COL, "prob", "proba", "proba_1", "p1", "prob_positive",
         "score_1", "prediction_score"
@@ -307,27 +154,12 @@ def find_score_column(num_cols):
 
 # ===== Jenkins helpers =====
 def _jenkins_session():
-    """Crea una sesión HTTP para interactuar con Jenkins.
-
-    Usa autenticación básica si `JENKINS_USER` y `JENKINS_API_TOKEN` están definidos.
-
-    Returns:
-        requests.Session: Sesión configurada.
-    """
     s = requests.Session()
     if JENKINS_USER and JENKINS_API_TOKEN:
         s.auth = (JENKINS_USER, JENKINS_API_TOKEN)
     return s
 
 def _get_crumb(s: requests.Session):
-    """Obtiene el par (campo, valor) del Jenkins-Crumb para solicitudes CSRF-safe.
-
-    Args:
-        s (requests.Session): Sesión autenticada (o no) contra Jenkins.
-
-    Returns:
-        tuple[str|None, str|None]: (nombre_del_campo, valor_del_crumb) o (None, None) si falla.
-    """
     try:
         url = f"{JENKINS_URL}/crumbIssuer/api/json"
         r = s.get(url, timeout=10)
@@ -339,17 +171,6 @@ def _get_crumb(s: requests.Session):
     return None, None
 
 def maybe_trigger_jenkins() -> bool:
-    """Intenta disparar el job de Jenkins respetando el cooldown y el modo de auth.
-
-    Lógica:
-      - Si no ha pasado `COOLDOWN_S` desde el último intento, no envía trigger.
-      - Prefiere autenticación por `JENKINS_USER`/`JENKINS_API_TOKEN` (CSRF/Crumb).
-      - Fallback legacy con `JENKINS_TOKEN` en querystring.
-      - Sin credenciales: informa y retorna False.
-
-    Returns:
-        bool: True si la respuesta HTTP indica aceptación del trigger (200/201/202/302).
-    """
     global _last_trigger_ts
     now_ts = time.time()
     if now_ts - _last_trigger_ts < COOLDOWN_S:
@@ -397,23 +218,6 @@ def maybe_trigger_jenkins() -> bool:
 
 # ========= Loop principal =========
 def detect_and_export_loop():
-    """Bucle principal de monitoreo, exportación de métricas y disparo de reentrenos.
-
-    Flujo por iteración:
-      1) Lee parquet desde HDFS (`DATA_PATH`) a Spark DataFrame.
-      2) Identifica columnas numéricas y categóricas.
-      3) Obtiene muestras pandas (ref/rec) con distintas semillas.
-      4) Calcula p-values (KS/Chi²) y actualiza métricas por columna.
-      5) Calcula PSI sobre la columna de score (si disponible).
-      6) Estima `pos_ratio` según `POSITIVE_THRESHOLD` o columnas binarias alternativas.
-      7) Determina condición de disparo (`should_trigger`) por KS/Chi² o PSI.
-      8) Aplica política EDGE_ONLY para evitar retriggers mientras persista el estado.
-
-    Side effects:
-        - Emite logs informativos/warn/error.
-        - Actualiza métricas Prometheus (servidor iniciado en `main()`).
-        - Puede disparar Jenkins según umbrales y cooldown.
-    """
     spark = get_spark()
     spark.sparkContext.setLogLevel("WARN")
     print(f"[START] DriftWatch leyendo {DATA_PATH} cada {LOOP_SECONDS}s (alpha={ALPHA}, psi_alert={PSI_ALERT})")
@@ -508,11 +312,6 @@ def detect_and_export_loop():
         time.sleep(LOOP_SECONDS)
 
 def main():
-    """Punto de entrada del módulo.
-
-    Inicia el servidor de métricas Prometheus en `EXPORTER_PORT` y arranca
-    el loop de detección/exportación. Bloqueante por diseño.
-    """
     start_http_server(EXPORTER_PORT, addr="0.0.0.0")
     detect_and_export_loop()
 

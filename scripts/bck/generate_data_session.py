@@ -1,53 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Generador de datos sintéticos bancarios con drift y escritura particionada en HDFS.
+Genera datos sintéticos de banca con drift y los escribe en HDFS con múltiples particiones.
+- Más columnas (amplio) y pocas filas por batch (para no saturar el equipo)
+- Particiona por dt (YYYY-MM-DD), hour (HH) y account_type
+- Escribe en formato Parquet (append)
 
-Descripción general
--------------------
-Este módulo genera datos transaccionales bancarios sintéticos con la opción de
-introducir "data drift" controlado y los escribe en HDFS en formato Parquet
-usando Spark. El dataset es "ancho" (muchas columnas) y se controla el volumen
-por lote para no saturar recursos locales en entornos de desarrollo.
-
-Características clave
----------------------
-- Columnas variadas: identificadores, tiempos, cliente/cuenta, transacción,
-  comercio/canal, geografía y particiones lógicas derivadas.
-- Particionado por `dt` (YYYY-MM-DD), `hour` (HH) y `account_type`.
-- Escritura en modo `append` para facilitar ingestas sucesivas.
-- Control de drift: factor que incrementa montos y riesgo para simular cambios
-  de distribución en producción.
-
-Arquitectura y ejecución
-------------------------
-- Spark: creación de sesión con configuración conservadora de recursos.
-- HDFS: escritura a ruta `hdfs:///datalake/raw/bank_transactions` (por defecto).
-- Faker: generación de campos de identidad, negocio y geografía.
-- Bucle por lotes: pausa configurable entre lotes, con re-particionado para
-  limitar número de archivos por partición.
-
-Ejecución típica (dentro de docker-compose)
--------------------------------------------
-spark-submit \\
-  --master spark://spark-master:7077 \\
-  --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000 \\
-  pyspark_generate_bank_data_partitions.py
-
-Parámetros principales
-----------------------
-- NUM_BATCHES (int): número de lotes a generar.
-- NUM_RECORDS_PER_BATCH (int): filas por lote (bajo para no cargar el equipo).
-- INTERVAL_SECONDS (int): pausa entre lotes.
-- DRIFT_CHANGE_EACH_MIN (int): cada cuántos minutos se actualiza el drift.
-- OUTPUT_PATH (str): ruta HDFS de salida (derivada de HDFS_BASE y TABLE_NAME).
-
-Consideraciones operativas
---------------------------
-- La función `wait_for_master` comprueba la disponibilidad del Spark master
-  antes de iniciar, con timeout configurable.
-- `repartition(4, "dt", "hour", "account_type")` ayuda a consolidar archivos
-  por partición (evita excesiva fragmentación).
-- El drift se modela elevando montos y riesgo de manera probabilística.
+Ejecución típica dentro de tu red de docker-compose:
+  spark-submit \
+    --master spark://spark-master:7077 \
+    --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000 \
+    pyspark_generate_bank_data_partitions.py
 """
 
 import time, random, socket
@@ -127,14 +89,7 @@ GENDERS             = ["M", "F", "O"]
 CURS                = ["USD", "EUR", "GBP", "COP"]
 
 def base_amount():
-    """Genera una base de monto con estacionalidad simple por día del mes.
-
-    La estacionalidad se modela con rangos de valores aleatorios dependientes
-    del día actual (`datetime.now().day`).
-
-    Returns:
-        float: Monto base sugerido para la transacción (sin comisiones).
-    """
+    """Monta una estacionalidad simple por día del mes."""
     d = datetime.now().day
     if 5 <= d <= 10:
         return random.uniform(20, 500)
@@ -143,32 +98,11 @@ def base_amount():
     return random.uniform(10, 1000)
 
 def fx_to_usd(cur: str) -> float:
-    """Devuelve una tasa de cambio simplificada hacia USD.
-
-    Args:
-        cur (str): Código de moneda ISO (p.ej., "USD", "EUR", "GBP", "COP").
-
-    Returns:
-        float: Tasa multiplicativa para convertir a USD. Si la moneda no está
-        mapeada, retorna 1.0.
-    """
+    """Tasa FX simplificada para convertir a USD."""
     return {"USD": 1.0, "EUR": 1.08, "GBP": 1.27, "COP": 0.00026}.get(cur, 1.0)
 
 def generate_one(ts: datetime, drift_factor: float = 0.0) -> dict:
-    """Crea un registro transaccional sintético con posible drift.
-
-    El drift se introduce aumentando tanto el monto como el riesgo de forma
-    probabilística, en función de `drift_factor`.
-
-    Args:
-        ts (datetime): Marca de tiempo del evento (`event_ts`).
-        drift_factor (float): Intensidad del drift en [0, 1]. Valores más altos
-            incrementan la probabilidad de montos elevados y mayor `risk_score`.
-
-    Returns:
-        dict: Diccionario con todas las columnas esperadas por el `schema`,
-        incluyendo particiones lógicas `dt` y `hour`.
-    """
+    """Genera un registro con posible drift en monto y riesgo."""
     amt = base_amount()
     # Drift: montos más altos y mayor riesgo
     if random.random() < drift_factor:
@@ -224,20 +158,6 @@ def generate_one(ts: datetime, drift_factor: float = 0.0) -> dict:
     }
 
 def wait_for_master(host="spark-master", port=7077, timeout=120):
-    """Bloquea la ejecución hasta que el Spark master sea accesible por TCP.
-
-    Realiza intentos de conexión al host/puerto indicados hasta `timeout`
-    segundos. Útil en entornos orquestados donde los servicios inician en
-    distinto orden.
-
-    Args:
-        host (str): Hostname o IP donde escucha el Spark master.
-        port (int): Puerto TCP del Spark master (por defecto 7077).
-        timeout (int): Tiempo máximo de espera en segundos.
-
-    Raises:
-        TimeoutError: Si no se logra establecer conexión dentro del `timeout`.
-    """
     start = time.time()
     print(f"⏳ Esperando Spark master en {host}:{port} ...")
     while time.time() - start < timeout:
@@ -251,23 +171,6 @@ def wait_for_master(host="spark-master", port=7077, timeout=120):
     raise TimeoutError(f"No se pudo contactar al Spark master en {host}:{port} dentro de {timeout}s")
 
 def main():
-    """Punto de entrada del generador.
-
-    Flujo:
-      1) Verifica disponibilidad del Spark master.
-      2) Crea `SparkSession` con configuración de HDFS y shuffles moderados.
-      3) Itera `NUM_BATCHES`:
-         - Actualiza `drift_factor` según política temporal.
-         - Genera lote de `NUM_RECORDS_PER_BATCH` registros.
-         - Reparticiona por columnas de partición lógicas.
-         - Escribe en Parquet (modo append) en `OUTPUT_PATH`.
-         - Pausa `INTERVAL_SECONDS`.
-      4) Finaliza la sesión Spark.
-
-    Side effects:
-        - Escritura de archivos Parquet particionados en HDFS.
-        - Mensajes informativos por consola sobre progreso y drift aplicado.
-    """
     wait_for_master()
 
     spark = (
