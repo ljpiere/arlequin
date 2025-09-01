@@ -21,6 +21,9 @@ EXPORTER_PORT = int(os.getenv("EXPORTER_PORT", "8010"))
 LOOP_SECONDS  = int(os.getenv("LOOP_SECONDS", "30"))
 COOLDOWN_S    = int(os.getenv("DRIFT_COOLDOWN_SECONDS", "300"))  # 5 min
 
+EDGE_ONLY = os.getenv("TRIGGER_EDGE_ONLY", "1") == "1"
+DRIFT_CLEAR_STREAK = int(os.getenv("DRIFT_CLEAR_STREAK", "3"))
+
 MODEL_NAME         = os.getenv("MODEL_NAME", "fraud")
 SCORE_COL          = os.getenv("SCORE_COL", "score")
 POSITIVE_THRESHOLD = float(os.getenv("POSITIVE_THRESHOLD", "0.5"))
@@ -48,6 +51,8 @@ g_drift_col = Gauge("drift_detected", "1 if drift detected else 0", ["col"])
 g_pval_col  = Gauge("pvalue", "p-value per column", ["col"])
 
 _last_trigger_ts = 0.0
+_prev_alert = False          # True = ya disparamos para el drift actual
+_clear_ok_streak = 0         # rachas sin drift para rearmar
 
 # ========= Spark =========
 def get_spark():
@@ -273,10 +278,33 @@ def detect_and_export_loop():
             g_pos_ratio.labels(MODEL_NAME).set(pos_ratio)
 
             should_trigger = drift_any or (psi_val is not None and psi_val > PSI_ALERT)
-            if should_trigger:
-                print(f"[DRIFT] KS/χ²={drift_any}, PSI={psi_val:.4f} (>{PSI_ALERT}) ⇒ Jenkins (cooldown {COOLDOWN_S}s)")
-                if maybe_trigger_jenkins():
-                    c_triggers.labels(MODEL_NAME).inc()
+
+            global _prev_alert, _clear_ok_streak
+
+            if EDGE_ONLY:
+                if should_trigger and not _prev_alert:
+                    print(f"[DRIFT][FIRST] KS/χ²={drift_any}, PSI={psi_val:.4f} (>{PSI_ALERT}) ⇒ Jenkins (cooldown {COOLDOWN_S}s)")
+                    if maybe_trigger_jenkins():
+                        c_triggers.labels(MODEL_NAME).inc()
+                    _prev_alert = True
+                    _clear_ok_streak = 0
+                elif should_trigger and _prev_alert:
+                    # Drift sigue presente, pero ya se disparó antes → no retrigger.
+                    pass
+                else:
+                    # No hay drift en este ciclo
+                    if _prev_alert:
+                        _clear_ok_streak += 1
+                        if _clear_ok_streak >= DRIFT_CLEAR_STREAK:
+                            print("[INFO] Drift despejado. Re-armado del trigger.")
+                            _prev_alert = False
+                            _clear_ok_streak = 0
+            else:
+                # Comportamiento anterior (por si quieres mantenerlo)
+                if should_trigger:
+                    print(f"[DRIFT] KS/χ²={drift_any}, PSI={psi_val:.4f} (>{PSI_ALERT}) ⇒ Jenkins (cooldown {COOLDOWN_S}s)")
+                    if maybe_trigger_jenkins():
+                        c_triggers.labels(MODEL_NAME).inc()
 
         except Exception as e:
             print("[ERROR] drift-watch:", e)

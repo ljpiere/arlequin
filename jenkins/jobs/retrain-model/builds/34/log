@@ -51,61 +51,61 @@ deps OK
 + docker exec -i 1bdc45b62cc9 sh -lc export MLFLOW_TRACKING_URI=http://mlflow:5000;                spark-submit --master spark://spark-master:7077                  --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000                  /scripts/train_model.py
 /usr/local/lib/python3.9/dist-packages/mlflow/utils/requirements_utils.py:20: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
   import pkg_resources  # noqa: TID251
-25/08/30 02:11:50 INFO SparkContext: Running Spark version 3.5.1
-25/08/30 02:11:50 INFO SparkContext: OS info Linux, 5.15.153.1-microsoft-standard-WSL2, amd64
-25/08/30 02:11:50 INFO SparkContext: Java version 11.0.16
-25/08/30 02:11:50 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-25/08/30 02:11:50 INFO ResourceUtils: ==============================================================
-25/08/30 02:11:50 INFO ResourceUtils: No custom resources configured for spark.driver.
-25/08/30 02:11:50 INFO ResourceUtils: ==============================================================
-25/08/30 02:11:50 INFO SparkContext: Submitted application: TrainModel
-25/08/30 02:11:50 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
-25/08/30 02:11:50 INFO ResourceProfile: Limiting resource is cpu
-25/08/30 02:11:50 INFO ResourceProfileManager: Added ResourceProfile id: 0
-25/08/30 02:11:50 INFO SecurityManager: Changing view acls to: root
-25/08/30 02:11:50 INFO SecurityManager: Changing modify acls to: root
-25/08/30 02:11:50 INFO SecurityManager: Changing view acls groups to: 
-25/08/30 02:11:50 INFO SecurityManager: Changing modify acls groups to: 
-25/08/30 02:11:50 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root; groups with view permissions: EMPTY; users with modify permissions: root; groups with modify permissions: EMPTY
-25/08/30 02:11:51 INFO Utils: Successfully started service 'sparkDriver' on port 40409.
-25/08/30 02:11:51 INFO SparkEnv: Registering MapOutputTracker
-25/08/30 02:11:51 INFO SparkEnv: Registering BlockManagerMaster
-25/08/30 02:11:51 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
-25/08/30 02:11:51 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
-25/08/30 02:11:51 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
-25/08/30 02:11:51 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-ee7e6c5b-6dc9-4800-b8f9-44d35bd25fd9
-25/08/30 02:11:51 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
-25/08/30 02:11:52 INFO SparkEnv: Registering OutputCommitCoordinator
-25/08/30 02:11:52 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
-25/08/30 02:11:52 INFO Utils: Successfully started service 'SparkUI' on port 4040.
-25/08/30 02:11:52 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
-25/08/30 02:11:53 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.7:7077 after 87 ms (0 ms spent in bootstraps)
-25/08/30 02:11:53 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20250830021153-0001
-25/08/30 02:11:53 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20250830021153-0001/0 on worker-20250830020150-172.18.0.8-38399 (172.18.0.8:38399) with 2 core(s)
-25/08/30 02:11:53 INFO StandaloneSchedulerBackend: Granted executor ID app-20250830021153-0001/0 on hostPort 172.18.0.8:38399 with 2 core(s), 1024.0 MiB RAM
-25/08/30 02:11:53 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 41283.
-25/08/30 02:11:53 INFO NettyBlockTransferService: Server created on pyspark-client:41283
-25/08/30 02:11:53 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
-25/08/30 02:11:53 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, pyspark-client, 41283, None)
-25/08/30 02:11:53 INFO BlockManagerMasterEndpoint: Registering block manager pyspark-client:41283 with 434.4 MiB RAM, BlockManagerId(driver, pyspark-client, 41283, None)
-25/08/30 02:11:53 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, pyspark-client, 41283, None)
-25/08/30 02:11:53 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, pyspark-client, 41283, None)
-25/08/30 02:11:53 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20250830021153-0001/0 is now RUNNING
-25/08/30 02:11:54 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
-/usr/local/lib/python3.9/dist-packages/_distutils_hack/__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
-  warnings.warn(
-Logged to MLflow: http://mlflow:5000 F1: 1.0
+25/08/30 02:17:03 INFO SparkContext: Running Spark version 3.5.1
+25/08/30 02:17:03 INFO SparkContext: OS info Linux, 5.15.153.1-microsoft-standard-WSL2, amd64
+25/08/30 02:17:03 INFO SparkContext: Java version 11.0.16
+25/08/30 02:17:03 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+25/08/30 02:17:04 INFO ResourceUtils: ==============================================================
+25/08/30 02:17:04 INFO ResourceUtils: No custom resources configured for spark.driver.
+25/08/30 02:17:04 INFO ResourceUtils: ==============================================================
+25/08/30 02:17:04 INFO SparkContext: Submitted application: TrainModel
+25/08/30 02:17:04 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+25/08/30 02:17:04 INFO ResourceProfile: Limiting resource is cpu
+25/08/30 02:17:04 INFO ResourceProfileManager: Added ResourceProfile id: 0
+25/08/30 02:17:04 INFO SecurityManager: Changing view acls to: root
+25/08/30 02:17:04 INFO SecurityManager: Changing modify acls to: root
+25/08/30 02:17:04 INFO SecurityManager: Changing view acls groups to: 
+25/08/30 02:17:04 INFO SecurityManager: Changing modify acls groups to: 
+25/08/30 02:17:04 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root; groups with view permissions: EMPTY; users with modify permissions: root; groups with modify permissions: EMPTY
+25/08/30 02:17:05 INFO Utils: Successfully started service 'sparkDriver' on port 45857.
+25/08/30 02:17:05 INFO SparkEnv: Registering MapOutputTracker
+25/08/30 02:17:05 INFO SparkEnv: Registering BlockManagerMaster
+25/08/30 02:17:05 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+25/08/30 02:17:05 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+25/08/30 02:17:05 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+25/08/30 02:17:06 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-ee2afe05-3ac5-4231-8c14-6b2ff93bc273
+25/08/30 02:17:06 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+25/08/30 02:17:06 INFO SparkEnv: Registering OutputCommitCoordinator
+25/08/30 02:17:07 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+25/08/30 02:17:07 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+25/08/30 02:17:08 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+25/08/30 02:17:08 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.7:7077 after 148 ms (0 ms spent in bootstraps)
+25/08/30 02:17:09 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20250830021709-0002
+25/08/30 02:17:09 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20250830021709-0002/0 on worker-20250830020150-172.18.0.8-38399 (172.18.0.8:38399) with 2 core(s)
+25/08/30 02:17:09 INFO StandaloneSchedulerBackend: Granted executor ID app-20250830021709-0002/0 on hostPort 172.18.0.8:38399 with 2 core(s), 1024.0 MiB RAM
+25/08/30 02:17:09 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 34961.
+25/08/30 02:17:09 INFO NettyBlockTransferService: Server created on pyspark-client:34961
+25/08/30 02:17:09 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+25/08/30 02:17:09 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, pyspark-client, 34961, None)
+25/08/30 02:17:09 INFO BlockManagerMasterEndpoint: Registering block manager pyspark-client:34961 with 434.4 MiB RAM, BlockManagerId(driver, pyspark-client, 34961, None)
+25/08/30 02:17:09 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, pyspark-client, 34961, None)
+25/08/30 02:17:09 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, pyspark-client, 34961, None)
+25/08/30 02:17:10 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20250830021709-0002/0 is now RUNNING
+25/08/30 02:17:10 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+Resuming build at Sat Aug 30 02:20:42 UTC 2025 after Jenkins restart
+Ready to run at Sat Aug 30 02:20:43 UTC 2025
+Resuming build at Sat Aug 30 02:26:56 UTC 2025 after Jenkins restart
+Ready to run at Sat Aug 30 02:26:57 UTC 2025
+Aborted by [8mha:////4HMZXo+wYY6jR3++UQEsy1RSuD1WUkUEutpxAPAAdi/YAAAAmR+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAz2EgZe/dLi1CL90rzsvPzyPAATbMabwgAAAA==[0munknown
+Sending interrupt signal to process
+[8mha:////4G+jiglQUwOVh7cG7oaPpJ/SqNCSf4gVETapTgaHvMT6AAAA5x+LCAAAAAAAAP9djDFOAzEQRWc3ghpRRumoGRcgKFCqUIAUAVJygU1iHO86M2Y8JqHhEFwDGiSukENwATpqChoWbQW/+a957+UTdpLAOYvD2lLjKc09xpBdS7hmaW4DrzHlGFkUk9qY0FPMijfXk+nFQ7QSPDVXrHbvvff2dfr9UUIxhl6WoLA/rqv7yoSKnJmoeHJnG4HBMi8SE86ZEgeLfyonw+fX4VPcllBewm6w5HTZ5e7gEYpW7//TR93/ytCtKAE2sQVUKA4U+qbmmRGrUnk6XPHCBnN0bNTK6gdH7WYsAQEAAA==[0mClick here to forcibly terminate running steps
+After 20s process did not stop
 [8mha:////4BCU/PDqpu9qfVOYZOE5wZYBbC9UJgPOudPFrQmo7aCHAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOICVEgoFa3lhheYxBgn1l2wHZyKF/E1/oBFJCq2WO1sM683LIOHmr3BTlNvKTQWBzeavDCx76+OE3Z8wYYpsNModZLc6tOMkqOGOUUJCwErTY3jYMlEWItOPVTlFJnqHH3+jgJK297hCYXI5qh8/MLkYXMb28D08/wVwDQMEcr9Ntfu8AEWNdkpvgAAAA==[0m[Pipeline] }
 [8mha:////4J8t8/1ih4HoeditHk4bH9fDHWt3dEuP6qv2SjbqpMJoAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOKi0FAgqrRWGl5gYmOcWHfGdkgqXsTX+AMWkajYYrWzzbzesI4BThwM9poGS7Gz6N1o8sKJw3B1PGHPF+yYIjuNrZ5aVrpZsOWkYUlRwkrARlPnOFoyCbailw9ZOUmmOqeQv6OA0qo7PKEQ2ZxkSF+YA+xuo4pMP89fAczeJyj3da768AEi+zpyvgAAAA==[0m[Pipeline] // stage
-[8mha:////4HL8aiPVUR/v2jkbSr29vfD5/11O1qhuWXEJIFiSMQa5AAAAph+LCAAAAAAAAP9tjTEOwjAQBC9BKWgpeYQjpaBBVLSWG15gYmOcWHfBvpBUvIiv8QcMkajYamel1TxfUKUIB4pOdBZ7j6n1Ygijy01MFPtLoEl0dBYtYaJghbKTImOPCypiC0uKElYS1hbbQMmjY9jITt91HTS6+sQxb3sJpTc3eEAhs5l15C/MEbbX0STCn+evAOaBodgxlE3zOVZv4eZmdcEAAAA=[0m[Pipeline] stage
-[8mha:////4I69wRGtfiKaqZCIC1xJ67eKHtyUiTe89CKvnOr/gY0dAAAAph+LCAAAAAAAAP9tjTEOwjAUQ3+LOrAycohUKiNiYo2ycILQhJA0+r9NUtKJE3E17kBLJSY8WLYl673eUMUAJwqGOY2dxdha1vvRzIllCt3NU2aOrqwljOQ1EzoLUvq8VkFJw6qihA2HrcbWU7RoEuy4kw9Ze4mmvqQwb0cOpVUDPKHgMznJkL5lCrC/jyoS/jh/ATD1CcqmWeywPKsPpnFij8IAAAA=[0m[Pipeline] { (Declarative: Post Actions)
-[8mha:////4AC3+V8wJbYcysX4aKA6fJQHHw9RaM3T8h96ZxbZsigSAAAApB+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIiAR2iSmu54QUmNsaJdWdsh6TiRXyNPxCIRMUWq51t5vmCZYpw5GixNdQ5So3D4Hs7LRw4dhfPA7Z8xoYpsTcozSBZm3pGydnAnKKEhYCVocZzcmQzrEWr7qryimx1ynH6DgJKp2/wgEJM5qxi/sIYYXPtdWL6ef4KYAwZyu3uU/vwBrANZ3i+AAAA[0m[Pipeline] echo
-✅ Entrenamiento OK — revisa el run en MLflow.
-[8mha:////4AXPz/g1IaAV9/ExHb/Tm0F5SO6uUuckYYOE/hLecpNzAAAApB+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIigagQVVrLDS8wsTFOrDtjOyQVL+Jr/IFAJCq2WO1sM88XLFOEI0eLraHOUWocBt/baeHAsbt4HrDlMzZMib1BaQbJ2tQzSs4G5hQlLASsDDWekyObYS1adVeVV2SrU47TdxBQOn2DBxRiMmcV8xfGCJtrrxPTz/NXAGMIGcrt/lO7N+4u68W+AAAA[0m[Pipeline] }
-[8mha:////4Nhq2rdGAv+eNEXgAuZJJYGEaapmIuvlJDFvkyiTqGd7AAAApB+LCAAAAAAAAP9tjTESwiAURH/iWNhaeggyk8LGsbJlaDwBJogQ5n8CRFJ5Iq/mHUQzY+UWO/u2ec8XrGOAIwXNrMLBYOwM827SZbFMYbg6yszShXWEkZxiQmVBvTotKCgpWFLVsOKwUdg5igZ1gi238i4bJ1E35xTKd+BQm36EB1S8mJMM6QtzgN1t6iPhz/NXALP3Cep2/6n2DdZseDS+AAAA[0m[Pipeline] // stage
-[8mha:////4Hho6DCg/YRK26Si7lK1+TgS0i40Bx0TyuhX54thFASnAAAApB+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMKRKKBAVLRWGl5gEmOcWHfBvpBUvIiv8QciIlGx1c4083pjmSKOHJ1qLLWeUuVVF3o3PTVwbK+BB9XwRVVMiYNVpR1Kru1pxpLFYl6WY6GxslQFTp6cYK0b8zBFMOSKs8TJHTRyX9/xRKanspgoXxgjNre+Tky/zt8Axq4T5Nu9INt9ABfk/wi9AAAA[0m[Pipeline] }
-[8mha:////4MkfKHEbUOfU6v4BhaJ17a81tpxkkpauyyPrwVQLke2RAAAApB+LCAAAAAAAAP9tjbEKwjAURW8rDq6OfkQKgiCIk2vo4hfENsa04b2avNpOfpG/5j9YLDh5p3vOcl5vLFPEkaNTjaXWU6q86kLvpqcGju018KAavqiKKXGwqrRDybU9zViyWMzLciw0VpaqwMmTE6x1Yx6mCIZccZY4uYNG7us7nsj0VBYT5QtjxObW14np1/kbwNh1gny7F2S7D3wiphO9AAAA[0m[Pipeline] // withEnv
-[8mha:////4Dry1ZcNjQbpwABUUDH44UOTshHyHou6z3jQ2jqsiH8rAAAApB+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMKREA1CVLRWGl5gEmOcWHfBvpBUvIiv8QciIlGx1c4083pjmSKOHJ1qLLWeUuVVF3o3PTVwbK+BB9XwRVVMiYNVpR1Kru1pxpLFYl6WY6GxslQFTp6cYK0b8zBFMOSKs8TJHTRyX9/xRKanspgoXxgjNre+Tky/zt8Axq4T5Nu9INt9AFo7wVm9AAAA[0m[Pipeline] }
-[8mha:////4HbsVeAGtDSqWoJzaq56PctTEs/HN5xrCzkY1XxPPGzYAAAAoh+LCAAAAAAAAP9tjbEOgjAURS8YB1dHP6KYMBon14bFL6hQa6F5D9uHMPlF/pr/IJHEyTvdc5bzemOdIo4cnWotdZ5S7VUfBjc/NXLsroFH1fJF1UyJg1WVHStu7GnBisViWZZjpbGxVAdOnpxgq1vzMEUw5IqzxNkdNHLf3PFEpueymChfmCJ2t6FJTL/O3wCmvhfk5V6QlR8tH+kBvQAAAA==[0m[Pipeline] // node
-[8mha:////4F620tOcxmoOoDtEi96Hd+/36xN1dMyL2r3DoZvfuqchAAAAoh+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMIRUCIqWisNLzCJMU6su2BfSCpexNf4AxGRqNhqZ5p5vbFMEUeOTjWWWk+p8qoLvZueGji218CDaviiKqbEwarSDiXX9jRjyWIxL8ux0FhZqgInT06w1o15mCIYcsVZ4uQOGrmv73gi01NZTJQvjBGbW18npl/nbwBj1wny/VaQ7T4LBo5LvQAAAA==[0m[Pipeline] End of Pipeline
-Finished: SUCCESS
+[8mha:////4JGsyKYBbvGFcaA0eULde1uoh9PpVDwVsBUst5ZSsbt2AAAAox+LCAAAAAAAAP9tjbEOgjAURS8YB1dHP6IkDC7GybVh8Qsq1Fpo3sP2IUx+kb/mP0gkcfJO95zlvN5Yp4gjR6daS52nVHvVh8HNT40cu2vgUbV8UTVT4mBVZceKG3tasGKxWJblWGlsLNWBkycn2OrWPEwRDLniLHF2B43cN3c8kem5LCbKF6aI3W1oEtOv8zeAqe8FeVkKsv0HZ2sfwL0AAAA=[0m[Pipeline] }
+[8mha:////4PUldgsMlToJ0FUkhCGyXKUOFLAaVXXesI9/6luNGXhCAAAAox+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMKRQFSIitZKwwtMYowT6y7YF5KKF/E1/kBEJCq22plmXm8sU8SRo1ONpdZTqrzqQu+mpwaO7TXwoBq+qIopcbCqtEPJtT3NWLJYzMtyLDRWlqrAyZMTrHVjHqYIhlxxlji5g0bu6zueyPRUFhPlC2PE5tbXienX+RvA2HWCfLsTZPsPbRN2ZL0AAAA=[0m[Pipeline] // withEnv
+[8mha:////4BtSykPzNFLzJ6/VrXDvEGsj7i24KYv912UpOzcw/epIAAAAox+LCAAAAAAAAP9tjbEOgjAURS8YB1dHP6Ikhs04uTYsfkGFWgvNe9g+hMkv8tf8B4kkTt7pnrOc1xvrFHHk6FRrqfOUaq/6MLj5qZFjdw08qpYvqmZKHKyq7FhxY08LViwWy7IcK42NpTpw8uQEW92ahymCIVecJc7uoJH75o4nMj2XxUT5whSxuw1NYvp1/gYw9b0g35eCrPwA6/9Rob0AAAA=[0m[Pipeline] }
+[8mha:////4CzxDY+xkP62cG3WlIwv69eJf2Ih2Fppfw61hurKtYWUAAAAox+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMKRQFSIitZKwwtMYowT6y7YF5KKF/E1/kBEJCq22plmXm8sU8SRo1ONpdZTqrzqQu+mpwaO7TXwoBq+qIopcbCqtEPJtT3NWLJYzMtyLDRWlqrAyZMTrHVjHqYIhlxxlji5g0bu6zueyPRUFhPlC2PE5tbXienX+RvA2HWCfLsXZLsP+ENVAr0AAAA=[0m[Pipeline] // node
+[8mha:////4AhXm8Ca7VEE2eR0xe7ix/GqXz9TH3FBSeWFsqY1aqGwAAAAox+LCAAAAAAAAP9tjbEOgjAURS8YB1dHP6IkDC7GybVh8Qsq1Fpo3sP2IUx+kb/mP0gkcfJO95zlvN5Yp4gjR6daS52nVHvVh8HNT40cu2vgUbV8UTVT4mBVZceKG3tasGKxWJblWGlsLNWBkycn2OrWPEwRDLniLHF2B43cN3c8kem5LCbKF6aI3W1oEtOv8zeAqe8FebkXZOUHvgnyMr0AAAA=[0m[Pipeline] End of Pipeline
+org.jenkinsci.plugins.workflow.actions.ErrorAction$ErrorId: d46f6141-e568-47fe-901b-0b5cb4af8648
+Finished: ABORTED

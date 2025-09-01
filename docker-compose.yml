@@ -63,7 +63,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts:/scripts
       - ./:/workspace
-      
+
     environment:
       JENKINS_JAVA_OPTS: "-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
     deploy:
@@ -110,22 +110,20 @@ services:
     env_file:
       - .env
     environment:
+      #SPARK_MASTER_URL: "spark://spark-master:7077"        # usar el cluster
       SPARK_MASTER_URL: "local[1]"
-      HDFS_URI: "hdfs://namenode:9000"
-      DATA_PATH: "hdfs:///datalake/raw/bank_transactions"
-      MLFLOW_TRACKING_URI: "http://mlflow:5000"
-      # Jenkins desde .env
-      JENKINS_URL: "${JENKINS_URL}"
-      JENKINS_JOB: "${JENKINS_JOB}"
-      JENKINS_USER: "${JENKINS_USER}"
-      JENKINS_API_TOKEN: "${JENKINS_API_TOKEN}"
+      HDFS_URI: "hdfs://namenode:9000"                     # ya lo tienes
+      DATA_PATH: "hdfs://namenode:9000/datalake/raw/bank_transactions"  # <-- authority EXP.
       DRIFT_ALPHA: "${DRIFT_ALPHA:-0.01}"
       EXPORTER_PORT: "8010"
       JAVA_HOME: "/usr/lib/jvm/java-21-openjdk-amd64"
       PYSPARK_PYTHON: "/usr/local/bin/python"
       PYTHONUNBUFFERED: "1"
+      PSI_ALERT: "-1"          # truco temporal: cualquier PSI > -1 dispara el print
+      DRIFT_COOLDOWN_SECONDS: "999999"  # evita spamear Jenkins
       SAMPLE_MAX: "500"
-      LOOP_SECONDS: "60"
+      LOOP_SECONDS: "15"                                   # baja a 15s para ver ciclos
+      TRIGGER_EDGE_ONLY: "0"                               # imprime en cada ciclo
     volumes:
       - ./scripts:/app
     command: >
@@ -147,6 +145,7 @@ services:
       - spark-master
       - mlflow
       - jenkins
+      - namenode
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks: [default]

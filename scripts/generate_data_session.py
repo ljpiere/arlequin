@@ -29,10 +29,10 @@ TABLE_NAME       = "bank_transactions"
 OUTPUT_PATH      = f"{HDFS_BASE}/{TABLE_NAME}"
 
 # Control de tamaño: pocos registros, muchas columnas
-NUM_BATCHES              = 3           # cuantos lotes escribir
-NUM_RECORDS_PER_BATCH    = 200         # filas por lote (ajusta si quieres aún menos)
+NUM_BATCHES              = 5           # cuantos lotes escribir
+NUM_RECORDS_PER_BATCH    = 500         # filas por lote (ajusta si quieres aún menos)
 INTERVAL_SECONDS         = 5           # pausa entre lotes
-DRIFT_CHANGE_EACH_MIN    = 1           # cambia el drift cada X minutos
+DRIFT_CHANGE_EACH_MIN    = 0           # cambia el drift cada X minutos
 
 # ----------------- Faker -----------------
 fake = Faker("es_ES")
@@ -193,7 +193,8 @@ def main():
     for b in range(NUM_BATCHES):
         # Actualiza drift cada cierto tiempo
         if (datetime.now() - start_cycle).total_seconds() / 60.0 >= DRIFT_CHANGE_EACH_MIN:
-            drift_factor = random.uniform(0.0, 0.5)
+            # drift_factor = random.uniform(0.0, 0.5)
+            drift_factor = 1.0
             start_cycle = datetime.now()
             print(f"--- Data Drift factor actualizado a: {drift_factor:.2f} ---")
 

@@ -51,50 +51,49 @@ deps OK
 + docker exec -i 1bdc45b62cc9 sh -lc export MLFLOW_TRACKING_URI=http://mlflow:5000;                spark-submit --master spark://spark-master:7077                  --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000                  /scripts/train_model.py
 /usr/local/lib/python3.9/dist-packages/mlflow/utils/requirements_utils.py:20: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
   import pkg_resources  # noqa: TID251
-25/08/30 02:11:50 INFO SparkContext: Running Spark version 3.5.1
-25/08/30 02:11:50 INFO SparkContext: OS info Linux, 5.15.153.1-microsoft-standard-WSL2, amd64
-25/08/30 02:11:50 INFO SparkContext: Java version 11.0.16
-25/08/30 02:11:50 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-25/08/30 02:11:50 INFO ResourceUtils: ==============================================================
-25/08/30 02:11:50 INFO ResourceUtils: No custom resources configured for spark.driver.
-25/08/30 02:11:50 INFO ResourceUtils: ==============================================================
-25/08/30 02:11:50 INFO SparkContext: Submitted application: TrainModel
-25/08/30 02:11:50 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
-25/08/30 02:11:50 INFO ResourceProfile: Limiting resource is cpu
-25/08/30 02:11:50 INFO ResourceProfileManager: Added ResourceProfile id: 0
-25/08/30 02:11:50 INFO SecurityManager: Changing view acls to: root
-25/08/30 02:11:50 INFO SecurityManager: Changing modify acls to: root
-25/08/30 02:11:50 INFO SecurityManager: Changing view acls groups to: 
-25/08/30 02:11:50 INFO SecurityManager: Changing modify acls groups to: 
-25/08/30 02:11:50 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root; groups with view permissions: EMPTY; users with modify permissions: root; groups with modify permissions: EMPTY
-25/08/30 02:11:51 INFO Utils: Successfully started service 'sparkDriver' on port 40409.
-25/08/30 02:11:51 INFO SparkEnv: Registering MapOutputTracker
-25/08/30 02:11:51 INFO SparkEnv: Registering BlockManagerMaster
-25/08/30 02:11:51 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
-25/08/30 02:11:51 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
-25/08/30 02:11:51 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
-25/08/30 02:11:51 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-ee7e6c5b-6dc9-4800-b8f9-44d35bd25fd9
-25/08/30 02:11:51 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
-25/08/30 02:11:52 INFO SparkEnv: Registering OutputCommitCoordinator
-25/08/30 02:11:52 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
-25/08/30 02:11:52 INFO Utils: Successfully started service 'SparkUI' on port 4040.
-25/08/30 02:11:52 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
-25/08/30 02:11:53 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.7:7077 after 87 ms (0 ms spent in bootstraps)
-25/08/30 02:11:53 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20250830021153-0001
-25/08/30 02:11:53 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20250830021153-0001/0 on worker-20250830020150-172.18.0.8-38399 (172.18.0.8:38399) with 2 core(s)
-25/08/30 02:11:53 INFO StandaloneSchedulerBackend: Granted executor ID app-20250830021153-0001/0 on hostPort 172.18.0.8:38399 with 2 core(s), 1024.0 MiB RAM
-25/08/30 02:11:53 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 41283.
-25/08/30 02:11:53 INFO NettyBlockTransferService: Server created on pyspark-client:41283
-25/08/30 02:11:53 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
-25/08/30 02:11:53 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, pyspark-client, 41283, None)
-25/08/30 02:11:53 INFO BlockManagerMasterEndpoint: Registering block manager pyspark-client:41283 with 434.4 MiB RAM, BlockManagerId(driver, pyspark-client, 41283, None)
-25/08/30 02:11:53 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, pyspark-client, 41283, None)
-25/08/30 02:11:53 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, pyspark-client, 41283, None)
-25/08/30 02:11:53 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20250830021153-0001/0 is now RUNNING
-25/08/30 02:11:54 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+25/08/30 22:50:26 INFO SparkContext: Running Spark version 3.5.1
+25/08/30 22:50:26 INFO SparkContext: OS info Linux, 5.15.153.1-microsoft-standard-WSL2, amd64
+25/08/30 22:50:26 INFO SparkContext: Java version 11.0.16
+25/08/30 22:50:26 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+25/08/30 22:50:26 INFO ResourceUtils: ==============================================================
+25/08/30 22:50:26 INFO ResourceUtils: No custom resources configured for spark.driver.
+25/08/30 22:50:26 INFO ResourceUtils: ==============================================================
+25/08/30 22:50:26 INFO SparkContext: Submitted application: TrainModel
+25/08/30 22:50:27 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+25/08/30 22:50:27 INFO ResourceProfile: Limiting resource is cpu
+25/08/30 22:50:27 INFO ResourceProfileManager: Added ResourceProfile id: 0
+25/08/30 22:50:27 INFO SecurityManager: Changing view acls to: root
+25/08/30 22:50:27 INFO SecurityManager: Changing modify acls to: root
+25/08/30 22:50:27 INFO SecurityManager: Changing view acls groups to: 
+25/08/30 22:50:27 INFO SecurityManager: Changing modify acls groups to: 
+25/08/30 22:50:27 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root; groups with view permissions: EMPTY; users with modify permissions: root; groups with modify permissions: EMPTY
+25/08/30 22:50:28 INFO Utils: Successfully started service 'sparkDriver' on port 41833.
+25/08/30 22:50:28 INFO SparkEnv: Registering MapOutputTracker
+25/08/30 22:50:28 INFO SparkEnv: Registering BlockManagerMaster
+25/08/30 22:50:29 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+25/08/30 22:50:29 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+25/08/30 22:50:29 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+25/08/30 22:50:29 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-f6a697ab-1a82-4aad-b5bb-7fc8b22a5d1e
+25/08/30 22:50:29 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+25/08/30 22:50:29 INFO SparkEnv: Registering OutputCommitCoordinator
+25/08/30 22:50:30 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+25/08/30 22:50:30 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+25/08/30 22:50:31 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+25/08/30 22:50:31 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.8:7077 after 182 ms (0 ms spent in bootstraps)
+25/08/30 22:50:32 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20250830225032-0000
+25/08/30 22:50:32 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 35881.
+25/08/30 22:50:32 INFO NettyBlockTransferService: Server created on pyspark-client:35881
+25/08/30 22:50:32 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+25/08/30 22:50:33 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, pyspark-client, 35881, None)
+25/08/30 22:50:33 INFO BlockManagerMasterEndpoint: Registering block manager pyspark-client:35881 with 434.4 MiB RAM, BlockManagerId(driver, pyspark-client, 35881, None)
+25/08/30 22:50:33 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, pyspark-client, 35881, None)
+25/08/30 22:50:33 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, pyspark-client, 35881, None)
+25/08/30 22:50:33 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20250830225032-0000/0 on worker-20250830224423-172.18.0.9-44911 (172.18.0.9:44911) with 2 core(s)
+25/08/30 22:50:33 INFO StandaloneSchedulerBackend: Granted executor ID app-20250830225032-0000/0 on hostPort 172.18.0.9:44911 with 2 core(s), 1024.0 MiB RAM
+25/08/30 22:50:33 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
 /usr/local/lib/python3.9/dist-packages/_distutils_hack/__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
   warnings.warn(
-Logged to MLflow: http://mlflow:5000 F1: 1.0
+Logged to MLflow: http://mlflow:5000 F1: 0.8349514563106796
 [8mha:////4BCU/PDqpu9qfVOYZOE5wZYBbC9UJgPOudPFrQmo7aCHAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOICVEgoFa3lhheYxBgn1l2wHZyKF/E1/oBFJCq2WO1sM683LIOHmr3BTlNvKTQWBzeavDCx76+OE3Z8wYYpsNModZLc6tOMkqOGOUUJCwErTY3jYMlEWItOPVTlFJnqHH3+jgJK297hCYXI5qh8/MLkYXMb28D08/wVwDQMEcr9Ntfu8AEWNdkpvgAAAA==[0m[Pipeline] }
 [8mha:////4J8t8/1ih4HoeditHk4bH9fDHWt3dEuP6qv2SjbqpMJoAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOKi0FAgqrRWGl5gYmOcWHfGdkgqXsTX+AMWkajYYrWzzbzesI4BThwM9poGS7Gz6N1o8sKJw3B1PGHPF+yYIjuNrZ5aVrpZsOWkYUlRwkrARlPnOFoyCbailw9ZOUmmOqeQv6OA0qo7PKEQ2ZxkSF+YA+xuo4pMP89fAczeJyj3da768AEi+zpyvgAAAA==[0m[Pipeline] // stage
 [8mha:////4HL8aiPVUR/v2jkbSr29vfD5/11O1qhuWXEJIFiSMQa5AAAAph+LCAAAAAAAAP9tjTEOwjAQBC9BKWgpeYQjpaBBVLSWG15gYmOcWHfBvpBUvIiv8QcMkajYamel1TxfUKUIB4pOdBZ7j6n1Ygijy01MFPtLoEl0dBYtYaJghbKTImOPCypiC0uKElYS1hbbQMmjY9jITt91HTS6+sQxb3sJpTc3eEAhs5l15C/MEbbX0STCn+evAOaBodgxlE3zOVZv4eZmdcEAAAA=[0m[Pipeline] stage
