@@ -50,7 +50,8 @@ Consideraciones operativas
 - El drift se modela elevando montos y riesgo de manera probabilística.
 """
 
-import time, random, socket
+import time, random, socket, os
+import argparse
 from datetime import datetime, timedelta
 from faker import Faker
 
@@ -268,6 +269,21 @@ def main():
         - Escritura de archivos Parquet particionados en HDFS.
         - Mensajes informativos por consola sobre progreso y drift aplicado.
     """
+    # CLI/env args
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--drift-factor", type=float, default=None, help="Fija el drift_factor en [0,1] para todas las filas (ignora política interna)")
+    ap.add_argument("--batches", type=int, default=None, help="Sobrescribe NUM_BATCHES")
+    ap.add_argument("--batch-size", type=int, default=None, help="Sobrescribe NUM_RECORDS_PER_BATCH")
+    ap.add_argument("--interval", type=int, default=None, help="Sobrescribe INTERVAL_SECONDS entre lotes")
+    args, _ = ap.parse_known_args()
+
+    env_df = os.getenv("DRIFT_FACTOR")
+    fixed_drift = args.drift_factor if args.drift_factor is not None else (float(env_df) if env_df else None)
+
+    nb = args.batches if args.batches is not None else NUM_BATCHES
+    bs = args.batch_size if args.batch_size is not None else NUM_RECORDS_PER_BATCH
+    itv = args.interval if args.interval is not None else INTERVAL_SECONDS
+
     wait_for_master()
 
     spark = (
@@ -285,18 +301,19 @@ def main():
     print(f"Escribiendo en: {OUTPUT_PATH}  (partitions: dt, hour, account_type)")
 
     start_cycle = datetime.now()
-    drift_factor = 0.0
+    drift_factor = 0.0 if fixed_drift is None else float(max(0.0, min(1.0, fixed_drift)))
 
-    for b in range(NUM_BATCHES):
-        # Actualiza drift cada cierto tiempo
-        if (datetime.now() - start_cycle).total_seconds() / 60.0 >= DRIFT_CHANGE_EACH_MIN:
-            # drift_factor = random.uniform(0.0, 0.5)
-            drift_factor = 1.0
-            start_cycle = datetime.now()
-            print(f"--- Data Drift factor actualizado a: {drift_factor:.2f} ---")
+    for b in range(nb):
+        # Política de drift: si se fija por CLI/env, se usa todo el tiempo;
+        # si no, se mantiene el comportamiento anterior "forzado a 1.0".
+        if fixed_drift is None:
+            if (datetime.now() - start_cycle).total_seconds() / 60.0 >= DRIFT_CHANGE_EACH_MIN:
+                drift_factor = 1.0
+                start_cycle = datetime.now()
+        print(f"--- Drift factor activo: {drift_factor:.2f} ---")
 
         now_ts = datetime.now()
-        batch = [generate_one(now_ts, drift_factor) for _ in range(NUM_RECORDS_PER_BATCH)]
+        batch = [generate_one(now_ts, drift_factor) for _ in range(bs)]
 
         df = spark.createDataFrame(batch, schema=schema)
 
@@ -310,9 +327,9 @@ def main():
               .partitionBy("dt", "hour", "account_type")
               .parquet(OUTPUT_PATH)
         )
-        print(f"Lote {b+1}/{NUM_BATCHES} -> {NUM_RECORDS_PER_BATCH} filas escrito.")
+        print(f"Lote {b+1}/{nb} -> {bs} filas escrito.")
 
-        time.sleep(INTERVAL_SECONDS)
+        time.sleep(itv)
 
     print("✔ Generación finalizada.")
     spark.stop()

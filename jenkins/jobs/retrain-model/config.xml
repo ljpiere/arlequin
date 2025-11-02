@@ -28,7 +28,7 @@
           set -eu
           CID_PY=$(docker ps -qf &quot;label=com.docker.compose.service=pyspark-client&quot; || true)
           if [ -z &quot;$CID_PY&quot; ]; then CID_PY=$(docker ps -qf &quot;name=pyspark-client&quot;); fi
-          [ -n &quot;$CID_PY&quot; ] || { echo &quot;[ERROR] No se encontró el contenedor pyspark-client&quot;; docker ps; exit 1; }
+          [ -n &quot;$CID_PY&quot; ] || { echo &quot;[ERROR] No se encontro el contenedor pyspark-client&quot;; docker ps; exit 1; }
           echo &quot;$CID_PY&quot; &gt; .cid_py
         &apos;&apos;&apos;
       }
@@ -44,7 +44,7 @@
             if docker exec -i &quot;$CID_PY&quot; sh -lc &quot;curl -sS -I ${MLFLOW_URL} &gt;/dev/null 2&gt;&amp;1&quot;; then
               echo &quot;[OK] MLflow responde&quot;; break
             fi
-            echo &quot;[wait] MLflow aún no responde (${i}/20)&quot;; sleep 3
+            echo &quot;[wait] MLflow aun no responde (${i}/20)&quot;; sleep 3
             [ $i -eq 20 ] &amp;&amp; { echo &quot;[ERROR] MLflow no responde en ${MLFLOW_URL}&quot;; exit 2; }
           done
 
@@ -64,23 +64,83 @@ PY
         &apos;&apos;&apos;
       }
     }
-    stage(&apos;Train with Spark&apos;) {
+    stage(&apos;Train with Spark + log&apos;) {
       steps {
         sh &apos;&apos;&apos;
           set -eu
           CID_PY=$(cat .cid_py)
-          CMD=&quot;export MLFLOW_TRACKING_URI=${MLFLOW_URL}; \
-               spark-submit --master ${SPARK_MASTER_URL} \
-                 --conf spark.hadoop.fs.defaultFS=${HDFS_URI} \
-                 ${TRAIN_SCRIPT}&quot;
-          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;$CMD&quot;
+          METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
+          mkdir -p &quot;$METRICS_DIR&quot;
+          RUNS_CSV=&quot;$METRICS_DIR/jenkins_runs.csv&quot;
+          if [ ! -f &quot;$RUNS_CSV&quot; ]; then echo &quot;timestamp,build,stage,cpu_perc,mem_perc,mem_used_mb,mem_limit_mb,duration_s&quot; &gt; &quot;$RUNS_CSV&quot;; fi
+
+          # Pre-stats
+          start_ts=$(date +%s)
+          stats=$(docker stats --no-stream --format '{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}' &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
+          mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
+          mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos; )
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | sed &apos;s/[^0-9\.]*//g&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | sed &apos;s/[^0-9\.]*//g&apos;)
+          echo &quot;$(date -Iseconds),$BUILD_NUMBER,pre,$cpu,$mem_perc,$used,$limit,0&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
+
+          # Training
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;\
+            export MLFLOW_TRACKING_URI=${MLFLOW_URL}; \
+            export EXPERIMENT_LOG_FILE=/tmp/arlequin-logs/training_log.csv; \
+            mkdir -p /tmp/arlequin-logs; \
+            spark-submit --master ${SPARK_MASTER_URL} \
+              --conf spark.hadoop.fs.defaultFS=${HDFS_URI} \
+              ${TRAIN_SCRIPT}&quot;
+
+          # Post-stats
+          end_ts=$(date +%s)
+          dur=$((end_ts - start_ts))
+          stats=$(docker stats --no-stream --format '{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}' &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
+          mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
+          mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos; )
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | sed &apos;s/[^0-9\.]*//g&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | sed &apos;s/[^0-9\.]*//g&apos;)
+          echo &quot;$(date -Iseconds),$BUILD_NUMBER,post,$cpu,$mem_perc,$used,$limit,$dur&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
+
+          # Pull training and drift CSV from container (opcional)
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/training_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/drift_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+        &apos;&apos;&apos;
+      }
+    }
+    stage(&apos;Evaluate stats&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          CID_PY=$(cat .cid_py)
+          METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
+          mkdir -p &quot;$METRICS_DIR&quot;
+
+          # Ensure SciPy and dependencies for evaluator
+          docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 - &lt;&lt;PY
+try:
+ import scipy, pandas, numpy
+ print("eval deps OK")
+except Exception:
+ raise SystemExit(1)
+PY&apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 -m pip install --no-cache-dir -r /scripts/requirements-drift.txt&apos;
+
+          # Run evaluator inside the container using internal CSVs
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;python3 /scripts/eval_stats.py --input /tmp/arlequin-logs/training_log.csv --drift-input /tmp/arlequin-logs/drift_log.csv --out /tmp/arlequin-logs/mannwhitney_results.csv --fdr || true&quot;
+
+          # Copy results to workspace
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/mannwhitney_results.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/training_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/drift_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
         &apos;&apos;&apos;
       }
     }
   }
   post {
-    success { echo &apos;✅ Entrenamiento OK — revisa el run en MLflow.&apos; }
-    failure { echo &apos;❌ Falló — mira los logs arriba.&apos; }
+    success { echo &apos;Entrenamiento OK - revisa el run en MLflow.&apos; }
+    failure { echo &apos;Fallo - mira los logs arriba.&apos; }
   }
 }
 </script>

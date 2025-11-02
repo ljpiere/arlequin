@@ -48,6 +48,8 @@ Notas operativas
 """
 
 import os, sys, time
+import csv
+from pathlib import Path
 from datetime import datetime
 os.environ.setdefault("GIT_PYTHON_REFRESH", "quiet")  # silencia el warning de git en MLflow
 
@@ -68,6 +70,34 @@ MLFLOW_URI   = os.getenv("MLFLOW_TRACKING_URI","http://mlflow:5000")
 
 EXPERIMENT_NAME = "bank-fraud"
 FEATURES_CANDIDATES = ["amount","fee","amount_usd","risk_score"]
+
+
+def _append_training_log(filepath: str, row: dict):
+    """Append a single CSV row with training/test metrics.
+
+    The file is created with a header if it does not exist. This is intentionally
+    light-weight to avoid adding new dependencies.
+
+    Columns written are the keys of ``row`` in a stable order.
+    """
+    if not filepath:
+        return
+    fp = Path(filepath)
+    fp.parent.mkdir(parents=True, exist_ok=True)
+    # Stable column order
+    fieldnames = [
+        "timestamp", "scenario", "mlflow_run_id", "label_strategy",
+        "total_rows", "positives", "negatives", "model", "f1"
+    ]
+    # Ensure all keys exist
+    for k in fieldnames:
+        row.setdefault(k, "")
+    file_exists = fp.exists()
+    with fp.open("a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        if not file_exists:
+            w.writeheader()
+        w.writerow({k: row.get(k, "") for k in fieldnames})
 
 def get_spark():
     """Crea y retorna una SparkSession adecuada para lectura desde HDFS.
@@ -207,6 +237,27 @@ def main():
         mlflow.log_metric("f1", float(f1))
         mlflow.sklearn.log_model(clf, artifact_path="model")
         print("Logged to MLflow:", mlflow.get_tracking_uri(), "F1:", f1)
+
+        # Optional CSV log for offline analysis
+        try:
+            active = mlflow.active_run()
+            run_id = active.info.run_id if active else ""
+        except Exception:
+            run_id = ""
+        _append_training_log(
+            os.getenv("EXPERIMENT_LOG_FILE", ""),
+            {
+                "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
+                "scenario": os.getenv("EVAL_SCENARIO", ""),
+                "mlflow_run_id": run_id,
+                "label_strategy": label_strategy,
+                "total_rows": total,
+                "positives": pos,
+                "negatives": neg,
+                "model": "logreg",
+                "f1": float(f1),
+            },
+        )
 
     spark.stop()
     return 0

@@ -61,6 +61,8 @@ Notas operativas
 
 import os
 import time
+import csv
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import requests
@@ -69,6 +71,7 @@ from prometheus_client import start_http_server, Gauge, Counter
 from pyspark.sql import SparkSession
 from pyspark import SparkConf
 from pyspark.sql.types import NumericType, StringType
+from pyspark.sql.functions import col, lit
 from scipy.stats import ks_2samp, chi2_contingency
 
 # ========= Config =========
@@ -80,6 +83,7 @@ ALPHA         = float(os.getenv("DRIFT_ALPHA", "0.01"))
 EXPORTER_PORT = int(os.getenv("EXPORTER_PORT", "8010"))
 LOOP_SECONDS  = int(os.getenv("LOOP_SECONDS", "30"))
 COOLDOWN_S    = int(os.getenv("DRIFT_COOLDOWN_SECONDS", "300"))  # 5 min
+WINDOW_MIN    = int(os.getenv("DRIFT_WINDOW_MINUTES", "5"))
 
 EDGE_ONLY = os.getenv("TRIGGER_EDGE_ONLY", "1") == "1"
 DRIFT_CLEAR_STREAK = int(os.getenv("DRIFT_CLEAR_STREAK", "3"))
@@ -113,6 +117,31 @@ g_pval_col  = Gauge("pvalue", "p-value per column", ["col"])
 _last_trigger_ts = 0.0
 _prev_alert = False          # True = ya disparamos para el drift actual
 _clear_ok_streak = 0         # rachas sin drift para rearmar
+
+# ========= CSV logging =========
+def _append_drift_log(row: dict):
+    """Append a single row with drift metrics to a CSV.
+
+    Controlled by the env var DRIFT_LOG_FILE; if empty, does nothing.
+    The file is created with a header if it doesn't exist.
+    """
+    path = os.getenv("DRIFT_LOG_FILE", "")
+    if not path:
+        return
+    fp = Path(path)
+    fp.parent.mkdir(parents=True, exist_ok=True)
+    # stable header: timestamp, scenario, model, psi, pos_ratio, drift_any, score_col
+    # plus dynamic p-values per column as p_<col>
+    base_fields = ["timestamp", "scenario", "model", "psi", "pos_ratio", "drift_any", "score_col"]
+    # Ensure stable order for p_ columns by sorting keys
+    p_keys = sorted(k for k in row.keys() if k.startswith("p_"))
+    fieldnames = base_fields + p_keys
+    file_exists = fp.exists()
+    with fp.open("a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        if not file_exists:
+            w.writeheader()
+        w.writerow({k: row.get(k, "") for k in fieldnames})
 
 # ========= Spark =========
 def get_spark():
@@ -420,17 +449,34 @@ def detect_and_export_loop():
 
     while True:
         try:
-            sdf = spark.read.parquet(DATA_PATH)
+            sdf_all = spark.read.parquet(DATA_PATH)
 
-            num_cols = numeric_columns(sdf)
-            cat_cols = string_columns(sdf)
+            # Ventanas móviles por tiempo de ingesta: ref=[-2W,-W), rec=[-W,now)
+            recent_from = pd.Timestamp.utcnow() - pd.Timedelta(minutes=WINDOW_MIN)
+            ref_from    = pd.Timestamp.utcnow() - pd.Timedelta(minutes=2*WINDOW_MIN)
+            ref_to      = recent_from
 
-            pdf_num_ref = to_pdf_sample(sdf, num_cols, n=SAMPLE_MAX, seed=42)
-            pdf_num_rec = to_pdf_sample(sdf, num_cols, n=SAMPLE_MAX, seed=7)
-            pdf_cat_ref = to_pdf_sample(sdf, cat_cols, n=SAMPLE_MAX, seed=42)
-            pdf_cat_rec = to_pdf_sample(sdf, cat_cols, n=SAMPLE_MAX, seed=7)
+            sdf = sdf_all
+            sdf_ref = sdf_all
+            sdf_rec = sdf_all
+            if "ingest_ts" in sdf_all.columns:
+                sdf_ref = sdf_all.filter((col("ingest_ts") >= lit(ref_from.to_pydatetime())) & (col("ingest_ts") < lit(ref_to.to_pydatetime())))
+                sdf_rec = sdf_all.filter(col("ingest_ts") >= lit(recent_from.to_pydatetime()))
+            else:
+                # Fallback: usar todo y hacer split aleatorio (menor fidelidad)
+                sdf_ref = sdf_all.sample(False, 0.5, 13)
+                sdf_rec = sdf_all.subtract(sdf_ref)
+
+            num_cols = numeric_columns(sdf_all)
+            cat_cols = string_columns(sdf_all)
+
+            pdf_num_ref = to_pdf_sample(sdf_ref, num_cols, n=SAMPLE_MAX, seed=42)
+            pdf_num_rec = to_pdf_sample(sdf_rec, num_cols, n=SAMPLE_MAX, seed=7)
+            pdf_cat_ref = to_pdf_sample(sdf_ref, cat_cols, n=SAMPLE_MAX, seed=42)
+            pdf_cat_rec = to_pdf_sample(sdf_rec, cat_cols, n=SAMPLE_MAX, seed=7)
 
             drift_any = False
+            pvals_row = {}
             for c in num_cols:
                 try:
                     p = ks_num(pdf_num_rec[c].values, pdf_num_ref[c].values)
@@ -439,6 +485,7 @@ def detect_and_export_loop():
                 g_pval_col.labels(c).set(p)
                 g_drift_col.labels(c).set(1 if p < ALPHA else 0)
                 drift_any = drift_any or (p < ALPHA)
+                pvals_row[f"p_{c}"] = float(p)
 
             for c in cat_cols:
                 try:
@@ -448,6 +495,7 @@ def detect_and_export_loop():
                 g_pval_col.labels(c).set(p)
                 g_drift_col.labels(c).set(1 if p < ALPHA else 0)
                 drift_any = drift_any or (p < ALPHA)
+                pvals_row[f"p_{c}"] = float(p)
 
             score_col = find_score_column(num_cols)
             psi_val = 0.0
@@ -474,6 +522,22 @@ def detect_and_export_loop():
             g_pos_ratio.labels(MODEL_NAME).set(pos_ratio)
 
             should_trigger = drift_any or (psi_val is not None and psi_val > PSI_ALERT)
+
+            # CSV log row
+            try:
+                _append_drift_log({
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+                    "scenario": os.getenv("EVAL_SCENARIO", ""),
+                    "model": MODEL_NAME,
+                    "psi": float(psi_val),
+                    "pos_ratio": float(pos_ratio) if pos_ratio == pos_ratio else "",  # keep empty for NaN
+                    "drift_any": int(bool(drift_any)),
+                    "score_col": score_col or "",
+                    **pvals_row,
+                })
+            except Exception as _e:
+                # Non-fatal
+                pass
 
             global _prev_alert, _clear_ok_streak
 
