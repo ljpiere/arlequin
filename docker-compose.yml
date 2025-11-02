@@ -121,7 +121,7 @@ services:
       PYTHONUNBUFFERED: "1"
       PSI_ALERT: "-1"          # truco temporal: cualquier PSI > -1 dispara el print
       DRIFT_COOLDOWN_SECONDS: "999999"  # evita spamear Jenkins
-      SAMPLE_MAX: "500"
+      SAMPLE_MAX: "500 > 7|"
       LOOP_SECONDS: "15"                                   # baja a 15s para ver ciclos
       TRIGGER_EDGE_ONLY: "0"                               # imprime en cada ciclo
     volumes:
