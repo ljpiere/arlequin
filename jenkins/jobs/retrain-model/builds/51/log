@@ -1,0 +1,101 @@
+Started by user [8mha:////4Nl2Q2pWAvXxMmkXmPmtW5HmSafkxvnPMxuEVAbW9pqYAAAAmh+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAyOEgY+/dLi1CL93Jz4lKLMtBIAlv7Fd8MAAAA=[0mml_drift
+[8mha:////4Dg0lofcHc3blb2tWvJQLY4UgmFe/3qWhOzKa74XwBrdAAAAoh+LCAAAAAAAAP9tjTEOwjAQBM8BClpKHuFItIiK1krDC0x8GCfWnbEdkooX8TX+gCESFVvtrLSa5wtWKcKBo5UdUu8otU4GP9jS5Mixv3geZcdn2TIl9igbHBs2eJyx4YwwR1SwULBGaj0nRzbDRnX6rmuvydanHMu2V1A5c4MHCFXMWcf8hSnC9jqYxPTz/BXAFEIGsfuclm8zQVqFvQAAAA==[0m[Pipeline] Start of Pipeline
+[8mha:////4GWmmwr/swDno9hrbT7SbKEuocJgW6BaJ/0/qNoY5mgiAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycohUghExsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jduZBmjwAAAAA==[0m[Pipeline] node
+Running on [8mha:////4KaUya+WUX7T9R1duA6rZ2Tr9BIUqF/o+kSOPwaH3cqjAAAAoR+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAz2EgZR/eT83ILSktQifY2k0sycEt3MPE19AHHxbH3KAAAA[0mJenkins in /var/jenkins_home/workspace/retrain-model
+[8mha:////4PSXudAluoPcd+mgeFKmyuSlkTGZLZ3A5ZDBHaInVYBhAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0gA0xsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jfoP95RwAAAAA==[0m[Pipeline] {
+[8mha:////4BRbMsnnHEpqfk0ERU7TjOJE/UuoR08adWgDoFPo+JG6AAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0gQkxsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jc09154wAAAAA==[0m[Pipeline] withEnv
+[8mha:////4Op+QZtALvOp3Q3Wess6+p2lMzmsC6Lv3TAxlkSzUFQcAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0ggUxsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jek7ggRwAAAAA==[0m[Pipeline] {
+[8mha:////4IwzZoa8bDksoxGlFKBOqby9wU0hZk2AW2K0v2gc3ASsAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0gwExsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jcChmMxwAAAAA==[0m[Pipeline] stage
+[8mha:////4HBAUomVn5ecE6tKE58f/6UnogCceipmfR1YoISclyngAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0BAkxsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jfpX/cvwAAAAA==[0m[Pipeline] { (Resolve containers)
+[8mha:////4KREBdJMdgku34I+cM8equXVpuxUa15ebODcWTHeInbuAAAAoh+LCAAAAAAAAP9tjTEOAiEURD9rLGwtPQTbaoyVLaHxBMgiwpL/WWDdrTyRV/MOEjexcpJJ5k3zXm9Y5wQnSpZ7g73DrB2PYbR18YlSfws0cU9XrgkzBcOlmSR15rygpGJgCWtgJWBjUAfKDm2BrfDqodqg0LaXkup3FNC4boAnMFHNRaXyhTnB7j52mfDn+SuAORZg+9pD/AAeoCAqvAAAAA==[0m[Pipeline] sh
++ set -eu
++ docker ps -qf label=com.docker.compose.service=pyspark-client
++ CID_PY=1bdc45b62cc9
++ [ -z 1bdc45b62cc9 ]
++ [ -n 1bdc45b62cc9 ]
++ echo 1bdc45b62cc9
+[8mha:////4BetZP49ipTveo7qpS+7GvU9fFQGYME842D+D5McUHRfAAAAox+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMKBDglR0VppeIFJjHFi3QX7QlLxIr7GH4iIRMVWO9PM641lijhydKqx1HpKlVdd6N301MCxvQYeVMMXVTElDlaVdii5tqcZSxaLeVmOhcbKUhU4eXKCtW7MwxTBkCvOEid30Mh9fccTmZ7KYqJ8YYzY3Po6Mf06fwMYu06Q77aCbP8Brmfz270AAAA=[0m[Pipeline] }
+[8mha:////4I+XG7+oA/r95rT+MUawdebEam5Orwd2CTdhH4GBxLF2AAAAox+LCAAAAAAAAP9tjTESgjAQRT84FraWHiIMlYVjZZuh8QQRYgxkdjFZhMoTeTXvICMzVv7qv9e81xvrFHHk6FRrqfOUaq/6MLj5qZFjdw08qpYvqmZKHKyq7FhxY08LViwWy7IcK42NpTpw8uQEW92ahymCIVecJc7uoJH75o4nMj2XxUT5whSxuw1NYvp1/gYw9b0gL0tBtv8Aj1Msdr0AAAA=[0m[Pipeline] // stage
+[8mha:////4MPDzgODiF+L3XQmMmdY9jZiAYXsXOmSgLHLFe5/luqRAAAAph+LCAAAAAAAAP9tjTEOwjAQBM9BKWgpeYQjKGgQFa3lhheY2Bgn1l2wLyQVL+Jr/IFAJCq22llpNc8XlDnBgZKXjcM2YK6D7GLvpyYHSu0l0iAbOsuaMFN0UrtBk3XHGTWxgzmigIWCpcM6Ug7oGVaqMXdTRYO+OnGatr2CItgbPECoycwm8RfGBOtrbzPhz/NXAGPHIHYMxWb7OZZvfPyORMEAAAA=[0m[Pipeline] stage
+[8mha:////4JGATYQK7g+JjfKl4yZElKAlGti113Mqjb1TaH/0bpIVAAAAph+LCAAAAAAAAP9tjTEOwjAUQ3+LOrAycohUwIiYukZZOEFoQkgb/V9+UtqJE3E17kBLJSY8WLYl673eUESGE7ETjcXWY6y96ELvpiQG4vYaaBANXURNGClYoeygyNhqqYqShUVZDisJa4t1oOjRJdjIRj90GTS68px42o4Scm/u8IRMTuSkOX3LyLC99SYS/jh/ATB2CfLdfrbD/Cw+y7kUycIAAAA=[0m[Pipeline] { (Train with Spark + log)
+[8mha:////4LZ5dxwcxgzzXwcTAXLbRtgF9Gx5BfefM1M9mZhKg9jRAAAApB+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIiBB2iSmu54QUmNsaJdWdsh6TiRXyNPxCIRMUWq51t5vmCZYpw5GixNdQ5So3D4Hs7LRw4dhfPA7Z8xoYpsTcozSBZm3pGydnAnKKEhYCVocZzcmQzrEWr7qryimx1ynH6DgJKp2/wgEJM5qxi/sIYYXPtdWL6ef4KYAwZyu3uU/vwBgq0rvS+AAAA[0m[Pipeline] sh
++ set -eu
++ cat .cid_py
++ CID_PY=1bdc45b62cc9
++ METRICS_DIR=/var/jenkins_home/workspace/retrain-model/metrics
++ mkdir -p /var/jenkins_home/workspace/retrain-model/metrics
++ RUNS_CSV=/var/jenkins_home/workspace/retrain-model/metrics/jenkins_runs.csv
++ [ ! -f /var/jenkins_home/workspace/retrain-model/metrics/jenkins_runs.csv ]
++ date +%s
++ start_ts=1762399880
++ docker stats --no-stream --format {{.CPUPerc}},{{.MemUsage}},{{.MemPerc}} 1bdc45b62cc9
++ stats=0.00%,19.18MiB / 3.577GiB,0.52%
++ + + echocut -d,tr -d 0.00%,19.18MiB / 3.577GiB,0.52%
+ -f1
+ %
++ cpu=0.00
++ + cutecho+  -d, -f3 0.00%,19.18MiB / 3.577GiB,0.52%
+tr -d
+ %
++ mem_perc=0.52
++ + echo+ cut -d, 0.00%,19.18MiB / 3.577GiB,0.52%
+tr -f2
+ -d  
++ mem_pair=19.18MiB/3.577GiB
++ + + echo 19.18MiB/3.577GiBcut -d/sed s/[^0-9.]*//g
+ -f1
+
++ used=19.18
++ + echo 19.18MiB/3.577GiB+ cut -d/
+sed -f2
+ s/[^0-9.]*//g
++ limit=3.577
++ date -Iseconds
++ echo 2025-11-06T03:31:22+00:00,51,pre,0.00,0.52,19.18,3.577,0
++ docker exec -i 1bdc45b62cc9 sh -lc             export MLFLOW_TRACKING_URI=http://mlflow:5000;             export EXPERIMENT_LOG_FILE=/tmp/arlequin-logs/training_log.csv;             mkdir -p /tmp/arlequin-logs;             spark-submit --master spark://spark-master:7077               --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000               /scripts/train_model.py
+/usr/local/lib/python3.9/dist-packages/mlflow/utils/requirements_utils.py:20: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources  # noqa: TID251
+25/11/06 03:31:35 INFO SparkContext: Running Spark version 3.5.1
+25/11/06 03:31:35 INFO SparkContext: OS info Linux, 5.15.153.1-microsoft-standard-WSL2, amd64
+25/11/06 03:31:35 INFO SparkContext: Java version 11.0.16
+25/11/06 03:31:35 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+25/11/06 03:31:36 INFO ResourceUtils: ==============================================================
+25/11/06 03:31:36 INFO ResourceUtils: No custom resources configured for spark.driver.
+25/11/06 03:31:36 INFO ResourceUtils: ==============================================================
+25/11/06 03:31:36 INFO SparkContext: Submitted application: TrainModel
+25/11/06 03:31:36 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+25/11/06 03:31:36 INFO ResourceProfile: Limiting resource is cpu
+25/11/06 03:31:36 INFO ResourceProfileManager: Added ResourceProfile id: 0
+25/11/06 03:31:36 INFO SecurityManager: Changing view acls to: root
+25/11/06 03:31:36 INFO SecurityManager: Changing modify acls to: root
+25/11/06 03:31:36 INFO SecurityManager: Changing view acls groups to: 
+25/11/06 03:31:36 INFO SecurityManager: Changing modify acls groups to: 
+25/11/06 03:31:36 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root; groups with view permissions: EMPTY; users with modify permissions: root; groups with modify permissions: EMPTY
+25/11/06 03:31:37 INFO Utils: Successfully started service 'sparkDriver' on port 41989.
+25/11/06 03:31:37 INFO SparkEnv: Registering MapOutputTracker
+25/11/06 03:31:38 INFO SparkEnv: Registering BlockManagerMaster
+25/11/06 03:31:38 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+25/11/06 03:31:38 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+25/11/06 03:31:38 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+25/11/06 03:31:38 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-979e5f89-40dd-4eb5-ba84-99354a05b848
+25/11/06 03:31:38 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+25/11/06 03:31:38 INFO SparkEnv: Registering OutputCommitCoordinator
+25/11/06 03:31:38 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+25/11/06 03:31:39 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+25/11/06 03:31:39 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+25/11/06 03:31:39 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.9:7077 after 93 ms (0 ms spent in bootstraps)
+25/11/06 03:31:39 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20251106033139-0001
+25/11/06 03:31:39 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20251106033139-0001/0 on worker-20251106031014-172.18.0.10-33353 (172.18.0.10:33353) with 1 core(s)
+25/11/06 03:31:39 INFO StandaloneSchedulerBackend: Granted executor ID app-20251106033139-0001/0 on hostPort 172.18.0.10:33353 with 1 core(s), 1024.0 MiB RAM
+25/11/06 03:31:39 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 39373.
+25/11/06 03:31:39 INFO NettyBlockTransferService: Server created on pyspark-client:39373
+25/11/06 03:31:39 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+25/11/06 03:31:39 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, pyspark-client, 39373, None)
+25/11/06 03:31:39 INFO BlockManagerMasterEndpoint: Registering block manager pyspark-client:39373 with 434.4 MiB RAM, BlockManagerId(driver, pyspark-client, 39373, None)
+25/11/06 03:31:39 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, pyspark-client, 39373, None)
+25/11/06 03:31:39 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, pyspark-client, 39373, None)
+25/11/06 03:31:40 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20251106033139-0001/0 is now RUNNING
+25/11/06 03:31:40 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+Resuming build at Thu Nov 06 03:40:29 UTC 2025 after Jenkins restart
+Ready to run at Thu Nov 06 03:40:30 UTC 2025
+Pausing (shutting down)

@@ -1,0 +1,384 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-build plugin="workflow-job@1540.v295eccc9778f">
+  <actions>
+    <hudson.model.CauseAction>
+      <causeBag class="linked-hash-map">
+        <entry>
+          <hudson.model.Cause_-UserIdCause>
+            <userId>ml_drift</userId>
+          </hudson.model.Cause_-UserIdCause>
+          <int>1</int>
+        </entry>
+      </causeBag>
+    </hudson.model.CauseAction>
+    <org.jenkinsci.plugins.workflow.libs.LibrariesAction plugin="pipeline-groovy-lib@752.vdddedf804e72">
+      <libraries/>
+    </org.jenkinsci.plugins.workflow.libs.LibrariesAction>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.ExecutionModelAction plugin="pipeline-model-definition@2.2265.v140e610fe9d5">
+      <stagesUUID>1f977e38-77a9-448d-b158-052dbdbbb255</stagesUUID>
+      <pipelineDefs>
+        <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTPipelineDef plugin="pipeline-model-api@2.2265.v140e610fe9d5">
+          <stages>
+            <stages>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+                <name>Resolve containers</name>
+                <branches>
+                  <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                    <name>default</name>
+                    <steps>
+                      <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                        <name>sh</name>
+                        <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                          <arguments class="linked-hash-map">
+                            <entry>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                                <key>script</key>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                                <value class="string">
+          set -eu
+          CID_PY=$(docker ps -qf &quot;label=com.docker.compose.service=pyspark-client&quot; || true)
+          if [ -z &quot;$CID_PY&quot; ]; then CID_PY=$(docker ps -qf &quot;name=pyspark-client&quot;); fi
+          [ -n &quot;$CID_PY&quot; ] || { echo &quot;[ERROR] pyspark-client no encontrado&quot;; docker ps; exit 1; }
+          echo &quot;$CID_PY&quot; &gt; .cid_py
+        </value>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                            </entry>
+                          </arguments>
+                        </args>
+                      </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                    </steps>
+                  </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                </branches>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+                <name>Train with Spark + log</name>
+                <branches>
+                  <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                    <name>default</name>
+                    <steps>
+                      <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                        <name>sh</name>
+                        <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                          <arguments class="linked-hash-map">
+                            <entry>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                                <key>script</key>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                                <value class="string">
+          set -eu
+          CID_PY=$(cat .cid_py)
+          METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
+          mkdir -p &quot;$METRICS_DIR&quot;
+          RUNS_CSV=&quot;$METRICS_DIR/jenkins_runs.csv&quot;
+          if [ ! -f &quot;$RUNS_CSV&quot; ]; then echo &quot;timestamp,build,stage,cpu_perc,mem_perc,mem_used_mb,mem_limit_mb,duration_s&quot; &gt; &quot;$RUNS_CSV&quot;; fi
+
+          # Pre-stats
+          start_ts=$(date +%s)
+          stats=$(docker stats --no-stream --format &apos;{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}&apos; &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
+          mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
+          mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos; )
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | sed &apos;s/[^0-9.]*//g&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | sed &apos;s/[^0-9.]*//g&apos;)
+          echo &quot;$(date -Iseconds),$BUILD_NUMBER,pre,$cpu,$mem_perc,$used,$limit,0&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
+
+          # Training
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;            export MLFLOW_TRACKING_URI=${MLFLOW_URL};             export EXPERIMENT_LOG_FILE=/tmp/arlequin-logs/training_log.csv;             mkdir -p /tmp/arlequin-logs;             spark-submit --master ${SPARK_MASTER_URL}               --conf spark.hadoop.fs.defaultFS=${HDFS_URI}               ${TRAIN_SCRIPT}&quot;
+
+          # Post-stats
+          end_ts=$(date +%s)
+          dur=$((end_ts - start_ts))
+          stats=$(docker stats --no-stream --format &apos;{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}&apos; &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
+          mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
+          mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos; )
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | tr -cd &apos;0-9.
+&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | tr -cd &apos;0-9.
+&apos;)
+          echo &quot;$(date -Iseconds),$BUILD_NUMBER,post,$cpu,$mem_perc,$used,$limit,$dur&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
+
+          # Pull training CSV from container (optional)
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/training_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/drift_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+        </value>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                            </entry>
+                          </arguments>
+                        </args>
+                      </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                    </steps>
+                  </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                </branches>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+                <name>Evaluate stats</name>
+                <branches>
+                  <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                    <name>default</name>
+                    <steps>
+                      <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                        <name>sh</name>
+                        <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                          <arguments class="linked-hash-map">
+                            <entry>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                                <key>script</key>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                                <value class="string">
+          set -eu
+          CID_PY=$(cat .cid_py)
+          METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
+          mkdir -p &quot;$METRICS_DIR&quot;
+
+          # Ensure SciPy and dependencies for evaluator
+          docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 - &lt;&lt;PY
+try:
+ import scipy, pandas, numpy
+ print(&quot;eval deps OK&quot;)
+except Exception:
+ raise SystemExit(1)
+PY&apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 -m pip install --no-cache-dir -r /scripts/requirements-drift.txt&apos;
+
+          # Run evaluator inside the container using internal CSVs
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;python3 /scripts/eval_stats.py --input /tmp/arlequin-logs/training_log.csv --drift-input /tmp/arlequin-logs/drift_log.csv --out /tmp/arlequin-logs/mannwhitney_results.csv --fdr || true&quot;
+
+          # Copy results to workspace
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/mannwhitney_results.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/training_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/drift_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+        </value>
+                              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                            </entry>
+                          </arguments>
+                        </args>
+                      </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                    </steps>
+                  </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBranch>
+                </branches>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStage>
+            </stages>
+            <uuid>1f977e38-77a9-448d-b158-052dbdbbb255</uuid>
+          </stages>
+          <postBuild>
+            <conditions>
+              <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBuildCondition>
+                <condition>always</condition>
+                <branch>
+                  <name>default</name>
+                  <steps>
+                    <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                      <name>echo</name>
+                      <args class="org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTNamedArgumentList">
+                        <arguments class="linked-hash-map">
+                          <entry>
+                            <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                              <key>message</key>
+                            </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                            <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                              <value class="string">Done.</value>
+                            </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                          </entry>
+                        </arguments>
+                      </args>
+                    </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTStep>
+                  </steps>
+                </branch>
+              </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTBuildCondition>
+            </conditions>
+          </postBuild>
+          <environment>
+            <variables class="linked-hash-map">
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>SPARK_MASTER_URL</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">spark://spark-master:7077</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>HDFS_URI</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">hdfs://namenode:9000</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>TRAIN_SCRIPT</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">/scripts/train_model.py</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+              <entry>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                  <key>MLFLOW_URL</key>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTKey>
+                <org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+                  <value class="string">http://mlflow:5000</value>
+                </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTValue_-ConstantValue>
+              </entry>
+            </variables>
+          </environment>
+          <agent>
+            <agentType>
+              <key>any</key>
+            </agentType>
+          </agent>
+        </org.jenkinsci.plugins.pipeline.modeldefinition.ast.ModelASTPipelineDef>
+      </pipelineDefs>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.ExecutionModelAction>
+  </actions>
+  <queueId>136</queueId>
+  <timestamp>1762399622576</timestamp>
+  <startTime>1762399622737</startTime>
+  <result>FAILURE</result>
+  <duration>93483</duration>
+  <charset>UTF-8</charset>
+  <keepLog>false</keepLog>
+  <execution class="org.jenkinsci.plugins.workflow.cps.CpsFlowExecution">
+    <result>FAILURE</result>
+    <script>pipeline {
+  agent any
+  environment {
+    SPARK_MASTER_URL = &apos;spark://spark-master:7077&apos;
+    HDFS_URI         = &apos;hdfs://namenode:9000&apos;
+    TRAIN_SCRIPT     = &apos;/scripts/train_model.py&apos;
+    MLFLOW_URL       = &apos;http://mlflow:5000&apos;
+  }
+  stages {
+    stage(&apos;Resolve containers&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          CID_PY=$(docker ps -qf &quot;label=com.docker.compose.service=pyspark-client&quot; || true)
+          if [ -z &quot;$CID_PY&quot; ]; then CID_PY=$(docker ps -qf &quot;name=pyspark-client&quot;); fi
+          [ -n &quot;$CID_PY&quot; ] || { echo &quot;[ERROR] pyspark-client no encontrado&quot;; docker ps; exit 1; }
+          echo &quot;$CID_PY&quot; &gt; .cid_py
+        &apos;&apos;&apos;
+      }
+    }
+    stage(&apos;Train with Spark + log&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          CID_PY=$(cat .cid_py)
+          METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
+          mkdir -p &quot;$METRICS_DIR&quot;
+          RUNS_CSV=&quot;$METRICS_DIR/jenkins_runs.csv&quot;
+          if [ ! -f &quot;$RUNS_CSV&quot; ]; then echo &quot;timestamp,build,stage,cpu_perc,mem_perc,mem_used_mb,mem_limit_mb,duration_s&quot; &gt; &quot;$RUNS_CSV&quot;; fi
+
+          # Pre-stats
+          start_ts=$(date +%s)
+          stats=$(docker stats --no-stream --format &apos;{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}&apos; &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
+          mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
+          mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos; )
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | sed &apos;s/[^0-9.]*//g&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | sed &apos;s/[^0-9.]*//g&apos;)
+          echo &quot;$(date -Iseconds),$BUILD_NUMBER,pre,$cpu,$mem_perc,$used,$limit,0&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
+
+          # Training
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;\
+            export MLFLOW_TRACKING_URI=${MLFLOW_URL}; \
+            export EXPERIMENT_LOG_FILE=/tmp/arlequin-logs/training_log.csv; \
+            mkdir -p /tmp/arlequin-logs; \
+            spark-submit --master ${SPARK_MASTER_URL} \
+              --conf spark.hadoop.fs.defaultFS=${HDFS_URI} \
+              ${TRAIN_SCRIPT}&quot;
+
+          # Post-stats
+          end_ts=$(date +%s)
+          dur=$((end_ts - start_ts))
+          stats=$(docker stats --no-stream --format &apos;{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}&apos; &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
+          mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
+          mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos; )
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | tr -cd &apos;0-9.\n&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | tr -cd &apos;0-9.\n&apos;)
+          echo &quot;$(date -Iseconds),$BUILD_NUMBER,post,$cpu,$mem_perc,$used,$limit,$dur&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
+
+          # Pull training CSV from container (optional)
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/training_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/drift_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+        &apos;&apos;&apos;
+      }
+    }
+    stage(&apos;Evaluate stats&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          CID_PY=$(cat .cid_py)
+          METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
+          mkdir -p &quot;$METRICS_DIR&quot;
+
+          # Ensure SciPy and dependencies for evaluator
+          docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 - &lt;&lt;PY\ntry:\n import scipy, pandas, numpy\n print(&quot;eval deps OK&quot;)\nexcept Exception:\n raise SystemExit(1)\nPY&apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 -m pip install --no-cache-dir -r /scripts/requirements-drift.txt&apos;
+
+          # Run evaluator inside the container using internal CSVs
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;python3 /scripts/eval_stats.py --input /tmp/arlequin-logs/training_log.csv --drift-input /tmp/arlequin-logs/drift_log.csv --out /tmp/arlequin-logs/mannwhitney_results.csv --fdr || true&quot;
+
+          # Copy results to workspace
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/mannwhitney_results.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/training_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/drift_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+        &apos;&apos;&apos;
+      }
+    }
+  }
+  post {
+    always {
+      echo &apos;Done.&apos;
+    }
+  }
+}
+</script>
+    <loadedScripts class="linked-hash-map"/>
+    <durabilityHint>MAX_SURVIVABILITY</durabilityHint>
+    <timings class="map">
+      <entry>
+        <string>flowNode</string>
+        <long>2622491361</long>
+      </entry>
+      <entry>
+        <string>classLoad</string>
+        <long>1268508691</long>
+      </entry>
+      <entry>
+        <string>runQueue</string>
+        <long>19087091287</long>
+      </entry>
+      <entry>
+        <string>run</string>
+        <long>14061787325</long>
+      </entry>
+      <entry>
+        <string>parse</string>
+        <long>196769908</long>
+      </entry>
+      <entry>
+        <string>saveProgram</string>
+        <long>7497563335</long>
+      </entry>
+    </timings>
+    <internalCalls class="sorted-set">
+      <string>hudson.model.Result.fromString</string>
+      <string>org.jenkinsci.plugins.pipeline.StageStatus.TAG_NAME</string>
+      <string>org.jenkinsci.plugins.workflow.job.WorkflowRun.result</string>
+    </internalCalls>
+    <sandbox>true</sandbox>
+    <iota>31</iota>
+    <head>1:31</head>
+    <done>true</done>
+    <resumeBlocked>false</resumeBlocked>
+    <storageDir>workflow-completed</storageDir>
+  </execution>
+  <completed>true</completed>
+  <checkouts class="hudson.util.PersistedList"/>
+</flow-build>

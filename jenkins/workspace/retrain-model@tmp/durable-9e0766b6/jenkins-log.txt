@@ -1,0 +1,77 @@
++ set -eu
++ cat .cid_py
++ CID_PY=1bdc45b62cc9
++ METRICS_DIR=/var/jenkins_home/workspace/retrain-model/metrics
++ mkdir -p /var/jenkins_home/workspace/retrain-model/metrics
++ RUNS_CSV=/var/jenkins_home/workspace/retrain-model/metrics/jenkins_runs.csv
++ [ ! -f /var/jenkins_home/workspace/retrain-model/metrics/jenkins_runs.csv ]
++ date +%s
++ start_ts=1762399880
++ docker stats --no-stream --format {{.CPUPerc}},{{.MemUsage}},{{.MemPerc}} 1bdc45b62cc9
++ stats=0.00%,19.18MiB / 3.577GiB,0.52%
++ + + echocut -d,tr -d 0.00%,19.18MiB / 3.577GiB,0.52%
+ -f1
+ %
++ cpu=0.00
++ + cutecho+  -d, -f3 0.00%,19.18MiB / 3.577GiB,0.52%
+tr -d
+ %
++ mem_perc=0.52
++ + echo+ cut -d, 0.00%,19.18MiB / 3.577GiB,0.52%
+tr -f2
+ -d  
++ mem_pair=19.18MiB/3.577GiB
++ + + echo 19.18MiB/3.577GiBcut -d/sed s/[^0-9.]*//g
+ -f1
+
++ used=19.18
++ + echo 19.18MiB/3.577GiB+ cut -d/
+sed -f2
+ s/[^0-9.]*//g
++ limit=3.577
++ date -Iseconds
++ echo 2025-11-06T03:31:22+00:00,51,pre,0.00,0.52,19.18,3.577,0
++ docker exec -i 1bdc45b62cc9 sh -lc             export MLFLOW_TRACKING_URI=http://mlflow:5000;             export EXPERIMENT_LOG_FILE=/tmp/arlequin-logs/training_log.csv;             mkdir -p /tmp/arlequin-logs;             spark-submit --master spark://spark-master:7077               --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000               /scripts/train_model.py
+/usr/local/lib/python3.9/dist-packages/mlflow/utils/requirements_utils.py:20: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources  # noqa: TID251
+25/11/06 03:31:35 INFO SparkContext: Running Spark version 3.5.1
+25/11/06 03:31:35 INFO SparkContext: OS info Linux, 5.15.153.1-microsoft-standard-WSL2, amd64
+25/11/06 03:31:35 INFO SparkContext: Java version 11.0.16
+25/11/06 03:31:35 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+25/11/06 03:31:36 INFO ResourceUtils: ==============================================================
+25/11/06 03:31:36 INFO ResourceUtils: No custom resources configured for spark.driver.
+25/11/06 03:31:36 INFO ResourceUtils: ==============================================================
+25/11/06 03:31:36 INFO SparkContext: Submitted application: TrainModel
+25/11/06 03:31:36 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+25/11/06 03:31:36 INFO ResourceProfile: Limiting resource is cpu
+25/11/06 03:31:36 INFO ResourceProfileManager: Added ResourceProfile id: 0
+25/11/06 03:31:36 INFO SecurityManager: Changing view acls to: root
+25/11/06 03:31:36 INFO SecurityManager: Changing modify acls to: root
+25/11/06 03:31:36 INFO SecurityManager: Changing view acls groups to: 
+25/11/06 03:31:36 INFO SecurityManager: Changing modify acls groups to: 
+25/11/06 03:31:36 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root; groups with view permissions: EMPTY; users with modify permissions: root; groups with modify permissions: EMPTY
+25/11/06 03:31:37 INFO Utils: Successfully started service 'sparkDriver' on port 41989.
+25/11/06 03:31:37 INFO SparkEnv: Registering MapOutputTracker
+25/11/06 03:31:38 INFO SparkEnv: Registering BlockManagerMaster
+25/11/06 03:31:38 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+25/11/06 03:31:38 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+25/11/06 03:31:38 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+25/11/06 03:31:38 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-979e5f89-40dd-4eb5-ba84-99354a05b848
+25/11/06 03:31:38 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+25/11/06 03:31:38 INFO SparkEnv: Registering OutputCommitCoordinator
+25/11/06 03:31:38 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+25/11/06 03:31:39 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+25/11/06 03:31:39 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+25/11/06 03:31:39 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.9:7077 after 93 ms (0 ms spent in bootstraps)
+25/11/06 03:31:39 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20251106033139-0001
+25/11/06 03:31:39 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20251106033139-0001/0 on worker-20251106031014-172.18.0.10-33353 (172.18.0.10:33353) with 1 core(s)
+25/11/06 03:31:39 INFO StandaloneSchedulerBackend: Granted executor ID app-20251106033139-0001/0 on hostPort 172.18.0.10:33353 with 1 core(s), 1024.0 MiB RAM
+25/11/06 03:31:39 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 39373.
+25/11/06 03:31:39 INFO NettyBlockTransferService: Server created on pyspark-client:39373
+25/11/06 03:31:39 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+25/11/06 03:31:39 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, pyspark-client, 39373, None)
+25/11/06 03:31:39 INFO BlockManagerMasterEndpoint: Registering block manager pyspark-client:39373 with 434.4 MiB RAM, BlockManagerId(driver, pyspark-client, 39373, None)
+25/11/06 03:31:39 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, pyspark-client, 39373, None)
+25/11/06 03:31:39 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, pyspark-client, 39373, None)
+25/11/06 03:31:40 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20251106033139-0001/0 is now RUNNING
+25/11/06 03:31:40 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0

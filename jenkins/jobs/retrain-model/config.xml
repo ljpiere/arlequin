@@ -22,45 +22,14 @@
     MLFLOW_URL       = &apos;http://mlflow:5000&apos;
   }
   stages {
-    stage(&apos;Resolver contenedores&apos;) {
+    stage(&apos;Resolve containers&apos;) {
       steps {
         sh &apos;&apos;&apos;
           set -eu
           CID_PY=$(docker ps -qf &quot;label=com.docker.compose.service=pyspark-client&quot; || true)
           if [ -z &quot;$CID_PY&quot; ]; then CID_PY=$(docker ps -qf &quot;name=pyspark-client&quot;); fi
-          [ -n &quot;$CID_PY&quot; ] || { echo &quot;[ERROR] No se encontro el contenedor pyspark-client&quot;; docker ps; exit 1; }
+          [ -n &quot;$CID_PY&quot; ] || { echo &quot;[ERROR] pyspark-client no encontrado&quot;; docker ps; exit 1; }
           echo &quot;$CID_PY&quot; &gt; .cid_py
-        &apos;&apos;&apos;
-      }
-    }
-    stage(&apos;Esperar MLflow y deps&apos;) {
-      steps {
-        sh &apos;&apos;&apos;
-          set -eu
-          CID_PY=$(cat .cid_py)
-
-          # Espera MLflow (hasta 20 intentos)
-          for i in $(seq 1 20); do
-            if docker exec -i &quot;$CID_PY&quot; sh -lc &quot;curl -sS -I ${MLFLOW_URL} &gt;/dev/null 2&gt;&amp;1&quot;; then
-              echo &quot;[OK] MLflow responde&quot;; break
-            fi
-            echo &quot;[wait] MLflow aun no responde (${i}/20)&quot;; sleep 3
-            [ $i -eq 20 ] &amp;&amp; { echo &quot;[ERROR] MLflow no responde en ${MLFLOW_URL}&quot;; exit 2; }
-          done
-
-          # Instala deps si faltan
-          docker exec -i &quot;$CID_PY&quot; sh -lc &apos;
-            python3 - &lt;&lt;PY
-try:
-  import mlflow, sklearn, pandas, numpy
-  print(&quot;deps OK&quot;)
-except Exception:
-  raise SystemExit(1)
-PY
-          &apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;
-            apt-get update &amp;&amp; apt-get install -y --no-install-recommends procps curl || true
-            python3 -m pip install --no-cache-dir -r /scripts/requirements.txt
-          &apos;
         &apos;&apos;&apos;
       }
     }
@@ -76,12 +45,12 @@ PY
 
           # Pre-stats
           start_ts=$(date +%s)
-          stats=$(docker stats --no-stream --format '{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}' &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          stats=$(docker stats --no-stream --format &apos;{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}&apos; &quot;$CID_PY&quot; || echo &quot;,,&quot;)
           cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
           mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
           mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos; )
-          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | sed &apos;s/[^0-9\.]*//g&apos;)
-          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | sed &apos;s/[^0-9\.]*//g&apos;)
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | sed &apos;s/[^0-9.]*//g&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | sed &apos;s/[^0-9.]*//g&apos;)
           echo &quot;$(date -Iseconds),$BUILD_NUMBER,pre,$cpu,$mem_perc,$used,$limit,0&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
 
           # Training
@@ -96,15 +65,15 @@ PY
           # Post-stats
           end_ts=$(date +%s)
           dur=$((end_ts - start_ts))
-          stats=$(docker stats --no-stream --format '{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}' &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          stats=$(docker stats --no-stream --format &apos;{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}&apos; &quot;$CID_PY&quot; || echo &quot;,,&quot;)
           cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
           mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
           mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos; )
-          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | sed &apos;s/[^0-9\.]*//g&apos;)
-          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | sed &apos;s/[^0-9\.]*//g&apos;)
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | tr -cd &apos;0-9.\n&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | tr -cd &apos;0-9.\n&apos;)
           echo &quot;$(date -Iseconds),$BUILD_NUMBER,post,$cpu,$mem_perc,$used,$limit,$dur&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
 
-          # Pull training and drift CSV from container (opcional)
+          # Pull training CSV from container (optional)
           docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/training_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
           docker cp &quot;$CID_PY&quot;:/tmp/arlequin-logs/drift_log.csv &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
         &apos;&apos;&apos;
@@ -119,13 +88,7 @@ PY
           mkdir -p &quot;$METRICS_DIR&quot;
 
           # Ensure SciPy and dependencies for evaluator
-          docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 - &lt;&lt;PY
-try:
- import scipy, pandas, numpy
- print("eval deps OK")
-except Exception:
- raise SystemExit(1)
-PY&apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 -m pip install --no-cache-dir -r /scripts/requirements-drift.txt&apos;
+          docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 - &lt;&lt;PY\ntry:\n import scipy, pandas, numpy\n print(&quot;eval deps OK&quot;)\nexcept Exception:\n raise SystemExit(1)\nPY&apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 -m pip install --no-cache-dir -r /scripts/requirements-drift.txt&apos;
 
           # Run evaluator inside the container using internal CSVs
           docker exec -i &quot;$CID_PY&quot; sh -lc &quot;python3 /scripts/eval_stats.py --input /tmp/arlequin-logs/training_log.csv --drift-input /tmp/arlequin-logs/drift_log.csv --out /tmp/arlequin-logs/mannwhitney_results.csv --fdr || true&quot;
@@ -139,8 +102,9 @@ PY&apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 -m pip insta
     }
   }
   post {
-    success { echo &apos;Entrenamiento OK - revisa el run en MLflow.&apos; }
-    failure { echo &apos;Fallo - mira los logs arriba.&apos; }
+    always {
+      echo &apos;Done.&apos;
+    }
   }
 }
 </script>

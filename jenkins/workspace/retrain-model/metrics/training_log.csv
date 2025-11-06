@@ -1,0 +1,2 @@
+timestamp,scenario,mlflow_run_id,label_strategy,total_rows,positives,negatives,model,f1
+2025-11-02T16:49:08,,e4774cb4031d47cebc6ee7544c3e6c3e,existing_is_suspicious,13900,5811,8089,logreg,0.8196856906534326

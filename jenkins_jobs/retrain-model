@@ -34,8 +34,8 @@ pipeline {
           cpu=$(echo "$stats" | cut -d, -f1 | tr -d '%')
           mem_perc=$(echo "$stats" | cut -d, -f3 | tr -d '%')
           mem_pair=$(echo "$stats" | cut -d, -f2 | tr -d ' ' )
-          used=$(echo "$mem_pair" | cut -d/ -f1 | sed 's/[^0-9\.]*//g')
-          limit=$(echo "$mem_pair" | cut -d/ -f2 | sed 's/[^0-9\.]*//g')
+          used=$(echo "$mem_pair" | cut -d/ -f1 | sed 's/[^0-9.]*//g')
+          limit=$(echo "$mem_pair" | cut -d/ -f2 | sed 's/[^0-9.]*//g')
           echo "$(date -Iseconds),$BUILD_NUMBER,pre,$cpu,$mem_perc,$used,$limit,0" >> "$RUNS_CSV"
 
           # Training
@@ -54,8 +54,8 @@ pipeline {
           cpu=$(echo "$stats" | cut -d, -f1 | tr -d '%')
           mem_perc=$(echo "$stats" | cut -d, -f3 | tr -d '%')
           mem_pair=$(echo "$stats" | cut -d, -f2 | tr -d ' ' )
-          used=$(echo "$mem_pair" | cut -d/ -f1 | sed 's/[^0-9\.]*//g')
-          limit=$(echo "$mem_pair" | cut -d/ -f2 | sed 's/[^0-9\.]*//g')
+          used=$(echo "$mem_pair" | cut -d/ -f1 | tr -cd '0-9.\n')
+          limit=$(echo "$mem_pair" | cut -d/ -f2 | tr -cd '0-9.\n')
           echo "$(date -Iseconds),$BUILD_NUMBER,post,$cpu,$mem_perc,$used,$limit,$dur" >> "$RUNS_CSV"
 
           # Pull training CSV from container (optional)

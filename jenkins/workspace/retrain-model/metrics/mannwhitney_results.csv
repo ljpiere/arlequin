@@ -1,0 +1,4 @@
+metric,A,B,nA,nB,pvalue,cliffs_delta
+f1,E1,E2,0,0,,
+f1,E2,E3,0,0,,
+f1,E1,E3,0,0,,
