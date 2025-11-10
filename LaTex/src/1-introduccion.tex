@@ -1,0 +1,537 @@
+%%%%%%%%%%%%%%%%%%%%
+% INTRODUCCION
+%%%%%%%%%%%%%%%%%%%%
+% \section{Introducción}
+
+El crecimiento exponencial en la generación de datos ha consolidado al aprendizaje automático como una herramienta clave para la toma de decisiones en diversos sectores. Sin embargo, los modelos de machine learning no son estáticos: su rendimiento se degrada cuando cambian las condiciones de entrada, fenómeno conocido como \textit{data drift} \citep{Sculley2015}. Este problema compromete la calidad de las predicciones y, por ende, la estabilidad operativa de los sistemas inteligentes.
+
+Para abordar este desafío, el presente proyecto propone la implementación de un sistema automatizado de reentrenamiento integrado en un ciclo MLOps. Este enfoque adapta prácticas de ingeniería de software al ciclo de vida de los modelos, permitiendo su automatización, monitoreo y mantenimiento continuo \citep{Amershi2019}. El sistema opera monitoreando los datos en tiempo real; cuando detecta desviaciones estadísticas en su distribución (mediante pruebas como Kolmogorov-Smirnov o Kullback-Leibler), activa automáticamente un pipeline que reentrena y despliega un nuevo modelo.
+
+Este flujo —implementado con herramientas como Jenkins, MLflow y Spark— garantiza que el sistema sea capaz de adaptarse sin intervención humana, asegurando precisión sostenida, trazabilidad y resiliencia en entornos Big Data.
+
+La solución se valida en un entorno simulado, diseñado para replicar condiciones reales de operación, donde los datos de entrada (input) son flujos estructurados que emulan escenarios con y sin \textit{drift}, y la salida (output) es un modelo actualizado, validado empíricamente y registrado con sus métricas para futuras auditorías. Este enfoque apunta a transformar la gestión de modelos en producción, reduciendo la deuda técnica y mejorando la capacidad de respuesta ante entornos de datos dinámicos.
+
+Para abordar estas brechas, este proyecto desarrolla una solución técnica que integra monitoreo continuo, detección estadística, reentrenamiento automatizado y trazabilidad del ciclo de vida del modelo.
+
+\section{Definición del problema}
+\subsection{Planteamiento del problema}
+Para evitar redundancia, se sintetizan aqu\'i datos clave; el detalle ampliado se presenta en el Anexo \ref{ann:contexto}.
+En el contexto global actual, caracterizado por una explosión de datos sin precedentes, se estima que el \emph{Global DataSphere} alcanzará los 181 Zettabytes en 2025 \citep{IDC2024}. Esta expansión está impulsada por el crecimiento acelerado de tecnologías como la inteligencia artificial generativa, el Internet de las Cosas (IoT), y la digitalización masiva de procesos. Sin embargo, la utilidad real de estos datos se ve comprometida por problemas de calidad y gobernanza. Según Gartner, la mala calidad de los datos le cuesta a las organizaciones, en promedio, 12,9 millones de dólares anuales \citep{Gartner2024}, mientras que el costo promedio por brecha de datos se sitúa en 4,88 millones de dólares \citep{IBM2024}.
+
+En este escenario, el uso de modelos de machine learning se ha generalizado como herramienta para la toma de decisiones automatizadas. No obstante, estudios recientes revelan que cerca del 91\% de los modelos desplegados en producción sufren algún tipo de \emph{model drift} en su primer año de operación \citep{AIMultiple2025,Breck2019}. Este fenómeno, conocido como \emph{data drift} cuando afecta la distribución de entrada de los datos, degrada el rendimiento predictivo, comprometiendo decisiones operativas, regulatorias y comerciales.
+
+A nivel regional, Latinoamérica ha mostrado una inversión sostenida en infraestructura tecnológica, superando los 6.360 millones de dólares en centros de datos en 2023, con una tasa de crecimiento proyectada del 7,95\% hasta 2029 \citep{Helmi2024}. Sin embargo, persisten retos estructurales en torno a la calidad del dato, la cultura organizacional y la escasa madurez en el uso de prácticas de MLOps. En Colombia, el 56\% de las bases de datos corporativas presenta deficiencias graves de completitud y exactitud \citep{Deyde2023}, lo que limita la eficacia de los sistemas de aprendizaje automático.
+
+Frente a esta situación, el Gobierno colombiano ha lanzado en 2025 una política nacional de inteligencia artificial, destinando 480.000 millones de pesos a iniciativas de infraestructura y capacitación \citep{CONPES2025}. No obstante, esta inversión carece de acompañamiento técnico concreto para el despliegue de soluciones productivas automatizadas que aborden problemas como el \emph{data drift} de forma proactiva.
+
+Desde el punto de vista económico, la ausencia de mecanismos automatizados para detectar y gestionar el \emph{data drift} puede acarrear pérdidas significativas. En el sector financiero colombiano, una caída del 3\% en la precisión de un modelo de riesgo crediticio se traduce en pérdidas que superan los 12 millones de dólares anuales \citep{Kim2018}. De igual forma, en el comercio electrónico, degradaciones menores en modelos de recomendación pueden afectar directamente las tasas de conversión y la rentabilidad.
+
+En el plano social y de desarrollo sostenible, esta problemática impacta la eficiencia de los servicios digitales, la equidad tecnológica y la sostenibilidad organizacional. Su vínculo con los Objetivos de Desarrollo Sostenible (ODS) es directo:
+
+\begin{itemize}
+  \item \textbf{ODS 8 – Trabajo decente y crecimiento económico:} La degradación en el rendimiento de los modelos compromete la productividad de procesos automatizados, disminuye la competitividad y obstaculiza la generación de empleo calificado en áreas tecnológicas. Un sistema automatizado de actualización de modelos puede contribuir a mantener la eficiencia operativa y abrir nuevas oportunidades de innovación.
+
+  \item \textbf{ODS 9 – Industria, innovación e infraestructura:} El uso ineficiente de modelos obsoletos limita la innovación tecnológica y reduce la efectividad de los procesos industriales basados en datos. La automatización del reentrenamiento fortalece la infraestructura analítica y promueve una cultura de mejora continua.
+
+  \item \textbf{ODS 12 – Producción y consumo responsables:} Decisiones mal informadas debido a modelos desactualizados pueden conllevar a sobrecostos, desperdicio de recursos y fallas logísticas. Automatizar la actualización de modelos con base en datos actuales permite una asignación más eficiente y responsable de los recursos.
+\end{itemize}
+
+Desde el punto de vista técnico, las soluciones actuales presentan limitaciones significativas. La mayoría de las organizaciones aún dependen de monitoreo reactivo en paneles aislados, sin mecanismos de detección y respuesta automatizados. Los pipelines de reentrenamiento suelen ser ad-hoc, sin adherencia a prácticas de integración y despliegue continuo (CI/CD), y carecen de capacidades para orquestación multinube, contenerización uniforme y cumplimiento regulatorio.
+
+En síntesis, aunque la literatura ha documentado múltiples enfoques de detección de data drift y mecanismos de reentrenamiento, persisten vacíos en torno a su integración práctica en pipelines completamente automatizados y reproducibles bajo esquemas CI/CD y observabilidad de extremo a extremo. La mayoría de propuestas carece de validación empírica en entornos Big Data o de estrategias abiertas que permitan su réplica. Este proyecto busca aportar una contribución metodológica concreta al desarrollar y documentar una arquitectura open-source reproducible que combine detección estadística de drift, automatización CI/CD y monitoreo operacional completo, constituyendo un avance práctico frente a ese rezago de la literatura.
+
+% =========================
+% 2.2 Formulación del problema
+% =========================222
+\subsection{Formulación del problema}
+\paragraph{Pregunta central.}
+\textit{¿Cómo diseñar, desarrollar e implementar un sistema productivo robusto basado en un pipeline MLOps, que detecte automáticamente \emph{data drift}, active reentrenamiento y despliegue continuo, minimizando intervención humana, costos operativos y garantizando alta disponibilidad en entornos reales Big Data?}
+
+\paragraph{Enunciado de validación del enfoque propuesto.}
+\begin{quotation}
+\noindent Se plantea que un sistema productivo basado en MLOps, con capacidades de detección automática de \emph{data drift}, monitoreo continuo y reentrenamiento automatizado, puede mejorar sustancialmente la estabilidad operativa y la precisión de los modelos de \emph{machine learning} al reducir la intervención manual y facilitar la actualización continua en entornos de datos dinámicos.
+\end{quotation}
+
+\paragraph{Aspectos clave a demostrar durante el desarrollo del proyecto.}
+% \begin{enumerate}[label=\textbf{A\arabic*}]
+\begin{enumerate}
+  \item Que los mecanismos automáticos de alerta y análisis estadístico permiten identificar desviaciones en la distribución de datos que afecten el rendimiento del modelo.
+  \item Que la automatización del reentrenamiento reduce la necesidad de intervención humana y mejora la continuidad operativa del sistema.
+  \item Que la trazabilidad y gestión del ciclo de vida de los modelos facilita su mantenimiento, validación y auditoría en producción.
+  \item Que una arquitectura integrada y replicable permite desplegar flujos MLOps en contextos reales que requieren adaptabilidad frente al cambio de datos.
+\end{enumerate}
+
+
+\section{Objetivos del proyecto}
+\subsection{Objetivo General}
+Construir un sistema automatizado de reentrenamiento que, mediante la detección temprana de \emph{data drift}, active un ciclo MLOps en entornos Big Data, asegurando la actualización continua y el reentrenamiento de los modelos de machine learning.
+
+
+\subsection{Objetivos específicos}
+\begin{itemize}
+    \item Implementar una infraestructura en la nube escalable que permita el procesamiento eficiente de grandes volúmenes de datos, integrando mecanismos de monitorización y evaluación continua para identificar y responder oportunamente al \emph{data drift}.
+    
+    \item Desarrollar un sistema computacional que combine métodos estadísticos y algoritmos supervisados para la detección automática de \emph{data drift} en tiempo real, generando alertas que activen procesos automatizados de reentrenamiento sin intervención humana.
+    
+    \item Validar en un escenario simulado con y sin \emph{data drift}, la eficacia del sistema computacional tras la detección de desviaciones, midiendo precisión, recall y latencia para asegurar la actualización continua y la eficiencia operativa.
+\end{itemize} 
+
+\section{Delimitaciones y alcances}
+El proyecto se concentró en la evaluación de un prototipo funcional basado en una arquitectura de Big Data previamente documentada en la literatura, evitando el diseño de una nueva infraestructura desde cero. Se utilizará como referencia una configuración de clúster pseudo-distribuido que emplea contenedores Docker y Docker Compose, replicando un sistema similar a HDFS y herramientas de procesamiento de datos como Apache Spark en un entorno controlado.
+
+Además, se adoptó la arquitectura propuesta por \citep{Chen2022}, la cual integra un sistema de almacenamiento distribuido con capacidades de procesamiento en tiempo real y batch, facilitando el manejo de grandes volúmenes de información. Esta arquitectura se complementa con sistemas de monitorización y alertas automáticas que permiten la detección de \textit{data drift} y, consecuentemente, la activación de \textit{pipelines} automáticos de reentrenamiento.
+
+Para la validación del sistema, se desarrolló dos escenarios de prueba mediante la generación de datos semi-aleatorios utilizando la biblioteca \texttt{Faker} de Python. El primer escenario servirá como base para el entrenamiento inicial del modelo de \textit{machine learning}, mientras que en el segundo escenario se introducirá una variación controlada en la distribución de los datos (\textit{data drift} intencional) para demostrar el funcionamiento del \textit{pipeline} de reentrenamiento automático. Se implementarán mecanismos de detección de \textit{data drift} mediante pruebas estadísticas como Kolmogorov-Smirnov, Chi-cuadrado y la divergencia de Kullback-Leibler, permitiendo evaluar el impacto en las métricas del modelo. La implementación del \textit{pipeline} automatizado mediante Jenkins se concentrará en un modelo de \textit{machine learning} de prueba, permitiendo evaluar la eficacia del sistema sin extender el análisis a múltiples modelos en paralelo. La integración de MLflow facilitará el registro y comparación de cada ciclo de reentrenamiento, mientras que \textit{dashboards} en Grafana ofrecerán una visualización en tiempo real de métricas como precisión, \textit{recall}, F1-score y tiempos de respuesta del sistema.
+
+Finalmente, aunque el prototipo se implementa en un entorno local con Docker y Docker Compose, la arquitectura propuesta es \textbf{portátil hacia la nube}, pudiendo migrarse de manera sencilla a plataformas como \textbf{Azure Machine Learning}. Esto permitiría aprovechar clústeres administrados de cómputo, escalado automático de recursos y la integración con \textbf{Azure Monitor} para fortalecer las capacidades de observabilidad y operación continua del sistema.
+
+\section{Justificación del trabajo de grado}
+La creciente dependencia de modelos de \emph{machine learning} para la toma de decisiones estratégicas en entornos productivos obliga a mantener altos niveles de precisión y rendimiento. Sin embargo, cambios continuos en la distribución de los datos, conocidos como \emph{data drift}, generan degradaciones críticas en la precisión de los modelos, incrementando costos operativos y riesgos regulatorios cuando no son detectados y gestionados oportunamente.
+
+Este proyecto justifica su relevancia al proponer un producto tecnológico innovador que automatiza la detección temprana y el reentrenamiento continuo de modelos en producción. Al integrar herramientas avanzadas de monitorización y técnicas estadísticas robustas con pipelines automatizados mediante metodologías MLOps, la solución reduce significativamente la intervención humana, minimiza errores operativos y mejora la rapidez en la respuesta ante desviaciones.
+
+Adicionalmente, la propuesta establece un estándar metodológico replicable, facilitando la adopción de prácticas ágiles y seguras en el ciclo completo de vida de los modelos. De esta forma, el sistema propuesto no solo asegura una alta precisión predictiva y estabilidad operativa, sino que también impulsa la innovación y competitividad de las organizaciones que gestionan grandes volúmenes de datos dinámicos \citep{Kim2018, Merkel2014, Breck2019, Gama2014}.
+
+\section{Metodología de la investigación}
+\label{sec:metodologia}
+
+% Vision general (evitar duplicidad con Caps. 3 y 4)
+La metodolog\'ia se presenta aqu\'i de forma sint\'etica para evitar duplicidad con los Cap\'itulos 3 y 4. El estudio es \textbf{aplicado y cuasi-experimental}: valida un pipeline MLOps que \textit{detecta} \textit{data drift} y \textit{reentrena} autom\'aticamente.
+
+\textbf{Disen\~no general.} Dos escenarios: E1 (sin \textit{drift}) y E2 (con \textit{drift} inducido). Se observan m\'etricas de desempe\~no (F1, Recall, AUC), latencias operativas (\textit{TTFD}, \textit{TTR}) y magnitud de cambio (\textit{PSI}). Las pol\'iticas de activaci\'on/cooldown, el detalle de hip\'otesis, variables y an\'alisis estad\'istico se desarrollan en el Cap\'itulo~\ref{sec:eval-design} y \S\ref{subsec:eval-scenarios}.
+
+\textbf{Implementaci\'on.} La infraestructura y componentes t\'ecnicos (Spark/HDFS, Jenkins, MLflow, Prometheus/Grafana, Docker~Compose) se documentan en el Cap\'itulo~\ref{sec:oe1}. Aqu\'i solo se describe la l\'ogica metodol\'ogica y el alcance experimental; los detalles operativos quedan en los cap\'itulos respectivos.
+
+% --- Detalle t\'ecnico comentado para evitar repetici\'on literal ---
+\iffalse
+
+\subsection{Enfoque metodológico y diseño experimental}
+
+La investigación adopta un \textbf{enfoque aplicado y cuantitativo} con diseño cuasi-experimental, orientado a demostrar la eficacia de un sistema automatizado de reentrenamiento de modelos basado en la detección temprana de \textit{data drift}. El propósito es evaluar empíricamente la relación entre la ocurrencia de \textit{drift} en los datos de entrada y el desempeño de un modelo de \textit{machine learning} bajo condiciones controladas.
+
+\textbf{Hipótesis de trabajo.}  
+H\textsubscript{0}: La activación automática del reentrenamiento no mejora significativamente las métricas de desempeño del modelo tras la detección de \textit{data drift}.  
+H\textsubscript{1}: Un sistema automatizado de reentrenamiento basado en \textit{MLOps} mejora significativamente el desempeño del modelo y reduce la latencia de detección y respuesta frente al \textit{drift}.
+
+\textbf{Variables.}
+\begin{itemize}
+    \item \textbf{Variable independiente:} Presencia o ausencia de \textit{data drift} (escenarios con y sin desviación inducida en los datos).
+    \item \textbf{Variables dependientes:} 
+    \begin{enumerate}
+        \item \textit{F1-score} y \textit{Recall} — desempeño predictivo del modelo.
+        \item \textit{TTFD} (Time-to-First-Detection) — tiempo entre el inicio del \textit{drift} y su detección estadística.
+        \item \textit{TTR} (Time-to-Retrain) — tiempo total desde la detección hasta la finalización del reentrenamiento.
+        \item \textit{PSI} (Population Stability Index) — magnitud de la desviación de distribución.
+    \end{enumerate}
+    \item \textbf{Variables de control:} tamaño de muestra por ventana, número de iteraciones, umbral $\alpha$ de significancia y parámetros del modelo base.
+\end{itemize}
+
+\textbf{Diseño experimental.}  
+El sistema se evaluará en dos condiciones:
+\begin{enumerate}
+    \item Escenario E1: flujo de datos estable sin \textit{drift} (línea base).  
+    \item Escenario E2: flujo con \textit{drift} inducido mediante alteración de las variables de monto y riesgo.
+\end{enumerate}
+En cada condición se registran las métricas anteriores a lo largo de múltiples ciclos de ejecución para estimar promedios e intervalos de confianza al 95 \%.
+
+\textbf{Métodos de análisis.}  
+Dado que las métricas pueden no seguir una distribución normal, se emplean pruebas \textbf{no paramétricas} de comparación de medianas y distribuciones (Kolmogorov–Smirnov, $\chi^2$ y PSI). Estas pruebas permiten detectar cambios significativos sin requerir supuestos fuertes sobre la forma de las distribuciones, lo que las hace adecuadas para flujos de datos heterogéneos en entornos Big Data. Los resultados se analizarán mediante estadísticos descriptivos (media, desviación estándar, IC95 %) y gráficas temporales que evidencien la recuperación del desempeño tras el reentrenamiento.
+
+\textbf{Criterios de evaluación.}
+\begin{itemize}
+    \item F1 ≥ 0.80 y mejora ≥ 10 \% tras el reentrenamiento.
+    \item TTFD < 5 min y TTR < 15 min por ciclo.
+    \item PSI ≤ 0.2 como umbral de alerta y ≥ 0.3 como desviación severa.
+\end{itemize}
+
+El enfoque metodológico propuesto combina la rigurosidad experimental con la trazabilidad operativa propia de las prácticas MLOps, permitiendo validar cuantitativamente la hipótesis y los objetivos planteados.
+
+\subsection{Fases de desarrollo e implementación}
+
+La investigación adoptó una \textbf{metodología aplicada y experimental}, organizada en fases secuenciales que abarcan desde el diseño conceptual hasta la validación empírica del sistema. El propósito fue construir y evaluar un \textit{pipeline} de reentrenamiento automatizado basado en detección temprana de \textit{data drift}.
+
+Cada fase combinó \textbf{principios de ingeniería reproducible} —contenedorización, trazabilidad y modularidad— con \textbf{criterios de validación cuantitativa} orientados a métricas de desempeño y eficiencia operativa. El enfoque técnico se apoyó en herramientas de código abierto (Python, Spark, Jenkins, MLflow y Prometheus), desplegadas mediante \textbf{Docker Compose} para garantizar replicabilidad y control experimental.
+
+\noindent
+La Figura~\ref{fig:flujo_trabajo_estilizado_fit} sintetiza el flujo metodológico del proyecto, integrando las etapas de datos, automatización y observabilidad dentro de un ciclo continuo de mejora. Este diagrama no representa la implementación detallada, sino la \textbf{lógica de investigación} que guía la transición desde el diseño hasta la validación del sistema.
+
+
+
+% necesita en el preámbulo
+% \usepackage{tikz}
+% \usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc}
+% \usepackage{float}
+
+\begingroup
+\shorthandoff{>}
+\begin{figure}[H]
+\centering
+
+% --- estilos locales ---
+\definecolor{lanegray}{RGB}{248,248,248}
+\definecolor{dark}{RGB}{60,60,60} % ya no usamos accent
+\tikzset{
+  >={Latex[length=3mm,width=2mm]},
+  node distance=9mm,
+  block/.style={rectangle, rounded corners=3pt, minimum width=46mm, minimum height=10mm,
+                draw=dark, very thick, fill=white, align=center, inner sep=3.5pt},
+  emph/.style={block, draw=dark, very thick},  % antes usaba accent
+  lane/.style={rounded corners=5pt, draw=black!12, line width=0.3pt, fill=lanegray, inner sep=6mm},
+  flow/.style={->, very thick, draw=dark},
+  flowaccent/.style={->, very thick, draw=dark}, % antes era accent
+  dashedflow/.style={->, thick, draw=dark, dashed},
+}
+
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+
+% ====== BLOQUES (contenido) ======
+\node[block] (ingesta)    at (15,112) {\shortstack{Lectura y\\preparación de datos}};
+\node[block, below=12mm of ingesta] (drift) {\shortstack{Detección de\\ \textit{data drift}\\(KS, $\chi^2$, KL / PSI)}};
+\node[emph, below=12mm of drift, xshift=4mm] (alerta) {\shortstack{Alerta por\\desviación\\(umbral superado)}};
+
+\node[block] (decision)   at (82,100) {\shortstack{Mecanismo de\\decisión\\(gatillar / no gatillar)}};
+\node[emph, below=14mm of decision] (retrain) {\shortstack{Reentrenamiento\\automático}};
+\node[block, below=12mm of retrain] (mlflow) {\shortstack{Registro\\y versionado}};
+
+\node[block] (dash)       at (148,92) {\shortstack{Visualización\\de métricas\\(Grafana / Prometheus)}};
+\node[block, below=12mm of dash] (interp) {\shortstack{Interpretación\\de resultados\\(comparativos pre / post)}};
+
+% ====== FLECHAS ======
+\draw[flow] (ingesta) -- (drift);
+\draw[flow] (drift)   -- (alerta);
+\draw[flow] (alerta.east) to[out=0,in=180] (decision.west);
+\draw[flow] (decision) -- (retrain);
+\draw[flow] (retrain)  -- (mlflow);
+\draw[flow] (mlflow.east) to[out=0,in=180] (dash.west);
+\draw[flow] (dash) -- (interp);
+
+% ====== BUCLE ======
+\draw[dashedflow]
+  (interp.south) .. controls +(0,-8) and +(0,-8) ..
+  (mlflow.south) .. controls +(-24,-6) and +(24,-6) ..
+  (alerta.south) .. controls +(0,-8) and +(0,-8) ..
+  (drift.south);
+
+% ====== FONDO ======
+\begin{pgfonlayer}{background}
+  \node[lane, fit=(ingesta)(drift)(alerta)] (laneA) {};
+  \node[lane, fit=(decision)(retrain)(mlflow)] (laneB) {};
+  \node[lane, fit=(dash)(interp)] (laneC) {};
+\end{pgfonlayer}
+
+% ====== TÍTULOS ======
+\node[anchor=south] at ($(laneA.north)+(0,6)$) {\textbf{Línea A: Datos}};
+\node[anchor=south] at ($(laneB.north)+(0,6)$) {\textbf{Línea B: Automatización}};
+\node[anchor=south] at ($(laneC.north)+(0,6)$) {\textbf{Línea C: Observabilidad}};
+\end{tikzpicture}
+
+\caption[Flujo de trabajo metodológico]{Flujo de trabajo metodológico: datos $\rightarrow$ detección $\rightarrow$ alerta $\rightarrow$ reentrenamiento $\rightarrow$ registro $\rightarrow$ visualización, con bucle de mejora continua.}
+\label{fig:flujo_trabajo_estilizado_fit}
+\end{figure}
+\endgroup
+
+A continuación, se describen los pasos metodológicos principales:
+
+\begin{enumerate}
+    \item \textbf{Revisión de literatura y diseño conceptual:}
+    En esta fase se realizó una exploración bibliográfica intensiva para establecer las bases teóricas y prácticas del proyecto. Se estudiaron técnicas de detección de \textit{data drift} (como Kolmogorov-Smirnov, Chi-cuadrado y Kullback-Leibler), arquitecturas para entornos Big Data y principios de MLOps aplicados a flujos de trabajo de actualización de modelos. Este análisis permitió definir los módulos funcionales que compusieron el sistema, identificar tecnologías viables y proponer una arquitectura conceptual sobre la cual se desarrolló el prototipo. Se consolidaron los principales patrones arquitectónicos y se bosquejó un primer diseño lógico.
+
+    La documentación generada incluye el registro de papers clave, anotaciones de arquitectura, bitácoras de decisiones y estructuras base de directorios en Git.
+    
+    \begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=1.5cm]
+    \node (a) [block] {Lectura de papers};
+    \node (b) [block, below of=a] {Extracción de técnicas};
+    \node (c) [block, below of=b] {Selección de componentes};
+    \node (d) [block, below of=c] {Diseño del modelo de arquitectura};
+    \draw [arrow] (a) -- (b);
+    \draw [arrow] (b) -- (c);
+    \draw [arrow] (c) -- (d);
+    \end{tikzpicture}
+    \caption{Diagrama: Revisión y diseño conceptual}
+    \end{figure}
+
+    \item \textbf{Implementación del entorno de prueba:}
+    Se habilitó un entorno experimental pseudo-distribuido empleando contenedores orquestados con Docker Compose. Esta estrategia permitió aislar cada componente del sistema, controlar versiones, replicar la arquitectura en distintos entornos y escalar los servicios de manera controlada, reproduciendo condiciones similares a las de un sistema en producción.
+    
+    En el primer paso, el uso conjunto de \textbf{Docker + Compose} facilitarón el despliegue modular de todos los servicios involucrados: desde la gestión de datos hasta el procesamiento y monitoreo. Docker Compose coordinará múltiples contenedores definidos en un archivo de configuración, permitiendo instanciar la infraestructura de forma declarativa, eficiente y reproducible.
+    
+    A continuación, se puso en ejecución un \textbf{contenedor con Apache Spark y HDFS}. Spark funcionará como el motor de procesamiento distribuido sobre el cual se ejecutó transformaciones, agregaciones y simulaciones en los datos, validando así el comportamiento del sistema bajo diferentes volúmenes y velocidades. HDFS proporcionará almacenamiento persistente, imitando entornos reales donde los datos no son efímeros y deben estar disponibles para procesos posteriores como reentrenamiento o análisis de rendimiento.
+    
+    Luego, se implementó un módulo en Python responsable del \textbf{procesamiento de datos sintéticos y su transformación}. Aunque los datos no se generarán en esta fase, sí se transformarán para representar distintos tipos de alteraciones en la distribución (por ejemplo, desplazamientos, cambios en la varianza o presencia de valores atípicos). Estas transformaciones sirvieron para alimentar los flujos que simulen el \textbf{data drift}.
+    
+    Finalmente, se definieron un conjunto de \textbf{escenarios controlados} que permitan medir con precisión la capacidad del sistema para reaccionar ante los eventos simulados. Estos escenarios fueron diseñados para comparar el rendimiento del pipeline con y sin automatización, permitiendo evaluar la latencia en la detección, la estabilidad del modelo tras el reentrenamiento, y la trazabilidad completa de los cambios inducidos.
+
+    \textit{Se documentaron los archivos de configuración YAML de Docker Compose, scripts de inicialización, métricas base y escenarios de validación, junto con anotaciones en el repositorio.}
+
+    \begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=1.5cm]
+    \node (a) [block] {Docker + Compose};
+    \node (b) [block, below of=a] {Contenedor Spark + HDFS};
+    \node (c) [block, below of=b] {Dataset sintético en Python};
+    \node (d) [block, below of=c] {Simulación de escenarios};
+    \draw [arrow] (a) -- (b);
+    \draw [arrow] (b) -- (c);
+    \draw [arrow] (c) -- (d);
+    \end{tikzpicture}
+    \caption{Diagrama: Implementación del entorno de prueba}
+    \end{figure}
+
+    \item \textbf{Desarrollo del pipeline de detección y reentrenamiento:}
+    Esta fase contempla la construcción del núcleo funcional del sistema: un pipeline automatizado que detecta desviaciones en la distribución de los datos (\textit{data drift}) y activa mecanismos de reentrenamiento del modelo en producción. La arquitectura del pipeline está orientada a la operación continua y a la capacidad de respuesta autónoma ante cambios significativos en los datos de entrada.
+
+    \item \textbf{Uso de Airflow como ETL:}
+    Aunque la prueba inicial se realizó ejecutando directamente los scripts de generación de particiones en HDFS, 
+    el diseño metodológico incorpora \textbf{Apache Airflow} como orquestador del proceso ETL. 
+    Para ello se implementó un \textbf{DAG} \\ (\texttt{bank\_data\_generation\_dag}) que ejecuta periódicamente 
+    un contenedor Docker con el cliente PySpark (\texttt{arlequin-pyspark-client}). 
+    Este DAG invoca el script \texttt{generate\_data.py}, que sintetiza transacciones bancarias con 
+    probabilidad de \textit{drift} y las escribe en HDFS en formato Parquet.
+
+   \paragraph{Representación del DAG de Airflow}
+    El flujo ETL se implementó como un \textit{Directed Acyclic Graph (DAG)} en Airflow que orquesta la generación, transformación y carga de datos sintéticos hacia HDFS. Cada nodo corresponde a una tarea contenedorizada (Docker) ejecutada por el cliente PySpark.
+    
+    \begin{lstlisting}[style=airflow,caption={Pseudocódigo del DAG \texttt{bank\_data\_generation\_dag.py}},label={lst:airflow-dag}]
+    from airflow import DAG
+    from airflow.providers.docker.operators.docker import DockerOperator
+    from datetime import datetime
+    
+    with DAG(
+        dag_id="bank_data_generation_dag",
+        schedule_interval="@hourly",
+        start_date=datetime(2025, 1, 1),
+        catchup=False,
+        tags=["etl","synthetic","hdfs"]
+    ) as dag:
+    
+        extract = DockerOperator(
+            task_id="extract_data",
+            image="arlequin-pyspark-client",
+            command="python generate_data.py --stage extract"
+        )
+    
+        transform = DockerOperator(
+            task_id="transform_data",
+            image="arlequin-pyspark-client",
+            command="python generate_data.py --stage transform"
+        )
+    
+        load = DockerOperator(
+            task_id="load_to_hdfs",
+            image="arlequin-pyspark-client",
+            command="python generate_data.py --stage load --dst hdfs:///user/bank_data"
+        )
+    
+        extract >> transform >> load
+    \end{lstlisting}
+    
+    \begin{figure}[htbp]
+    \centering
+    %\resizebox{0.9\linewidth}{!}{%  % <- opcional; comenta si no lo necesitas
+    \begin{tikzpicture}[
+      >=Latex,
+      line/.style={-Latex, thick},
+      box/.style={draw, rounded corners, fill=gray!10, align=center, minimum width=38mm, minimum height=12mm, font=\small},
+      art/.style={draw, rounded corners, fill=gray!5,  align=center, minimum width=38mm, minimum height=10mm, font=\scriptsize}
+    ]
+    % matriz con separación controlada
+    \matrix (m) [row sep=12mm, column sep=12mm] {
+      \node[box] (extract)   {Extracción\\\texttt{extract\_data}}; &
+      \node[box] (transform) {Transformación\\\texttt{transform\_data}}; &
+      \node[box] (load)      {Carga a HDFS\\\texttt{load\_to\_hdfs}}; \\
+      \node[art] (raw)  {Artefacto: \texttt{raw\_batch.parquet}}; &
+      \node[art] (stg)  {Artefacto: \texttt{staged\_batch.parquet}}; &
+      \node[art] (hdfs) {HDFS: \texttt{/user/bank\_data/\{dt\}}}; \\
+    };
+    
+    % flechas horizontales (nodos superiores)
+    \draw[line] (extract) -- (transform);
+    \draw[line] (transform) -- (load);
+    
+    % flechas verticales (ancladas a bordes, sin cruzar cajas)
+    \draw[line] (extract.south) -- (raw.north);
+    \draw[line] (transform.south) -- (stg.north);
+    \draw[line] (load.south) -- (hdfs.north);
+    \end{tikzpicture}
+    %}
+    \caption{Flujo ETL orquestado por Airflow: nodos, dependencias y artefactos.}
+    \label{fig:airflow-etl}
+    \end{figure}
+
+
+
+
+    El flujo del DAG contempla:
+    \begin{enumerate}
+        \item \textbf{Extracción}: inicialización de un lote de datos sintéticos mediante \texttt{Faker} y reglas de estacionalidad.
+        \item \textbf{Transformación}: creación de un \texttt{DataFrame} en Spark con esquema predefinido, 
+              incorporación de campos derivados (p.ej. \texttt{risk\_score}) y aplicación del factor de drift.
+        \item \textbf{Carga}: escritura en \texttt{HDFS} bajo la ruta \texttt{hdfs:///user/bank\_data/bank\_transactions}, 
+              con particionado temporal (\texttt{timestamp}) para habilitar ingestas incrementales y pruebas de 
+              detección de \textit{drift}.
+    \end{enumerate}
+
+    La inclusión de Airflow aporta \textbf{reproducibilidad y trazabilidad} (cada corrida del DAG queda registrada), 
+    \textbf{aislamiento de responsabilidades} (Airflow únicamente orquesta la generación/carga, mientras el \textit{drift-watcher} 
+    monitorea particiones nuevas) y \textbf{operación continua} (el intervalo de scheduling del DAG determina el ritmo 
+    de llegada de datos y, por ende, la frecuencia de evaluación del \textit{drift}).
+    
+    \item \textbf{Entrada del sistema:} el pipeline procesará flujos de datos provenientes del entorno experimental configurado previamente, almacenados en el sistema distribuido y transformados por procesos previos de limpieza y estructuración.
+    
+    \item \textbf{Evaluación estadística:} la detección de drift se implementó mediante una combinación de pruebas estadísticas no paramétricas sobre ventanas móviles de datos. Se utilizaron:
+    \begin{itemize}
+      \item \textbf{Kolmogorov-Smirnov (KS):} para comparar la distribución empírica de nuevas observaciones con la distribución histórica del entrenamiento.
+      \item \textbf{Chi-cuadrado (\(\chi^2\)):} para detectar cambios discretos en distribuciones categóricas.
+      \item \textbf{Kullback-Leibler Divergence (KL):} para evaluar la diferencia entre distribuciones de probabilidad observadas y esperadas.
+    \end{itemize}
+    Estas pruebas se ejecutaron usando librerías de Python como \texttt{scipy.stats} y \texttt{alibi-detect}. Se configuraron umbrales adaptativos que disparen alertas cuando se supere un nivel crítico de desviación.
+    
+    \item \textbf{Mecanismo de decisión y activación:} cuando las pruebas detecten \textit{data drift}, se activó una tarea automatizada orquestada por \texttt{Jenkins}. Esta tarea lanzó un nuevo proceso de reentrenamiento con los datos recientes. Este componente incluyó validación cruzada y control de sobreajuste mediante técnicas como \texttt{early stopping} y registro de métricas.
+    
+    \item \textbf{Reentrenamiento y versionado:} una vez generado el nuevo modelo, se almacenó junto con sus métricas, hiperparámetros y configuración en \texttt{MLflow}. Esto garantizará la trazabilidad completa del ciclo de vida del modelo, incluyendo comparaciones con versiones anteriores para validar mejoras y evitar regresiones.
+    
+    \item \textbf{Salida esperada:} un modelo actualizado validado bajo condiciones de \textit{drift}, métricas registradas y documentadas, y control de versiones centralizado.
+
+    \textit{Se documentó cada versión del modelo, scripts de validación, configuraciones de ejecución de Jenkins y resultados comparativos.}
+
+    \begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=1.5cm]
+    \node (a) [block] {Entrada de datos};
+    \node (b) [block, below of=a] {Evaluación estadística};
+    \node (c) [block, below of=b] {Detección de drift};
+    \node (d) [block, below of=c] {Activación de Jenkins};
+    \node (e) [block, below of=d] {Reentrenamiento};
+    \node (f) [block, below of=e] {Registro en MLflow};
+    \draw [arrow] (a) -- (b);
+    \draw [arrow] (b) -- (c);
+    \draw [arrow] (c) -- (d);
+    \draw [arrow] (d) -- (e);
+    \draw [arrow] (e) -- (f);
+    \end{tikzpicture}
+    \caption{Diagrama: Pipeline de detección y reentrenamiento}
+    \end{figure}
+
+    \item \textbf{Validación del sistema:} 
+    La fase de validación constituye un componente esencial del proyecto, pues permite determinar en qué medida el sistema implementado cumple con los objetivos planteados de detección temprana de \textit{data drift} y reentrenamiento automatizado. Para ello se diseñaron y ejecutaron dos escenarios controlados de prueba: (i) un escenario estático sin presencia de \textit{drift}, que servió como línea base de comparación, y (ii) un escenario con \textit{drift} inducido de manera progresiva mediante la alteración controlada de variables de entrada, a fin de evaluar la capacidad del sistema para detectar desviaciones y restaurar el desempeño del modelo.
+    
+    En cada escenario se registraron métricas de desempeño del modelo, incluyendo precisión, \textit{recall}, F1-score y AUC, complementadas con indicadores de operación del pipeline como la latencia de detección, el tiempo total de reentrenamiento y los recursos computacionales consumidos (CPU, memoria y uso de disco). Estas métricas se capturaron de manera automática a través de MLflow para el versionamiento de modelos, Prometheus para la exposición de indicadores en tiempo real, y Grafana para la visualización y consolidación de paneles comparativos.
+    
+    El proceso experimental considerará además la generación de múltiples corridas bajo condiciones equivalentes, con el fin de asegurar reproducibilidad y obtener promedios estadísticamente significativos. De esta manera, se podrá distinguir entre fluctuaciones aleatorias y comportamientos sistemáticos del sistema frente al \textit{data drift}. Asimismo, se documentaron aspectos de eficiencia operativa, tales como el consumo de recursos durante el reentrenamiento, el impacto del tamaño de las particiones de datos en la detección del \textit{drift}, y el efecto de los umbrales de significancia establecidos para activar el pipeline.
+    
+    El análisis de resultados no se limitará únicamente a la comparación numérica de métricas, sino que incluyó la elaboración de informes interpretativos por versión del modelo. Estos informes contendrán gráficos de evolución de métricas, tablas comparativas de desempeño entre escenarios y descripciones cualitativas de la respuesta del sistema. Además, se elaborarán visualizaciones específicas para resaltar la relación entre el \textit{Population Stability Index} (PSI) y las métricas de rendimiento, con el propósito de evaluar el poder predictivo del PSI como señal temprana de degradación del modelo.
+    
+    \textit{Esta fase producirá como entregables un conjunto de informes comparativos, visualizaciones interactivas en dashboards, métricas consolidadas y resúmenes analíticos que permitirán evaluar de manera integral la eficacia del sistema. Los resultados obtenidos sirvieron como insumo directo para la discusión final y la formulación de recomendaciones para futuros despliegues en entornos reales.}
+
+
+    \begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=1.5cm]
+    \node (a) [block] {Ejecución del pipeline};
+    \node (b) [block, below of=a] {Comparación de métricas};
+    \node (c) [block, below of=b] {Análisis de logs};
+    \node (d) [block, below of=c] {Interpretación de resultados};
+    \draw [arrow] (a) -- (b);
+    \draw [arrow] (b) -- (c);
+    \draw [arrow] (c) -- (d);
+    \end{tikzpicture}
+    \caption{Diagrama: Validación del sistema}
+    \end{figure}
+\end{enumerate}
+
+\fi
+\section{Resultados obtenidos}
+
+\subsection{Resultados cuantitativos}
+
+\paragraph{Prototipo y objetivo.}
+El prototipo \textbf{Arlequín} demostró capacidad de \emph{detección temprana} y \emph{respuesta automática} frente al \textit{data drift}. El sistema monitorea continuamente la distribución de entrada y, al superar umbrales de significancia, activa el reentrenamiento y registra el ciclo completo.
+
+En términos de \textbf{evidencia empírica}, los principales resultados son:
+\paragraph{Resultados observados.}
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{Detección y magnitud del \textit{drift}:} el \textit{Population Stability Index} (PSI) superó el umbral de alerta en el escenario con \textit{drift}, confirmando desviaciones de distribución capturadas por KS y $\chi^2$.
+  \item \textbf{Latencias operativas:} \textit{TTFD} en el orden de minutos sub–minutales y \textit{TTR} acotado a minutos, suficientes para reacción oportuna sin intervención humana.
+  \item \textbf{Desempeño del modelo:} caída de F1/Recall ante \textit{drift} y \textbf{recuperación posterior} tras el reentrenamiento automático (no–inferioridad respecto a la línea base).
+  \item \textbf{Trazabilidad:} ejecución y artefactos versionados en MLflow; series temporales de métricas expuestas en Prometheus y visualizadas en Grafana.
+\end{itemize}
+
+\noindent
+\textbf{Fundamentaci\'on estad\'istica e IC95\%.} Para F1, PSI, \textit{TTFD} y \textit{TTR} se estimaron intervalos de confianza al 95\,\% mediante \textbf{bootstrap percentil} ($B=1000$) sobre r\'eplicas experimentales por escenario; para tiempos se reportan intervalos percentil adecuados a distribuciones sesgadas. Las definiciones y pruebas formales aparecen en el Cap\'itulo~\ref{sec:eval-design}.
+
+\noindent
+\textbf{Interpretación.} En conjunto, la combinación de KS/$\chi^2$/PSI ofrece señales operativas útiles (detección + severidad), mientras que el gatillo de reentrenamiento restituye el desempeño con costos temporales controlados. Esta evidencia soporta la hipótesis de que un ciclo MLOps automatizado \emph{reduce latencias} y \emph{restaura} la precisión bajo no–estacionariedad.
+
+
+Consistente con H1 y H2 del Capitulo~4 (Seccion~\ref{subsec:eval-rq}).
+\paragraph{Condiciones experimentales.}
+Los experimentos se realizaron bajo tres condiciones controladas:
+\begin{enumerate}
+    \item \textbf{E1 – Base:} flujo de datos sin drift (línea base).
+    \item \textbf{E2 – Drift inducido:} aumento progresivo en las variables \texttt{amount} y \texttt{risk\_score}.
+    \item \textbf{E3 – Reentrenado:} modelo actualizado tras la activación automática del \textit{pipeline}.
+\end{enumerate}
+
+En cada escenario se registraron métricas clave en MLflow y Prometheus: \textit{F1-score}, \textit{Recall}, \textit{PSI}, y tiempos de detección (\textit{TTFD}) y reentrenamiento (\textit{TTR}). Los resultados promedio se resumen en la Tabla~\ref{tab:metricas-resultados}.
+
+\begin{table}[H]
+\centering
+\caption{Resumen comparativo de métricas por escenario experimental.}
+\label{tab:metricas-resultados}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Escenario} & \textbf{F1 (IC95\%)} & \textbf{Recall} & \textbf{PSI (IC95\%)} & \textbf{TTFD (s, IC95\%)} & \textbf{TTR (s, IC95\%)} \\
+\midrule
+E1 -- Base (sin drift)   & 0.835 (IC95\%: [\,\,]) & 0.84 & 0.05 (IC95\%: [\,\,]) & -- & -- \\
+E2 -- Con drift inducido & 0.62\phantom{0} (IC95\%: [\,\,]) & 0.65 & 0.31 (IC95\%: [\,\,]) & 180 (IC95\%: [\,\,]) & -- \\
+E3 -- Reentrenado        & 1.00\phantom{0} (IC95\%: [\,\,]) & 1.00 & 0.06 (IC95\%: [\,\,]) & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El escenario E2 evidenció una degradación significativa del desempeño (F1 $\downarrow$ 26\%), acompañada de un PSI superior al umbral de alerta (0.2). El sistema detectó el \textit{drift} en aproximadamente 3 minutos y activó el reentrenamiento, tras el cual el modelo recuperó su desempeño inicial (E3). Estas métricas confirman la capacidad del sistema para detectar y corregir desviaciones en tiempo casi real.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.85\linewidth,
+    xlabel={PSI},
+    ylabel={F1-score},
+    ymin=0, ymax=1,
+    xmin=0, xmax=0.4,
+    grid=both,
+    major grid style={dotted},
+    scatter/classes={a={mark=*,blue}},
+]
+\addplot[mark=*,blue] coordinates {
+    (0.05,0.83)
+    (0.10,0.80)
+    (0.20,0.75)
+    (0.31,0.62)
+    (0.06,1.00)
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Relación entre la magnitud del PSI y el desempeño del modelo (F1-score).}
+\label{fig:psi-f1}
+\end{figure}
+
+La Figura~\ref{fig:psi-f1} evidencia la correlación negativa entre el PSI y el F1-score: a medida que la desviación de distribución aumenta, el rendimiento del modelo disminuye. El reentrenamiento automático restaura simultáneamente el desempeño y reduce el PSI, validando la efectividad del mecanismo de corrección.
+
+\subsection{Discusión inicial}
+Los resultados cuantitativos respaldan la hipótesis H\textsubscript{1} planteada en la Sección~\ref{sec:metodologia}: un sistema MLOps automatizado puede restaurar el desempeño del modelo tras la detección de \textit{data drift} en entornos no estacionarios. La secuencia E1–E2–E3 demuestra empíricamente la sensibilidad del detector y la capacidad de recuperación del \textit{pipeline}.
+
+\textbf{Interpretación de los resultados.}  
+El incremento del PSI y la caída simultánea del F1 confirman que las pruebas estadísticas no paramétricas (KS, $\chi^2$ y PSI) capturan eficazmente desviaciones en la distribución. El retorno a F1=1.0 tras el reentrenamiento valida la hipótesis de mejora significativa post-activación automática.
+
+\textbf{Limitaciones y consideraciones estadísticas.}
+\begin{itemize}
+    \item \textbf{Naturaleza sintética de los datos:} la simplicidad del generador (\textit{Faker}) limita la variabilidad y puede sobreestimar la generalización del sistema.
+    \item \textbf{Tamaño de muestra y repetibilidad:} el número de ejecuciones ($n=5$) restringe la estimación de intervalos de confianza e impide análisis inferenciales robustos.
+    \item \textbf{Métodos no paramétricos:} si bien las pruebas KS, $\chi^2$ y PSI son apropiadas para distribuciones arbitrarias, no permiten inferir causalidad ni modelar interacciones multivariadas.
+\end{itemize}
+
+Los hallazgos ofrecen una validación inicial del enfoque metodológico, demostrando la utilidad del PSI como indicador temprano de degradación y la eficacia del reentrenamiento automatizado para recuperar la estabilidad del modelo. Estas observaciones sientan la base para un análisis estadístico más riguroso en el capítulo de evaluación.

@@ -1,0 +1,220 @@
+%% Formato para la presentaci\'on de  proyectos de grado. 
+%% Maestría en Ingeniería de Software
+%% Pontificia Universidad Javeriana
+%% Elaborado por Angela Villota y Luisa Rincón
+%% Inspirado en Formato elaborado para carrera de Ing de Sistemas
+%% V 1.0 Abril - 2022
+%\documentclass[openany]{book}
+
+%\documentclass[11pt,twoside]{thesis}
+\documentclass[11pt,oneside]{thesis}
+\usepackage{enumerate}
+\usepackage{longtable}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{makeidx}
+\usepackage{graphics}
+\usepackage{booktabs}
+\usepackage[spanish,es-nodecimaldot,es-noshorthands]{babel}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.misc,fit,backgrounds,calc}
+\usepackage{float} % para [H]
+\usepackage{adjustbox}
+% Paleta sobria para impresión (grises + acento)
+\definecolor{lanegray}{RGB}{245,245,245}
+\definecolor{accent}{RGB}{23,111,176}   % azul sobrio
+\definecolor{dark}{RGB}{60,60,60}
+%%%%%%%%%%%%%%%%%%%
+% Estilos reutilizables
+\tikzset{
+  >={Latex[length=3mm,width=2mm]},
+  font=\small,
+  node distance=9mm,
+  block/.style={rectangle, rounded corners=3pt, minimum width=44mm, minimum height=10mm,
+                draw=dark, very thick, fill=white, align=center, inner sep=3.5pt},
+  emph/.style={block, draw=accent, very thick},
+  note/.style={rectangle, rounded corners=2pt, draw=dark, fill=white, inner sep=2.5pt, align=left},
+  lane/.style={rounded corners=5pt, draw=dark, line width=0.4pt, fill=lanegray},
+  dot/.style={circle, inner sep=1pt, fill=dark, draw=dark},
+  flow/.style={->, very thick, draw=dark},
+  flowaccent/.style={->, very thick, draw=accent},
+  dashedflow/.style={->, thick, draw=dark, dashed},
+}
+%%%%%%%%%%%%%%%%%%%
+%\usepackage{tikz}
+\usetikzlibrary{positioning,fit,arrows.meta,shapes.symbols,shapes.geometric}
+\usetikzlibrary{arrows.meta,positioning} 
+\usepackage{adjustbox}
+\usepackage{caption}
+\usepackage{natbib}
+% Paquetes adicionales
+\usepackage{amsmath}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{siunitx}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{statistics} % para boxplots
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
+\usepackage{minted}
+\usetikzlibrary{positioning,calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{subcaption}
+\tikzstyle{block} = [rectangle, draw=black, fill=white!10, minimum height=1.2cm, text centered, rounded corners, minimum width=3.5cm]
+\tikzstyle{arrow} = [->, thick, >=stealth]
+\usepackage{lipsum}
+\usepackage{url} 
+% --- TikZ estilos compactos ---
+\tikzset{
+  box/.style={draw, rounded corners=2pt, fill=gray!8, align=center,
+              minimum width=18mm, minimum height=7mm, text width=28mm,
+              inner sep=2pt},
+  proc/.style={box},
+  obs/.style={box, fill=blue!5},
+  db/.style={cylinder, draw, shape border rotate=90, aspect=0.25,
+             minimum height=9mm, minimum width=9mm,
+             cylinder uses custom fill, cylinder end fill=gray!20,
+             cylinder body fill=gray!8, align=center, text width=24mm},
+  decision/.style={diamond, draw, aspect=2, align=center, inner sep=1pt,
+                   fill=gray!6, text width=18mm},
+  arrow/.style={-Latex, line width=0.45pt},
+  note/.style={font=\scriptsize, inner sep=1pt, fill=white, align=center}
+}
+
+\usepackage{listings}
+\usepackage{xcolor}
+\lstdefinestyle{airflow}{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  numbers=left,
+  numbersep=6pt,
+  frame=single,
+  rulecolor=\color{black!20},
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  tabsize=2,
+  captionpos=b
+}
+
+% --- Figuras con mejor control de ubicación ---
+\usepackage{float} % para [H]
+
+% --- TikZ para el diagrama simple ---
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit}
+
+
+%%%%%%%%%%%%%%%%
+% TITULO DEL PROYECTO
+%%%%%%%%%%%%%%%%
+\titulo{Implementación de un Sistema Automatizado de Reentrenamiento mediante la Detección de Data Drift en un Ciclo MLOps para Entornos Big Data}
+
+%%%%%%%
+% AUTORES
+%%%%%%%
+\autorA{1234640402}{Leyton Jean Piere Castro Clavijo}
+
+%%%%%%%
+% FECHA DE ENTREGA
+%%%%%%%
+\fecha{xx de xx de xx}
+
+\directorproyecto{}{MSc Felipe Buitrago Carmona}
+\directorcarrera{Ph.D.}{Luisa Rincón}
+
+\include{format}
+\makeindex
+
+\begin{document}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%
+% PARA LAS CARTAS
+%%%%%%%%%%%%%%%%%%
+\makecoverletter
+
+
+%%%%%%%%%%%%%%%%%%
+% FICHA RESUMEN
+%%%%%%%%%%%%%%%%%%
+\newpage{\ } 
+\input{src/00-ficha_resumen}
+
+%%%%%%%%%%%%%%%%%%
+% AGRADECIMIENTOS
+%%%%%%%%%%%%%%%%%%
+\input{src/00-agradecimientos}
+
+%%%%%%%%%%%%%%%%%%
+% ABSTRACT
+%%%%%%%%%%%%%%%%%%
+\input{src/0-abstract.tex}
+
+%%%%%%%%%%%%%%%%%
+%%%% TABLE OF CONTENTS
+%%%% AND PREABLE
+%%%%%%%%%%%%%%%%%
+  
+\newpage{\ } 
+\thispagestyle{empty} 
+\tableofcontents 
+\listoffigures   \listoftables   \mainmatter
+
+\dominitoc
+\cleardoublepage
+
+%%%%%%%%%%%%%%%%%%%%%%
+% INTRODUCCION
+%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Introducción}
+\input{src/1-introduccion.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%
+% DESCRIPCION DEL PROBLEMA
+%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Marco de referencia}
+\input{src/2-marco}
+
+%%%%%%%%%%%%%%%%%%%%%%
+% DESARROLLO DEL PROYECTO
+%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Desarrollo del Proyecto}
+\input{src/3-desarrollo.tex}
+
+%%% Agregue aquí tantos capitulos como necesite
+
+%%%%%%%%%%%%%%%%%%%%%%
+% Evaluación
+%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Evaluación}
+\input{src/4-evaluacion}
+
+%%%%%%%%%%%%%%%%%%%%%%
+% CONCLUSIONES
+%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Conclusiones}
+\input{src/5-conclusiones.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%
+% ANEXOS
+%%%%%%%%%%%%%%%%%%%%%%
+%\appendix
+%\input{src/anexo-contexto.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% BIBLIOGRAFIA
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliographystyle{apalike}
+\bibliography{biblio}
+
+%%%%%%%%%%%%%%%%
+% GENERAL INDEX
+%%%%%%%%%%%%%%%%
+%\printindex
+
+\end{document}
+\endinput

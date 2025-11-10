@@ -1,0 +1,25 @@
+%%%%%%%%%%%%%%%%
+% ABSTRACT
+%%%%%%%%%%%%%%%%
+
+\chapter*{Resumen}
+El presente proyecto propone un sistema automatizado de reentrenamiento de modelos de \textit{machine learning} que responde a la detección temprana del \textit{data drift} en entornos Big Data. En la actualidad, las organizaciones enfrentan pérdidas promedio de 12,9 millones de USD anuales por mala calidad de datos y 4,88 millones por brechas de información \citep{Gartner2024,IBM2024}, lo que evidencia la necesidad de soluciones que garanticen precisión y resiliencia en sistemas basados en datos.
+
+El sistema desarrollado monitorea continuamente los flujos de entrada de los modelos en producción; cuando identifica cambios estadísticamente significativos en su distribución, activa un \textit{pipeline} automatizado que reentrena, valida y despliega una nueva versión del modelo. De esta forma, se obtiene un modelo actualizado, trazable y auditable, que mantiene la exactitud predictiva ante condiciones cambiantes.
+
+Basado en prácticas MLOps, el ciclo integra herramientas abiertas como Docker para contenerización, Jenkins para orquestación, Spark para procesamiento distribuido y MLflow para trazabilidad experimental. Los resultados, validados en escenarios con y sin \textit{drift}, demuestran una recuperación completa del desempeño del modelo (F1-score) y una reducción significativa del tiempo de respuesta operativa.
+
+El proyecto contribuye a los \textbf{ODS 8, 9 y 12}: fomenta la eficiencia y productividad mediante automatización inteligente (ODS 8), impulsa innovación e infraestructura digital reproducible (ODS 9) y promueve la sostenibilidad operativa al reducir retrabajos y desperdicio computacional (ODS 12).
+
+\textbf{Palabras Clave}: Data Drift, MLOps, Big Data, Automatización, Machine Learning
+
+\chapter*{Abstract}
+This research presents the \textbf{design, implementation, and empirical validation} of a fully automated retraining system for \textbf{machine-learning models} based on early \textbf{data-drift detection} in \textbf{Big Data} environments. In modern organizations, poor data quality costs an average of \textbf{USD 12.9 million} per year, while data breaches exceed \textbf{USD 4.88 million} in losses \citep{Gartner2024,IBM2024}, highlighting the critical need for resilient and self-adaptive analytical systems.
+
+The proposed system continuously monitors production data streams; when it detects statistically significant distributional changes, it triggers an automated \textit{pipeline} that retrains, validates, and redeploys the model. As a result, the model remains accurate, traceable, and auditable under changing data conditions. 
+
+Grounded in \textbf{MLOps best practices}, the architecture integrates open-source tools such as \textbf{Docker} for containerization, \textbf{Jenkins} for orchestration, \textbf{Apache Spark} for distributed processing, and \textbf{MLflow} for experiment tracking. Empirical validation under both drift and non-drift scenarios demonstrated full recovery of the model’s F1-score and a substantial reduction in operational latency and manual intervention.
+
+The project contributes to the \textbf{UN Sustainable Development Goals (SDGs 8, 9, and 12)} by enhancing operational efficiency and productivity through intelligent automation (SDG 8), strengthening innovation and resilient digital infrastructure (SDG 9), and promoting sustainable resource use and reduced computational waste (SDG 12).
+
+\textbf{Keywords}: Data Drift; MLOps; Big Data; Automated Retraining; Machine Learning

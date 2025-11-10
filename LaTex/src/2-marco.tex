@@ -1,0 +1,182 @@
+%%%%%%%%%%%%%%%%%%%%%%
+% Marco teorico y antecedentes
+%%%%%%%%%%%%%%%%%%%%%%
+
+Este apartado recopila y organiza los fundamentos conceptuales y antecedentes relevantes al problema abordado, sirviendo de guía para orientar el enfoque del proyecto. Se analizan tanto las bases teóricas que sustentan la investigación como el estado actual de las soluciones y estudios relacionados, lo cual permite identificar vacíos y oportunidades en el contexto de la detección de \textit{data drift} y la automatización del reentrenamiento.
+
+\subsection{Bases Teóricas}
+Las bases teóricas del proyecto se sustentan en diversos pilares conceptuales que explican el comportamiento de los modelos de \textit{machine learning} en entornos dinámicos, la necesidad de sistemas adaptativos y los enfoques tecnológicos subyacentes \citep{Kodakandla2024}.
+
+\subsubsection{Machine Learning y Data Drift}
+Los modelos de \textit{machine learning} comúnmente parten de la premisa de que la distribución de los datos de entrenamiento se mantiene estable a lo largo del tiempo. En escenarios reales, esta condición casi nunca se cumple, pues los datos pueden experimentar variaciones, un fenómeno denominado \textbf{\textit{data drift}} o \textbf{\textit{concept drift}} \citep{Lu2019, Gama2014, Zliobaite2016}. El \textit{data drift} puede manifestarse de diversas maneras:
+
+\begin{itemize}
+    \item \textbf{Cambios de distribución (covariate shift):} Se altera la distribución de las variables de entrada, afectando la capacidad predictiva del modelo.
+    \item \textbf{Cambios de concepto (concept shift):} Se modifican las relaciones subyacentes entre variables de entrada y la variable objetivo, generando una posible degradación en el desempeño.
+    \item \textbf{Drift virtual vs.\ real:} El primero indica cambios aparentes sin modificar la relación subyacente, mientras que el segundo implica un cambio genuino en el proceso generador de los datos \citep{Gama2014}.
+\end{itemize}
+
+Para abordar estos desafíos, se han desarrollado técnicas de \textbf{detección temprana} de \textit{data drift}, que van desde métodos estadísticos no paramétricos (test de Kolmogorov-Smirnov, Chi-cuadrado o divergencia de Kullback-Leibler) hasta algoritmos de \textit{machine learning} supervisados o no supervisados \citep{Chawla2021, Sethi2017}. Adicionalmente, métodos como el \textbf{Early Drift Detection Method (EDDM)} se han mostrado efectivos para identificar cambios sutiles o graduales en los datos \citep{BaenaGarcia2006}.
+
+\paragraph{Formas de Detección de Data Drift}
+De acuerdo con la literatura \citep{Lu2019, Gama2014, BaenaGarcia2006}, se pueden distinguir los siguientes enfoques principales para detectar \textit{data drift}:
+\begin{itemize}
+    \item \textbf{Detección basada en estadísticos de distribución:} Compara la distribución de las variables (o la salida del modelo) en distintas ventanas de datos (\textit{sliding windows}), utilizando pruebas como Kolmogorov-Smirnov o la divergencia de Kullback-Leibler.
+    \item \textbf{Métodos de supervisión externa:} Se introduce un clasificador específico que compara los datos antiguos frente a los datos nuevos para determinar si ha ocurrido un cambio en la distribución o en la relación subyacente.
+    \item \textbf{Monitoreo de métricas de rendimiento:} Se revisan periódicamente indicadores como la exactitud, \textit{precision}, \textit{recall} o la puntuación \textit{F1}, ya que la degradación en estas métricas puede evidenciar \textit{data drift} \citep{Bifet2010}.
+    \item \textbf{Combinaciones híbridas:} Integran pruebas estadísticas con algoritmos de \textit{machine learning} para lograr una detección más robusta.
+\end{itemize}
+
+La elección de pruebas como Kolmogorov-Smirnov, Chi-cuadrado o el Population Stability Index (PSI) responde a su amplia utilización en la literatura de \textit{drift detection} y a su complementariedad. El test de Kolmogorov-Smirnov es sensible a variaciones en la forma de la distribución (media, varianza o asimetría) de variables continuas, mientras que la prueba Chi-cuadrado resulta idónea para identificar cambios en frecuencias categóricas \citep{Sethi2017}. Por su parte, el PSI es ampliamente adoptado en entornos productivos -particularmente en finanzas y riesgo crediticio- porque resume la magnitud de la desviación en un valor único fácilmente interpretable. Estas métricas permiten cubrir distintos tipos de variables y escenarios de \textit{drift}, equilibrando sensibilidad estadística y aplicabilidad práctica \citep{Gama2014, Zliobaite2016}.
+
+\subsection{Contraste crítico y criterios de selección}
+Para maximizar validez práctica en operación, la selección del detector debe ponderar: (i) tipo de variable (continua/categórica/mixta), (ii) modo de operación (\textit{batch} vs. \textit{streaming}), (iii) sensibilidad vs. tasa de falsas alarmas, (iv) costo computacional y memoria, y (v) facilidad de calibración e interpretabilidad \citep{Lu2019, Gama2014, Bifet2010}.
+
+- Variables: KS es adecuado para continuas; $\chi^2$ para categóricas; PSI admite numéricas y categóricas vía \textit{binning}; KL requiere discretización o estimación de densidad.
+- Modo: ADWIN/EDDM operan en flujo con actualización incremental; KS/$\chi^2$/PSI/KL suelen emplearse en ventanas \textit{batch} o deslizantes.
+- Costos: pruebas de conteo (PSI, $\chi^2$) son livianas; KS/KL medianos; detectores de flujo (ADWIN/EDDM) tienen costo amortizado bajo por evento.
+- Calibración: PSI y $\chi^2$ son fáciles de umbralizar; KL requiere suavizado; KS exige tamaños muestrales suficientes por ventana.
+- Multivariado: las versiones univariantes requieren control de multiplicidad o métricas agregadas; el soporte multivariado puro exige técnicas adicionales.
+
+\subsection{Cuadro comparativo de detectores}
+\label{subsec:cuadro-detectores}
+El Cuadro~\ref{tab:comparativa-detectores} contrasta los detectores más usados por tipo de variable y costo computacional (orden relativo por ventana o por evento), según la literatura \citep{Gama2014, Lu2019, Bifet2010, BaenaGarcia2006, Sethi2017}.
+
+\begin{table}[htbp]
+\centering
+\caption{Detectores de \textit{drift}: tipo de variable vs. costo computacional (relativo).}
+\label{tab:comparativa-detectores}
+\begin{tabular}{llll}
+\toprule
+\textbf{Detector} & \textbf{Tipo de variable} & \textbf{Modo} & \textbf{Costo (aprox.)} \\
+\midrule
+Kolmogorov--Smirnov (KS) & Continua (univar.) & Ventanas (batch) & Medio ($\mathcal{O}(n\log n)$ por ventana) \\
+$\chi^2$ de independencia & Categórica & Ventanas (batch) & Bajo ($\mathcal{O}(k)$; conteos) \\
+Kullback--Leibler (KL) & Num./cat. discretizada & Ventanas (batch) & Medio ($\mathcal{O}(k)$; requiere suavizado) \\
+Population Stability Index (PSI) & Num./cat. (con binning) & Ventanas (batch) & Bajo ($\mathcal{O}(\text{bins})$) \\
+EDDM \citep{BaenaGarcia2006} & Métrica de error (cualquiera) & Flujo (\textit{online}) & Bajo (\,\, $\mathcal{O}(1)$ por evento) \\
+ADWIN \citep{Bifet2010} & Métrica de error (cualquiera) & Flujo (\textit{online}) & Bajo/medio (amort. $\mathcal{O}(\log n)$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Notas: $k$ es el número de categorías o \textit{bins}. En práctica, el costo efectivo depende del tamaño de ventana, número de variables monitorizadas y política de muestreo. Para escenarios multivariados, se recomienda (i) combinación de pruebas univariantes con control de FDR, o (ii) detectores multivariados según el caso de uso (no desarrollados aquí por brevedad) \citep{Lu2019, Gama2014}.
+
+\subsubsection{MLOps y Automatización del Ciclo de Vida de los Modelos}
+El paradigma \textbf{MLOps} integra las prácticas de \textit{DevOps} (Integración y Despliegue Continuo, CI/CD) con las necesidades específicas de entrenamiento, validación y mantenimiento de modelos de \textit{machine learning}:
+
+\begin{itemize}
+    \item \textbf{Monitorización continua:} Permite detectar a tiempo los cambios en la calidad de las predicciones y, por ende, en la distribución de los datos \citep{Amershi2019}.
+    \item \textbf{Integración y despliegue automatizado (CI/CD):} Garantiza una reacción rápida cuando se detecta \textit{data drift}, lanzando procesos de reentrenamiento y actualización de modelos en producción \citep{Chen2022, Kim2018}.
+    \item \textbf{Trazabilidad y versionado:} El uso de herramientas como MLflow facilita el registro y la comparación de experimentos, así como la documentación de las versiones de los modelos en cada iteración \citep{Chen2022}.
+\end{itemize}
+
+\subsubsection{Big Data y Tecnologías Emergentes}
+El manejo de grandes volúmenes de datos implica adoptar tecnologías de \textbf{Big Data}:
+\begin{itemize}
+    \item \textbf{Procesamiento distribuido:} \textit{Frameworks} como \textit{Apache Spark} permiten análisis en \textit{batch} y en tiempo real de forma escalable \citep{Chen2022}.
+    \item \textbf{Contenerización y orquestación:} \textit{Docker} y \textit{Kubernetes} facilitan la empaquetación y administración de aplicaciones en entornos heterogéneos, brindando portabilidad y escalabilidad \citep{Merkel2014, Patel2020}.
+    \item \textbf{Monitorización y paneles de control:} Herramientas como Prometheus y Grafana ofrecen la capacidad de vigilar métricas de rendimiento y detectar anomalías en tiempo real, desencadenando acciones de reentrenamiento automático \citep{Zhao2021}.
+\end{itemize}
+
+\subsubsection{Adaptación y Aprendizaje en Línea}
+Los métodos de \textbf{aprendizaje en línea} y \textbf{adaptación continua} permiten que los modelos se ajusten de manera incremental a medida que reciben datos:
+\begin{itemize}
+    \item \textbf{Ventanas deslizantes (sliding windows):} Se da prioridad a los datos recientes para que el modelo refleje la distribución actual \citep{Kolter2007, Bifet2010}.
+    \item \textbf{Ponderación de instancias:} Concede mayor relevancia a ejemplos más nuevos para acelerar la adaptación al cambio \citep{Minku2010}.
+    \item \textbf{Reentrenamiento periódico o gatillado:} Se combina la detección de \textit{data drift} con la activación selectiva de un reentrenamiento parcial o completo, buscando optimizar recursos computacionales y tiempo de inactividad.
+\end{itemize}
+
+\subsection{Evaluación de Sistemas de Detección y Reentrenamiento}
+La eficacia de un sistema de detección de \textit{data drift} y automatización de reentrenamiento se valora en múltiples dimensiones \citep{Gama2014, Zliobaite2016}:
+\begin{itemize}
+    \item \textbf{Métricas de rendimiento del modelo:} \textit{Precision}, \textit{recall}, \textit{F1-score}, \textit{AUC} (Área Bajo la Curva) y otras, para cuantificar la calidad de las predicciones antes y después de la actualización.
+    \item \textbf{Tiempo de detección (time-to-detect):} Intervalo entre el momento en que ocurre el \textit{drift} y el instante en que se emite la alerta; un sistema óptimo debería identificarlo con rapidez \citep{Sethi2017}.
+    \item \textbf{Tasa de falsas alarmas:} Mide cuántas veces el detector produce avisos de \textit{drift} sin que realmente haya un cambio significativo, lo cual conduce a reentrenamientos innecesarios y sobrecarga de recursos.
+    \item \textbf{Costo computacional y escalabilidad:} Incluye el análisis de consumo de CPU, memoria y tiempo de procesamiento requerido por la infraestructura \textit{Big Data}, que puede tener un impacto directo en la viabilidad económica de la solución.
+\end{itemize}
+
+Combinar estas métricas y criterios de evaluación posibilita un análisis integral del sistema, permitiendo la implementación de mejoras que optimicen el rendimiento predictivo, reduzcan los costos operativos y garanticen una reacción ágil ante cambios en los datos.
+
+\subsection{Estado del Arte}
+
+El análisis del estado del arte en la literatura académica y técnica permite identificar los principales enfoques, avances y limitaciones que existen actualmente en torno a la detección del \emph{data drift} y la automatización de pipelines MLOps en entornos Big Data.
+
+En cuanto a las estrategias de detección de \textit{data drift}, se ha documentado ampliamente el uso de técnicas estadísticas tradicionales como las pruebas de Kolmogorov-Smirnov, Chi-cuadrado y la divergencia de Kullback-Leibler \citep{Chawla2021, Lu2019}. Además, algunos enfoques recientes han propuesto combinaciones híbridas que integran métodos estadísticos con modelos supervisados, con el objetivo de aumentar la sensibilidad a cambios sutiles en la distribución de los datos \citep{BaenaGarcia2006, Singh2023}. Sin embargo, una revisión detallada evidencia que existe una escasez de estudios que comparen de manera sistemática estas técnicas en contextos de datos masivos y variados, además de una limitada integración práctica en pipelines completamente automatizados \citep{Nguyen2023, Chatterjee2023}.
+
+En lo referente a la automatización del reentrenamiento, se ha identificado que, aunque algunos estudios reportan avances en la implementación de flujos automáticos que abarcan desde la detección de desviaciones hasta el despliegue continuo del modelo, muchos de ellos aún requieren intervención manual en etapas críticas. Esto introduce demoras en la respuesta y limita la escalabilidad de las soluciones en ambientes dinámicos \citep{Amershi2019}. También se ha detectado una falta de estandarización en las prácticas para integrar tecnologías abiertas y escalables, como Jenkins o MLflow, en arquitecturas robustas y reproducibles \citep{RodriguezSimmhan2023, Kapoor2023, Abou2023, DeSousa2023}.
+
+Por otro lado, el ecosistema tecnológico que habilita estos procesos se ha visto favorecido por la adopción de plataformas como Apache Spark, Docker y Kubernetes, que permiten procesamiento distribuido, contenerización y orquestación eficiente \citep{Chen2022, Merkel2014, Patel2020, Zhao2021}. A pesar de ello, persiste una falta de estudios empíricos sobre la escalabilidad y sostenibilidad de estas soluciones en condiciones reales de operación, así como análisis de sus implicaciones económicas a gran escala \citep{Xu2022, Lopez2022}.
+
+Además, si bien existen propuestas funcionales que abordan el problema del \textit{data drift}, la validación empírica de estos sistemas sigue siendo limitada. Hay una carencia de experimentos replicables que evalúen el desempeño integral de las soluciones en distintos sectores productivos, lo cual limita su aplicabilidad general y la construcción de benchmarks estandarizados \citep{Agarwal2023, Singh2023}.
+
+En total, se han revisado 19 estudios que abordan la detección del \textit{data drift} y la automatización del reentrenamiento. De ellos, la mayoría propone el uso de pruebas estadísticas, mientras que una fracción menor recurre a enfoques híbridos o modelos supervisados. A pesar de avances considerables en algunos frentes, se mantiene una brecha significativa en cuanto a la integración automatizada y escalable de estas soluciones en entornos productivos. Esta investigación se propone contribuir a ese vacío, desarrollando un sistema replicable que permita gestionar el \textit{data drift} de manera proactiva, automatizada y trazable en contextos reales.
+
+Diversas plataformas empresariales ofrecen actualmente capacidades para automatizar el monitoreo de modelos \citep{Bhatt2025}, la detección de \textit{data drift} y el reentrenamiento en entornos reales \citep{Berberi2025}. Entre las más destacadas se encuentran AWS SageMaker, Google Vertex AI y Azure Machine Learning. En el caso de AWS SageMaker, la herramienta \texttt{Model Monitor} permite evaluar continuamente los datos de entrada y salida del modelo, generando alertas ante desviaciones relevantes. Sin embargo, su carácter cerrado y dependiente del ecosistema AWS limita su personalización para dominios con métricas particulares.
+
+Google Vertex AI también proporciona funcionalidades avanzadas de detección de \textit{drift} y reentrenamiento, pero su fuerte integración con AutoML y su arquitectura opaca dificultan la intervención directa en el pipeline. Por su parte, Azure Machine Learning incluye herramientas para CI/CD y monitoreo con Azure Monitor, aunque presenta restricciones similares en términos de extensibilidad metodológica y adaptabilidad a casos de uso altamente personalizados.
+
+% \paragraph{Capacidades de Azure Machine Learning y Azure Monitor para pipelines MLOps}
+
+Microsoft Azure ofrece un ecosistema integrado para la gestión completa del ciclo de vida de los modelos de \textit{machine learning}. En particular, \textbf{Azure Machine Learning (Azure ML)} proporciona un entorno escalable para entrenamiento, despliegue y monitoreo continuo de modelos, con énfasis en reproducibilidad y trazabilidad. Sus principales capacidades incluyen:
+
+\begin{itemize}
+    \item \textbf{Automatización y CI/CD:} permite definir \textit{pipelines} de entrenamiento y despliegue continuo integrados con Azure DevOps y GitHub Actions, reduciendo la intervención manual y garantizando control de versiones sobre datos, modelos y código \citep{AzureML2023}.
+    \item \textbf{Detección de \textit{drift}:} incluye módulos nativos de \textit{Data Drift Monitoring}, los cuales comparan distribuciones históricas con datos recientes mediante métricas estadísticas y alertas configurables, activando procesos de reentrenamiento cuando se superan umbrales críticos.
+    \item \textbf{Monitoreo operacional:} la integración con \textbf{Azure Monitor} y \textbf{Application Insights} facilita la observabilidad de modelos en producción, centralizando métricas de inferencia, consumo de recursos y desempeño, lo que habilita diagnósticos rápidos y escalamiento automático \citep{AzureMonitor2022}.
+    \item \textbf{Escalabilidad en la nube:} gracias a la compatibilidad con clústeres de cómputo administrados (CPU/GPU), Azure ML soporta cargas intensivas y permite ajustar dinámicamente los recursos de entrenamiento e inferencia en función de la demanda.
+\end{itemize}
+
+Estas capacidades posicionan a Azure como una alternativa robusta frente a SageMaker y Vertex AI, con la ventaja de su integración nativa con el ecosistema empresarial de Microsoft. No obstante, la literatura técnica señala que su carácter parcialmente cerrado y la dependencia de servicios gestionados pueden limitar la flexibilidad metodológica para investigadores que requieren un control granular de cada etapa del pipeline \citep{Lopez2022, Xu2022}.
+
+\begin{table}[htbp]
+\centering
+\caption{Resumen comparativo de plataformas MLOps gestionadas frente al \textit{stack} abierto propuesto.}
+\label{tab:mlops-cloud-compare}
+\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Criterio} & \textbf{Azure ML} & \textbf{AWS SageMaker} & \textbf{Vertex AI} & \textbf{Stack abierto (Jenkins+MLflow+Spark)} \\
+\midrule
+Apertura / \textit{lock-in} & Media (SDK, servicios) & Media & Media & Alta (OSS, portable) \\
+\textit{Drift} nativo & Sí (Data Drift Monitor)\textsuperscript{1} & Sí (Model Monitor)\textsuperscript{2} & Sí (Monitoring)\textsuperscript{3} & Configurable (Prometheus + detectores) \\
+CI/CD nativo & Azure DevOps / GitHub Actions & CodePipeline / CodeBuild & Cloud Build & Jenkins / GitHub Actions \\
+Observabilidad integrada & Azure Monitor / App Insights\textsuperscript{4} & CloudWatch & Cloud Logging / Monitoring & Prometheus / Grafana \\
+Registro de modelos & Registry nativo & Registry nativo & Registry nativo & MLflow Model Registry \\
+Escalabilidad gestionada & AmlCompute (autoscaling) & Managed compute & Managed compute & Kubernetes (autoscaling) \\
+Extensibilidad metodológica & Media--Alta & Media & Media & Alta (control total) \\
+Portabilidad / reproducibilidad & Media (plantillas+SDK) & Media & Media & Alta (contenedores+IaC) \\
+Gobernanza / cumplimiento & Alta (RBAC, policies) & Alta & Alta & Depende de configuración OSS \\
+Costos / transparencia & Por servicio (\$) & Por servicio (\$) & Por servicio (\$) & Infraestructura propia \\
+\bottomrule
+\end{tabular}}
+\\[2pt]
+\raggedright\footnotesize
+\textsuperscript{1}\citep[{\small fuente secundaria}]{AzureML2023}\;
+\textsuperscript{2}\citep[{\small fuente secundaria}]{SageMakerMonitor2023}\;
+\textsuperscript{3}\citep[{\small fuente secundaria}]{VertexAI2023}\;
+\textsuperscript{4}\citep[{\small fuente secundaria}]{AzureMonitor2022}
+\end{table}
+
+
+
+En paralelo a las plataformas gestionadas, la literatura describe el uso de \textbf{stacks abiertos} (p. ej., Jenkins + MLflow + Spark sobre Docker/Kubernetes) para entornos de investigación y prototipado, destacando su control granular y trazabilidad \citep{RodriguezSimmhan2023,Kapoor2023,DeSousa2023}. La elección entre servicios gestionados y componentes abiertos se fundamenta en criterios comparativos (apertura/\textit{lock-in}, portabilidad, costo operativo, requisitos de auditoría) más que en preferencias universales.
+
+\vspace{0.25em}
+
+\paragraph{Validez externa}
+La arquitectura validada en entornos \textit{on-premise}/contenedorizados mantiene \textbf{validez externa} frente a nubes gestionadas por correspondencia funcional de componentes (\textit{Spark/HDFS}→\textit{Databricks/ADLS}, \textit{Jenkins}→\textit{Azure DevOps}, \textit{MLflow}→\textit{AML Registry}). 
+Dado que los mecanismos de detección (KS/$\chi^{2}$/PSI), política de activación (\textit{edge-trigger + cooldown}) y trazabilidad (runs, métricas, artefactos) son invariantes a la infraestructura, los efectos observados—tiempo de detección, recuperación de F1 y reducción de intervención manual—pueden extrapolarse bajo supuestos realistas de latencia y seguridad gestionada. 
+Las diferencias esperadas se concentran en \textit{SLOs} y costos por uso; se recomienda replicar la evaluación en nube registrando TTFD, TTR y consumo para cuantificar el \textit{overhead} operativo y económico.
+
+
+\section{Resumen del capítulo}
+
+Este capítulo presentó los fundamentos conceptuales y los antecedentes que sustentan la investigación. En primer lugar, se expusieron las bases teóricas del \textit{data drift} y su impacto en el rendimiento de los modelos de \textit{machine learning}, destacando sus diferentes manifestaciones (cambios de distribución, cambios de concepto, y \textit{drift} virtual vs.\ real) y las técnicas estadísticas comúnmente empleadas para su detección. Asimismo, se revisaron los enfoques de aprendizaje en línea y adaptación continua, que permiten a los modelos responder de manera incremental a escenarios de datos dinámicos.
+
+Posteriormente, se analizó el papel de las prácticas de \textbf{MLOps} en la automatización del ciclo de vida de los modelos, resaltando la importancia de la monitorización continua, la integración y despliegue automatizado, así como la trazabilidad mediante herramientas como MLflow. Se complementó esta visión con la revisión de tecnologías de \textbf{Big Data}, tales como Apache Spark para procesamiento distribuido, Docker y Kubernetes para contenerización y orquestación, y Prometheus/Grafana para la observabilidad en tiempo real.
+
+En cuanto a la evaluación de sistemas de detección y reentrenamiento, se identificaron métricas clave como precisión, \textit{recall}, F1-score, latencia de detección, tasa de falsas alarmas y costo computacional, cuya combinación permite valorar integralmente la eficacia y viabilidad de las soluciones propuestas. Estos criterios no solo ofrecen una perspectiva cuantitativa del rendimiento, sino que también sirven como guía para el diseño de sistemas robustos y escalables.
+
+El estado del arte evidenció un uso predominante de pruebas estadísticas tradicionales, junto con propuestas híbridas que integran algoritmos supervisados. Sin embargo, se identificaron brechas importantes: la escasez de estudios que validen empíricamente estas técnicas en escenarios reales de datos masivos, la falta de estandarización en la integración de tecnologías abiertas dentro de pipelines automatizados, y la limitada replicabilidad de experimentos en sectores productivos. Aunque plataformas como AWS SageMaker, Google Vertex AI y Azure Machine Learning ofrecen servicios avanzados de monitoreo y reentrenamiento, presentan restricciones de flexibilidad y dependencia tecnológica que pueden dificultar su adopción en contextos con necesidades particulares.

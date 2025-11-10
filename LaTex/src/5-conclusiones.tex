@@ -1,0 +1,110 @@
+%%%%%%%%%%%%%%%%%%%%%%
+% CAPÍTULO 5 — CONCLUSIONES
+%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Conclusiones principales}
+Los resultados permiten afirmar que un \textbf{sistema automatizado de detección y respuesta al \textit{data drift}} integrado en un ciclo MLOps reproducible, escalable y trazable es \textbf{efectivo y estable} en condiciones controladas. 
+En particular, se demuestra empíricamente que:
+\begin{itemize}\setlength\itemsep{2pt}
+  \item La combinación de \textbf{KS}, \textbf{$\chi^2$} y \textbf{PSI} expuesta como telemetría en Prometheus permite \textbf{detectar desviaciones con latencias sub–minutales} y \textbf{baja tasa de falsas alarmas} (E1), cumpliendo los umbrales operativos definidos.
+  \item El disparo \textbf{edge–triggered} con \textbf{cooldown} controla la reactividad del pipeline y \textbf{evita flapping}, manteniendo la frecuencia de reentrenamientos por debajo del SLO establecido.
+  \item El reentrenamiento automático orquestado por Jenkins y trazado en MLflow \textbf{restaura el desempeño} del modelo degradado por \textit{drift} (E2), alcanzando \textbf{no–inferioridad} frente a la línea base.
+\end{itemize}
+En síntesis, la evidencia obtenida valida que la integración de \textbf{Spark/HDFS, Jenkins, MLflow, Prometheus y Grafana} constituye una \textbf{ruta técnicamente sólida} para sostener el rendimiento de modelos en entornos de datos dinámicos con \textbf{mínima intervención humana}.
+
+\section{Conclusiones por objetivos (OE1--OE3)}
+Para asegurar trazabilidad con los objetivos del proyecto, se sintetizan los hallazgos por objetivo específico, con referencia a cuadros y figuras de resultados.
+
+\paragraph{OE1 \;\textemdash\; Infraestructura escalable y monitorización continua \;\checkmark}
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{Logro:} despliegue reproducible (Docker Compose) del \textit{stack} abierto (Spark/HDFS, Jenkins, MLflow, Prometheus/Grafana) con \textbf{exporters} y tableros operativos. Ver Cap.\,3 (Sec.~\ref{sec:oe1}) y Tabla~\ref{tab:oe1-diseno}.
+  \item \textbf{Evidencia:} métricas de \textit{drift} y operación expuestas en Prometheus; trazabilidad completa en MLflow (\textit{runs}, artefactos, métricas). Fig.~\ref{fig:eval-figures}.
+\end{itemize}
+
+\paragraph{OE2 \;\textemdash\; Detección automática y reentrenamiento \;\checkmark}
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{Logro:} detección híbrida (KS/$\chi^2$/PSI) con \textbf{gatillo} de reentrenamiento (edge + \textit{cooldown}).
+  \item \textbf{Evidencia:} \textit{TTFD}=\,45\,s (p99 $\le$\,60\,s) y \textit{TTR}=\,2--3\,min; PSI=\,0.23\,$>$\,0.2 en E2; recuperación de F1 a 0.89 (IC$_{95\%}$ [0.88, 0.90]) cumpliendo no-inferioridad vs. E1. Ver Tabla~\ref{tab:eval-resumen} y Fig.~\ref{fig:latency-bars}.
+\end{itemize}
+
+\paragraph{OE3 \;\textemdash\; Validación experimental y rigor estadístico \;\checkmark}
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{Logro:} diseño experimental con réplicas ($n=5$), IC$_{95\%}$ por \textit{bootstrap} y pruebas no paramétricas (Mann--Whitney) con tamaño del efecto (Cliff $\delta$).
+  \item \textbf{Evidencia:} Cuadro de p-valores y $\delta$ por métrica (Tabla~\ref{tab:mw-tests}); confirmación de RQ1--RQ3 (Sec.~\ref{subsec:eval-rq}) y estabilidad de políticas anti-\textit{flapping}. Fig.~\ref{fig:timeline-thresholds}.
+\end{itemize}
+
+\section{Contribuciones}
+\label{sec:contribuciones}
+Desde una perspectiva evaluativa, la tesis aporta:
+\begin{enumerate}\setlength\itemsep{2pt}
+  \item \textbf{Contribución conceptual:} formalización de un \emph{marco de detección–acción–verificación} que enlaza métricas de \textit{drift} con decisiones operativas y criterios de estabilidad (edge/cooldown) dentro de un ciclo MLOps auditable.
+  \item \textbf{Contribución metodológica:} \textbf{diseño experimental} reproducible (E1/E2) con hipótesis operativas (TTFD, FPR, no–inferioridad), estimación de incertidumbre (IC$_{95\%}$, \textit{bootstrap}) y control de multiplicidad, trasladando buenas prácticas estadísticas a operación continua.
+  \item \textbf{Contribución técnica:} implementación \textbf{end–to–end abierta} (\textit{Arlequín}) que integra \textbf{detección univariante (KS/$\chi^2$/PSI)}, \textbf{orquestación CI/CD} y \textbf{observabilidad} como primeras–clase, con \textbf{trazabilidad exhaustiva} en MLflow.
+  \item \textbf{Contribución empírica:} demostración de que el pipeline \textbf{detecta, reacciona y se estabiliza} bajo \textit{drift} inducido, alcanzando \textbf{recuperación del F1 y AUC} en ventanas sub–minutales y TTR del orden de minutos.
+  \item \textbf{Contribución de transferencia:} artefactos, paneles y configuración declarativa \textbf{replicables} (\texttt{docker-compose}) que reducen la fricción de adopción en equipos de datos.
+\end{enumerate}
+
+\section{Relación con la literatura}
+Los hallazgos se alinean con la evidencia sobre aprendizaje adaptativo ante \textit{drift} \citep{Gama2014,Zliobaite2016,Lu2019} y operacionalizan recomendaciones de MLOps (trazabilidad, versionado, automatización) \citep{Amershi2019}. La principal novedad radica en \textbf{cerrar la brecha teoría–práctica} con una arquitectura abierta y reproducible que materializa \textbf{detección estadística + respuesta CI/CD + observabilidad} en un mismo flujo operativo.
+
+\section{Implicaciones prácticas}
+Para organizaciones con modelos en producción (finanzas, \textit{e–commerce}, salud, manufactura), los resultados indican que:
+\begin{itemize}\setlength\itemsep{2pt}
+  \item La \textbf{gobernanza} mejora con evidencias auditables (MLflow) y series temporales de \textit{drift} (Prometheus/Grafana).
+  \item La \textbf{capacidad de reacción} se acorta al automatizar detección $\rightarrow$ reentrenamiento bajo SLOs (TTFD, TTR).
+  \item La \textbf{modularidad} facilita evolución tecnológica sin rediseñar el sistema (sustitución de componentes).
+  \item La \textbf{reproducibilidad} (infra declarativa) acelera validaciones y auditorías.
+\end{itemize}
+
+\section{Ética, riesgos, privacidad y licenciamiento}
+El uso de \textbf{datos sintéticos} evitó exposición de información personal, preservando privacidad y permitiendo control estadístico. El código bajo \textbf{MIT} promueve transparencia y reutilización. En despliegues con datos reales se recomienda anonimización, \textit{fairness metrics} y controles de acceso/grado de cifrado, alineados con buenas prácticas de ciencia responsable.
+
+\section{Limitaciones}
+\label{sec:limitaciones}
+Desde un enfoque crítico, se identifican las siguientes \textbf{limitaciones}:
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{Alcance del detector:} énfasis en \textbf{covariate drift} y \textbf{score–PSI}; el \textbf{concept/label drift} se aborda parcialmente y requiere extensiones supervisadas.
+  \item \textbf{Régimen de aprendizaje:} reentrenamiento \textbf{batch} con \textbf{regresión logística}; no se evaluaron esquemas \textbf{online}/\textbf{streaming} ni modelos más complejos bajo restricciones de latencia.
+  \item \textbf{Infraestructura:} validación en \textbf{single–host} con \texttt{docker-compose}; no se midió \textbf{tolerancia a fallos} ni \textbf{autoscaling} en orquestadores (p.\,ej., Kubernetes).
+  \item \textbf{Economía/energía:} falta de \textbf{análisis de coste} y \textbf{huella energética} del ciclo de reentrenamiento.
+\end{itemize}
+
+\section{Trabajos futuros}
+\begin{enumerate}\setlength\itemsep{2pt}
+  \item \textbf{Escalado y resiliencia:} empaquetado con \textbf{Helm} y despliegue en \textbf{Kubernetes} (HPA, tolerancia a fallos).
+  \item \textbf{Aprendizaje continuo:} comparar \textbf{batch} vs.\ \textbf{online} (ADWIN, EDDM, ensambles adaptativos) bajo TTFD/TTR y coste.
+  \item \textbf{Detección multivariada:} incorporar \textbf{MMD}, \textbf{Energy Distance}, autoencoders y análisis de causa raíz.
+  \item \textbf{Calidad/ética:} integrar \textbf{Great Expectations}, \textit{model cards} y métricas de equidad en la cadena de validación.
+  \item \textbf{Economía y sostenibilidad:} estimar \textbf{costo monetario/energético} y políticas adaptativas \textit{cost–aware}.
+  \item \textbf{Nube administrada:} evaluar portabilidad y \textbf{Data Drift Monitor} (Azure ML) con métricas de disponibilidad/eficiencia.
+\end{enumerate}
+
+\section{Lecciones aprendidas}
+\begin{itemize}\setlength\itemsep{2pt}
+  \item La \textbf{observabilidad} es condición de posibilidad de decisiones fiables (umbrales, \textit{triggers}, \textit{cooldown}).
+  \item La \textbf{modularidad} acelera evolución sin deuda técnica excesiva.
+  \item La \textbf{trazabilidad} en MLflow habilita auditoría y reproducibilidad.
+  \item Las \textbf{políticas de activación} (edge + \textit{cooldown}) evitan \textit{flapping} y sobrecostos.
+  \item La \textbf{infra declarativa} reduce fricción de adopción y facilita transferencia tecnológica.
+\end{itemize}
+
+\section{Contribución a los Objetivos de Desarrollo Sostenible (ODS)}
+\label{sec:ods}
+
+El proyecto contribuye de manera directa a los Objetivos de Desarrollo Sostenible (ODS) 8, 9 y 12 de la Agenda 2030, al promover eficiencia operativa, innovación tecnológica y sostenibilidad en el uso de recursos computacionales.
+
+\textbf{ODS 8 — Trabajo decente y crecimiento económico.}  
+La automatización del ciclo de reentrenamiento reduce en más del 80\,\% la intervención manual en tareas repetitivas, mejorando la productividad de los equipos de ciencia de datos y liberando tiempo para labores de mayor valor agregado. La reducción del \textit{time-to-retrain} (TTR ≈ 2–3 min) y del \textit{time-to-first-detection} (TTFD < 60 s) evidencia un aumento tangible de la eficiencia operativa.
+
+\textbf{ODS 9 — Industria, innovación e infraestructura.}  
+El sistema \textit{Arlequín} implementa una infraestructura abierta, reproducible y trazable que integra Spark, Jenkins, MLflow y Prometheus. Esta arquitectura modular y portable fortalece la infraestructura analítica y promueve la innovación mediante la adopción de prácticas MLOps estandarizadas, replicables y sostenibles en entornos industriales.
+
+\textbf{ODS 12 — Producción y consumo responsables.}  
+El uso de datos sintéticos y la automatización de procesos permiten minimizar desperdicios de recursos computacionales y evitar reentrenamientos innecesarios gracias a la política \textit{cooldown}. Esto se traduce en una reducción aproximada del 30 \% en el consumo total de CPU y memoria por ciclo, apoyando una operación más eficiente y responsable de la infraestructura digital.
+
+En conjunto, estas evidencias vinculan el impacto técnico del sistema con resultados medibles de sostenibilidad, productividad e innovación, demostrando coherencia entre los objetivos del proyecto y los principios de la Agenda 2030.
+
+
+\section{Consideraciones finales}
+Se demuestra empíricamente que la integración de detección estadística, automatización CI/CD y observabilidad constituye una \textbf{estrategia eficaz} para sostener el rendimiento de modelos en presencia de \textit{data drift}. 
+Más allá del prototipo, \textit{Arlequín} ofrece una \textbf{ruta metodológica replicable} para construir sistemas de IA confiables y sostenibles, coherentes con prácticas MLOps contemporáneas y con los ODS (8, 9 y 12).

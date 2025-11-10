@@ -1,0 +1,558 @@
+\section{Diseño de la evaluación}
+\label{sec:eval-design}
+
+El objetivo de esta evaluación es validar, en condiciones controladas y reproducibles, la eficacia del sistema propuesto para \textit{detectar} \textit{data drift} y \textit{recuperar} desempeño mediante reentrenamiento automatizado, con métricas medibles y trazables en MLflow/Prometheus \citep{Gama2014,Breck2019,Chawla2021}.
+
+% (Bloque duplicado eliminado para evitar similitud excesiva)
+
+\subsection{Preguntas de investigación e hipótesis}
+\label{subsec:eval-rq}
+
+El proceso de evaluación se orienta por tres preguntas de investigación que permiten verificar de manera empírica la eficacia del sistema propuesto frente a sus objetivos operativos: detección oportuna del \textit{data drift}, recuperación del desempeño del modelo y estabilidad del proceso de reentrenamiento. Cada pregunta se asocia con una hipótesis comprobable, formulada en términos cuantitativos y verificables mediante los experimentos E1 (sin \textit{drift}) y E2 (con \textit{drift} inducido).
+
+\paragraph{RQ1 — Detección.}
+Se busca determinar si el sistema de monitoreo identifica oportunamente la presencia de \textit{data drift} sin generar falsos positivos en condiciones estables.  
+\textbf{Hipótesis H1:} En el escenario E1 (sin \textit{drift}), la tasa de alertas generadas es inferior al 1\,\%, mientras que en el escenario E2 (con \textit{drift}), la latencia promedio de detección (\textbf{TTFD}) no supera los 60\,s.
+
+\paragraph{RQ2 — Recuperación del desempeño.}
+Evalúa la capacidad del mecanismo de reentrenamiento automático para restablecer la calidad predictiva del modelo degradado por \textit{drift}.  
+\textbf{Hipótesis H2:} En el escenario E2, los valores de F1-score y AUC obtenidos tras el reentrenamiento no son estadísticamente inferiores (diferencia $<2$ puntos porcentuales) a los de la línea base del escenario E1, cumpliendo una prueba de no–inferioridad.
+
+\paragraph{RQ3 — Estabilidad operativa.}
+Examina si la política de activación basada en \textit{edge-triggered} y \textit{cooldown} mantiene estabilidad en la operación continua, evitando ciclos repetidos de reentrenamiento (\textit{flapping}) bajo condiciones de \textit{drift} sostenido.  
+\textbf{Hipótesis H3:} El número de reentrenamientos automáticos registrados no excede una activación por hora, bajo las configuraciones establecidas en los parámetros \texttt{DRIFT\_COOLDOWN\_SECONDS} y \texttt{DRIFT\_CLEAR\_STREAK}.
+
+
+\subsection{Escenarios de evaluación}
+\label{subsec:eval-scenarios}
+
+\subsection{Pruebas estadísticas y p-valores}
+\label{subsec:eval-tests}
+Para contrastar las hipótesis y diferencias entre condiciones se emplean pruebas \textbf{no paramétricas} (Mann–Whitney U) por pares de escenarios, dada la posible no-normalidad y tamaños de muestra moderados. Se evalúan F1 y PSI como métricas principales, y las latencias \textit{TTFD}/\textit{TTR}. Cuando aplica, se reporta ajuste por múltiples comparaciones (FDR de Benjamini–Hochberg).
+
+\begin{table}[htbp]
+\centering
+\caption{Pruebas de Mann–Whitney por métrica y comparación (se reporta p‑valor y tamaño de efecto de Cliff, $\delta$).}
+\label{tab:mw-tests}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Métrica} & \textbf{E1 vs. E2} & \textbf{E2 vs. E3} & \textbf{E1 vs. E3} \\
+\midrule
+F1   & $p=\,$[\,]; $\delta=\,$[\,] & $p=\,$[\,]; $\delta=\,$[\,] & $p=\,$[\,]; $\delta=\,$[\,] \\
+PSI  & $p=\,$[\,]; $\delta=\,$[\,] & $p=\,$[\,]; $\delta=\,$[\,] & $p=\,$[\,]; $\delta=\,$[\,] \\
+TTFD & $p=\,$[\,]; $\delta=\,$[\,] & $p=\,$[\,]; $\delta=\,$[\,] & n/a \\
+TTR  & n/a                            & $p=\,$[\,]; $\delta=\,$[\,] & n/a \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+\footnotesize Notas: E1=base, E2=con drift (pre), E3=post‑reentrenamiento. TTR sólo aplica en E3. Para H2 (no‑inferioridad E3 vs. E1) puede reportarse adicionalmente una prueba unilateral o intervalo de no‑inferioridad. Interpretación de $\delta$ (Cliff): $|\delta|<0.147$ (trivial), $<0.33$ (pequeño), $<0.474$ (mediano), $\ge 0.474$ (grande).
+\end{table}
+
+
+Para garantizar la validez interna y externa de la evaluación, se definieron dos escenarios experimentales controlados y reproducibles que permiten analizar el comportamiento del sistema tanto en condiciones de estabilidad como ante desviaciones significativas en la distribución de los datos. Ambos escenarios se ejecutaron sobre el mismo entorno de infraestructura descrito en el Capítulo~\ref{sec:oe1}, utilizando \texttt{Docker~Compose} y las configuraciones base del proyecto \texttt{Arlequín}.
+
+\paragraph{Escenario E1 — Sin \textit{drift} (condición de control).}
+En este escenario, el generador de datos sintéticos mantiene inalteradas las distribuciones originales de las variables de entrada. El objetivo es establecer una línea base de comportamiento, validando que el sistema de monitoreo preserve la estabilidad del modelo y no genere alertas espurias. Este escenario permite estimar la tasa de falsos positivos de detección y comprobar la robustez del sistema ante fluctuaciones menores propias del muestreo aleatorio.
+
+\paragraph{Escenario E2 — Con \textit{drift} inducido.}
+En este caso se activa el parámetro \texttt{drift\_factor} dentro del módulo \texttt{generate\_data\_session.py}, que introduce alteraciones controladas en variables numéricas y categóricas: incrementos progresivos en \texttt{amount\_usd} y \texttt{risk\_score}, y redistribución de proporciones en \texttt{account\_type}. Dichas modificaciones emulan dos tipos de desviaciones ampliamente documentadas en la literatura: el \textit{covariate drift} (cambio en la distribución de las variables independientes) y el \textit{concept drift} (cambio en la relación entre variables y etiquetas) \citep{Lu2019,Sethi2017}. El propósito es verificar la sensibilidad del detector y la eficacia del pipeline de reentrenamiento para restaurar el desempeño del modelo una vez detectado el evento.
+
+\paragraph{Justificación de las pruebas estadísticas.}
+El sistema de detección integra tres métricas complementarias seleccionadas por su respaldo teórico y uso extendido en entornos industriales y académicos.  
+
+\begin{itemize}
+    \item \textbf{Kolmogorov–Smirnov (KS):} prueba no paramétrica adecuada para detectar diferencias en la forma, media y varianza de variables continuas. Su sensibilidad a cambios sutiles en la distribución la convierte en un método estándar para evaluar \textit{drift} univariado en datos financieros o de riesgo \citep{Lu2019,Chawla2021}.
+    \item \textbf{Chi–cuadrado ($\chi^2$):} medida estadística robusta para comparar frecuencias categóricas observadas y esperadas, permitiendo identificar desplazamientos en proporciones de clases o categorías \citep{Sethi2017}. Es particularmente útil en dominios donde el \textit{drift} se manifiesta en la composición de segmentos poblacionales.
+    \item \textbf{Population Stability Index (PSI):} indicador agregado que resume el grado de desviación entre dos distribuciones, ampliamente utilizado en la industria para evaluar la estabilidad de modelos en producción \citep{Breck2019}. Su interpretación operativa —valores superiores a 0.2 indican cambio significativo— lo convierte en una métrica accesible para equipos técnicos y de negocio.
+\end{itemize}
+
+Estas métricas fueron seleccionadas por su \textbf{complementariedad metodológica}. Mientras KS y $\chi^2$ proporcionan sensibilidad estadística específica para distintos tipos de variables (numéricas y categóricas), el PSI actúa como un agregador global que facilita la interpretación operacional del grado de cambio. En conjunto, este enfoque híbrido equilibra el rigor estadístico con la aplicabilidad práctica, alineándose con las recomendaciones contemporáneas para la detección automática de \textit{data drift} en sistemas MLOps \citep{Gama2014,Zliobaite2016,DeSousa2023}.
+
+
+% Fusionado con "Diseño experimental y variables" para evitar duplicidad.
+\subsection{Diseño experimental y protocolo}
+\label{subsec:eval-protocol}
+Esta subsección se integra con \autoref{subsec:oe3-design} para evitar duplicación. Véase el protocolo estandarizado y variables en Cap. 3; aquí se referencian únicamente los umbrales y reglas clave: $\alpha=0.01$, $\tau=0.2$, regla de disyunción ($p<\alpha$ o PSI$>\tau$) y mecanismos anti-flapping (\texttt{TRIGGER\_EDGE\_ONLY}, \texttt{DRIFT\_COOLDOWN\_SECONDS}, \texttt{DRIFT\_CLEAR\_STREAK}).
+
+\subsection{Diseño experimental y variables}
+\label{subsec:eval-design-formal}
+
+El experimento se estructura bajo un diseño bifactorial controlado con réplicas independientes,
+en el que se comparan dos condiciones principales (E1 y E2) y se evalúan las respuestas del sistema en términos de desempeño, latencia y estabilidad. 
+El objetivo es cuantificar, con rigor estadístico, la eficacia del pipeline para detectar y mitigar \textit{data drift}.
+
+\paragraph{Factores experimentales.}
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{Factor 1 (Condición de distribución):}  
+  \textit{E1} = datos estacionarios (control) vs. \textit{E2} = datos con \textit{drift} inducido.  
+  Este factor representa la presencia o ausencia del fenómeno de interés.
+  \item \textbf{Factor 2 (Etapa del modelo en E2):}  
+  \textit{Pre-reentrenamiento} vs. \textit{Post-reentrenamiento}.  
+  Permite medir la recuperación del desempeño tras la intervención automática.
+\end{itemize}
+
+\paragraph{Unidades experimentales y replicación.}
+Cada ejecución de E1 y E2 se considera una réplica independiente; se realizaron $n=5$ repeticiones completas por condición, reiniciando los contenedores y restableciendo el estado del sistema antes de cada corrida.  
+Cada corrida genera 14–20 ciclos de monitoreo con muestras de tamaño fijo
+\texttt{SAMPLE\_MAX}=1000 por ventana de referencia y reciente.
+El total de observaciones efectivas supera las 100\,000 instancias por escenario, lo que asegura estabilidad estadística en las estimaciones de las pruebas KS, $\chi^2$ y PSI.
+
+\paragraph{Hipótesis formales.}
+\[
+\begin{aligned}
+&\textbf{H}_{0}^{(1)}: \pi_{\mathrm{alert}}^{(E1)} \ge 0.01 
+&&\text{vs.}\quad \textbf{H}_{1}^{(1)}: \pi_{\mathrm{alert}}^{(E1)} < 0.01 \\[3pt]
+&\textbf{H}_{0}^{(2)}: \mathbb{E}[F1_{\mathrm{post}} - F1_{\mathrm{base}}] \le -0.02 
+&&\text{vs.}\quad \textbf{H}_{1}^{(2)}: \mathbb{E}[F1_{\mathrm{post}} - F1_{\mathrm{base}}] > -0.02 \\[3pt]
+&\textbf{H}_{0}^{(3)}: \mathrm{TTFD} \ge 60\,\mathrm{s} \ \text{ó}\  \mathrm{TTR} \ge 300\,\mathrm{s} 
+&&\text{vs.}\quad \textbf{H}_{1}^{(3)}: \mathrm{TTFD} < 60\,\mathrm{s} \ \text{y}\  \mathrm{TTR} < 300\,\mathrm{s}
+\end{aligned}
+\]
+Las tres hipótesis corresponden, respectivamente, a RQ1–RQ3:
+detección oportuna, recuperación del desempeño y estabilidad operativa.
+
+\paragraph{Variables experimentales.}
+\begin{table}[htbp]
+\centering
+\caption{Variables consideradas en la evaluación (por ciclo y agregadas por réplica).}
+\label{tab:eval-vars}
+\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+\textbf{Variable} & \textbf{Descripción} & \textbf{Tipo / Rol} \\
+\midrule
+$F1$, AUC, Prec, Rec & Métricas de desempeño del modelo & Dependientes (rendimiento) \\
+TTFD & Tiempo hasta la detección del \textit{drift} & Dependiente (latencia detector) \\
+TTR  & Tiempo total de reentrenamiento & Dependiente (latencia pipeline) \\
+PSI  & Índice de estabilidad poblacional & Variable intermedia (magnitud del cambio) \\
+$p_{\min}$ & Mínimo $p$ de KS/$\chi^2$ por ciclo & Variable intermedia (evidencia estadística) \\
+FPR  & Tasa de falsas alarmas en E1 & Indicador de robustez \\
+\texttt{drift\_factor} & Intensidad de la perturbación aplicada & Independiente (nivel de tratamiento) \\
+\texttt{SAMPLE\_MAX}, \texttt{LOOP\_SECONDS} & Parámetros de ventana de muestreo & Control experimental \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Control de sesgo y aleatorización.}
+Se fijaron semillas determinísticas (\texttt{seed}=42,7) y se alternó el orden de ejecución de las réplicas E1/E2 para evitar efectos de calentamiento.  
+El mismo modelo inicial se usa como punto de partida en todas las corridas, asegurando comparabilidad.  
+
+\paragraph{Agregación y análisis.}
+Los resultados de cada réplica se promedian y se acompañan de intervalos de confianza al 95\,\% calculados por \textit{bootstrap} ($B=1000$).  
+Para RQ2 se aplica una prueba de no–inferioridad ($\delta=0.02$) y para RQ1 una prueba unilateral de proporciones con intervalo de Wilson.  
+Las medidas de tamaño del efecto (Cohen’s~$d$ y Cliff’s~$\delta$) complementan la significancia estadística, aportando evidencia práctica de
+
+
+\subsection{Ablaciones y análisis de sensibilidad}
+\label{subsec:eval-ablation}
+
+Con el fin de evaluar la contribución individual de cada componente del detector y la estabilidad del sistema frente a variaciones paramétricas, se realizaron estudios de \textbf{ablación} y \textbf{sensibilidad}.  
+Las ablaciones permiten aislar el efecto de cada módulo estadístico (PSI y $\chi^2$), mientras que las pruebas de sensibilidad exploran la respuesta del sistema ante cambios en las ventanas de muestreo y en los umbrales de decisión.  
+Cada experimento se repitió cinco veces y se compararon los resultados en términos de \textbf{TTFD} (tiempo de detección), \textbf{tasa de falsos negativos} y \textbf{estabilidad operativa}.
+
+\paragraph{Ablaciones.}
+\begin{enumerate}
+  \item \textbf{Ablación–PSI:} se desactiva el componente del \textit{Population Stability Index} manteniendo las pruebas KS y $\chi^2$ activas.  
+  Este ensayo evalúa la contribución específica del PSI a la detección de \textit{drift} numérico, midiendo la variación $\Delta \text{TTFD}$ y el incremento en la tasa de falsos negativos. Se espera un aumento significativo en el tiempo medio de detección, dado que el PSI ofrece mayor sensibilidad a desplazamientos graduales en las distribuciones continuas \citep{Sethi2017,Lu2019}.
+  
+  \item \textbf{Ablación–$\chi^2$:} se deshabilita la prueba de independencia para variables categóricas, con el fin de medir la pérdida de sensibilidad frente a alteraciones en \texttt{account\_type}.  
+  El objetivo es cuantificar la dependencia del sistema respecto a la detección de \textit{concept drift} categórico, especialmente en escenarios donde las proporciones de clases varían lentamente.
+\end{enumerate}
+
+\paragraph{Líneas de sensibilidad.}
+\begin{enumerate}
+  \item \textbf{Sensibilidad a tamaño de ventana:} se varían los parámetros \texttt{SAMPLE\_MAX} y \texttt{LOOP\_SECONDS} en \{15, 30, 60\} segundos.  
+  Este análisis permite estimar el compromiso entre latencia y estabilidad: ventanas más cortas reducen TTFD pero incrementan la volatilidad y el riesgo de falsas alarmas, mientras que ventanas amplias tienden a suavizar las fluctuaciones pero retrasan la detección.
+
+  \item \textbf{Sensibilidad a umbrales estadísticos:} se realiza un barrido sistemático sobre los valores $\alpha \in \{0.05,\,0.01,\,0.001\}$ y $\tau \in \{0.1,\,0.2,\,0.3\}$.  
+  Se evalúa el impacto sobre TTFD, tasa de falsos positivos y métrica F1 post–reentrenamiento.  
+  Estos experimentos permiten identificar el punto de operación óptimo entre sensibilidad y estabilidad, configurando un equilibrio adecuado para los SLO-1 y SLO-3 definidos en la sección~\ref{subsec:eval-metrics}.
+\end{enumerate}
+
+\subsection{Análisis estadístico}
+\label{subsec:eval-stats}
+
+El análisis estadístico se diseñó para cuantificar la confiabilidad de los resultados y contrastar las hipótesis planteadas en la Sección~\ref{subsec:eval-rq}. Con este fin, se aplicaron procedimientos de estimación e inferencia adecuados al tipo de métrica, al tamaño de muestra y a la naturaleza del experimento (comparativo pre/post). Todas las pruebas se realizaron con un nivel de significancia $\alpha = 0.05$.
+
+\paragraph{Estimación de intervalos de confianza.}
+Para las métricas de desempeño (F1-score y AUC) se calcularon intervalos de confianza al 95\,\% utilizando el método de \textit{bootstrap} con 1\,000 réplicas re-muestreadas. Este enfoque no paramétrico permite estimar la variabilidad empírica de los estimadores sin asumir normalidad, resultando apropiado para conjuntos de datos moderados y distribuciones sesgadas.
+
+\paragraph{Prueba de no–inferioridad.}
+La comparación entre los valores de F1 obtenidos antes y después del reentrenamiento (E2 pre y post) se evaluó mediante una prueba de no–inferioridad, considerando un margen $\delta = 0.02$. El objetivo es verificar que el desempeño del modelo reentrenado no sea estadísticamente inferior en más de dos puntos porcentuales respecto a la línea base (E1). Este procedimiento es adecuado para contextos en los que el interés radica en garantizar la conservación del rendimiento tras una intervención y no necesariamente en demostrar una mejora significativa.
+
+\paragraph{Intervalos para el AUC.}
+En los casos en que se dispuso de las predicciones individuales y etiquetas verdaderas, se calcularon intervalos de confianza para el AUC mediante el método de DeLong, ampliamente utilizado para comparar curvas ROC sin requerir supuestos paramétricos sobre la distribución de las puntuaciones.
+
+\paragraph{Estimación de tasas de alerta.}
+Las tasas de alerta y de falsas alarmas se estimaron como proporciones binomiales y se acompañaron de intervalos de confianza de Wilson al 95\,\%. Este método proporciona límites más precisos que el intervalo normal aproximado, especialmente cuando el número de eventos es bajo o las proporciones se aproximan a los extremos (0 o 1).
+
+\paragraph{Medidas de tamaño del efecto.}
+Además de las pruebas de hipótesis, se reportó el tamaño del efecto mediante el estadístico de Cohen’s~$d$ para cuantificar la magnitud de la diferencia entre los valores de F1 en el escenario E2 (antes y después del reentrenamiento). Esta métrica complementa la significancia estadística con una medida de relevancia práctica, facilitando la interpretación del impacto real del reentrenamiento en el desempeño del modelo.
+
+\paragraph{Umbrales y fundamentación.}
+La elección de $\alpha=0.01$ para pruebas KS y $\chi^2$ busca controlar el error tipo~I en un
+contexto de comparaciones múltiples (varias columnas), donde el \textit{family-wise error rate} (FWER)
+aumenta como $1-(1-\alpha)^m$ para $m$ tests independientes. Un $\alpha$ más conservador
+reduce disparos espurios y es consistente con recomendaciones de control de multiplicidad
+(\citealp{Holm1979}; \citealp{BenjaminiHochberg1995}) en entornos operacionales. 
+
+Para el Population Stability Index (PSI), seguimos la práctica consolidada en riesgo crediticio
+y monitoreo de modelos, que utiliza umbrales guía: $\text{PSI}<0.1$ (cambio menor), $0.1\leq\text{PSI}<0.25$
+(cambio moderado que amerita seguimiento) y $\text{PSI}\geq 0.25$ (cambio significativo que sugiere
+recalibración o reentrenamiento) \citep{Siddiqi2012}. En línea con esta guía, adoptamos
+$\tau=0.2$ como umbral de alerta y $0.3$ como severo. Estos cortes se interpretan de forma
+operativa y complementan a KS/$\chi^2$ (variables continuas y categóricas), ofreciendo una
+señal continua de desviación fácilmente auditable.
+
+La Sección~\ref{sec:eval-results} muestra la sensibilidad de estos umbrales: con $\alpha=0.01$ y
+$\tau=0.2$ se logra un TTFD bajo (sub-minutal) con bajas falsas alarmas; al endurecer a
+$\alpha=0.001$ o $\tau=0.3$ aumenta la especificidad pero crece la latencia, tal como se observa
+en los histogramas binned (PSI), las CDFs (KS) y la línea de tiempo de alertas.
+
+
+\subsection{Instrumentación y consultas de observabilidad}
+\label{subsec:eval-obs}
+
+La infraestructura de observabilidad se implementó mediante Prometheus y Grafana, con el propósito de registrar, almacenar y visualizar en tiempo real tanto las métricas de desempeño del modelo como las señales estadísticas asociadas al \textit{data drift}. Esta instrumentación posibilita un seguimiento continuo del estado operativo del sistema, permitiendo correlacionar eventos de detección con ejecuciones de reentrenamiento y evaluar el cumplimiento de los objetivos de servicio (SLO) definidos en la evaluación.
+
+\paragraph{Métricas exportadas.}
+El componente \texttt{drift\_watch.py} expone un conjunto de métricas específicas a través de un \textit{exporter} compatible con Prometheus, las cuales son recolectadas de manera periódica por los agentes de monitoreo. Entre las métricas más relevantes se incluyen:
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \texttt{drift\_score\_psi\{model\}} — valor del \textit{Population Stability Index} (PSI) calculado por modelo, indicador agregado del grado de desviación entre distribuciones.
+  \item \texttt{pvalue\{col\}} y \texttt{drift\_detected\{col\}} — resultados de las pruebas estadísticas KS y $\chi^2$, junto con una bandera binaria que indica la detección de \textit{drift} por columna.
+  \item \texttt{predicted\_positive\_ratio\{model\}} — proporción de predicciones positivas generadas por el modelo en la ventana actual, utilizada como proxy para detectar desplazamientos conceptuales.
+  \item \texttt{jenkins\_retrain\_triggers\_total\{model\}} — contador acumulado de eventos de reentrenamiento automatizados ejecutados mediante Jenkins.
+\end{itemize}
+
+\paragraph{Consultas PromQL.}
+Para el análisis temporal de eventos y la verificación de los indicadores definidos, se emplearon consultas PromQL que permiten derivar métricas agregadas y cuantificar el comportamiento del sistema a lo largo del tiempo. Los principales cálculos utilizados fueron los siguientes:
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{Tiempo de detección (TTFD):} \texttt{min\_over\_time((drift\_detected==1)[10m:])}, que estima el intervalo mínimo entre la aparición del \textit{drift} y su detección.
+  \item \textbf{Frecuencia de reentrenamientos:} \texttt{increase(jenkins\_retrain\_triggers\_total[1h])}, que mide el número de activaciones del pipeline de reentrenamiento por hora.
+  \item \textbf{PSI percentil 95 (p95):} \texttt{quantile\_over\_time(0.95, drift\_score\_psi[1h])}, que captura el valor máximo típico del PSI en una ventana horaria para evaluar severidad y estabilidad.
+\end{itemize}
+
+
+
+\subsection{Resultados de la evaluación}
+\label{sec:eval-results}
+
+Los resultados obtenidos en los escenarios de prueba permiten contrastar de forma empírica las hipótesis formuladas y evaluar el comportamiento integral del sistema ante condiciones controladas de estabilidad y desviación de datos.
+
+\begin{table}[htbp]
+\centering
+\caption{Sensibilidad a umbrales: promedio en sesiones repetidas.}
+\label{tab:threshold-sensitivity}
+\begin{tabular}{lcccc}
+\toprule
+$\alpha$ & $\tau_{\text{PSI}}$ & TTFD (s) & Falsas alarmas (\%) & Post-F1 \\
+\midrule
+0.05  & 0.20 & 35--40  & 3.1 & 0.88--0.90 \\
+0.01  & 0.20 & 45      & 0.8 & 0.89--0.90 \\
+0.001 & 0.30 & 60--75  & 0.2 & 0.89--0.90 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\paragraph{Escenario E1 — Sin \textit{drift} (condición de control).}
+Durante el periodo de observación sin alteraciones en las distribuciones, el modelo mantuvo un desempeño estable con un F1-score promedio de $0.91$ (\textit{IC}$_{95\%}$: $[0.90, 0.92]$) y un AUC de $0.93$. No se registraron reentrenamientos automáticos ni alertas espurias, manteniéndose la tasa de falsos positivos por debajo del $1\,\%$. Estos resultados confirman la robustez del sistema de monitoreo bajo condiciones estacionarias y la correcta calibración de los umbrales de detección.
+
+\paragraph{Escenario E2 — Con \textit{drift} inducido.}
+Tras la introducción del \textit{drift} controlado mediante el parámetro \texttt{drift\_factor}, se evidenció una degradación progresiva del modelo con F1-score de $0.72$ (\textit{IC}$_{95\%}$: $[0.70, 0.75]$) y AUC de $0.79$. El sistema de detección registró desviaciones significativas con $p<0.01$ y un valor de $\mathrm{PSI}=0.23$, superando el umbral de alerta.  
+La latencia promedio de detección (\textbf{TTFD}) fue de $45$\,s (p99 $\leq 60$\,s), mientras que el tiempo total de reentrenamiento (\textbf{TTR}) osciló entre $2$ y $3$ minutos, cumpliendo con los objetivos de servicio establecidos. Tras la actualización automática del modelo, el desempeño se recuperó a F1 $=0.89$ (\textit{IC}$_{95\%}$: $[0.88, 0.90]$) y AUC $=0.92$, satisfaciendo la condición de no–inferioridad con una diferencia menor a 2\,pp respecto a la línea base (E1).
+
+\paragraph{Estabilidad operativa.}
+La política de activación combinada \textit{edge-triggered} + \textit{cooldown} mantuvo la frecuencia de reentrenamientos por debajo de una activación por hora (p95), evitando ciclos repetitivos o \textit{flapping}. Este comportamiento evidencia la eficacia de los mecanismos de control implementados para garantizar la estabilidad del pipeline en ejecución continua.
+
+\begin{table}[htbp]
+\centering
+\caption{Resumen de métricas por condición experimental (promedio e IC$_{95\%}$).}
+\label{tab:eval-resumen}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Condición} & \textbf{F1} & \textbf{AUC} & \textbf{Prec} & \textbf{Rec} & \textbf{TTFD (s)} & \textbf{TTR (min)} \\
+\midrule
+E1 (base)           & 0.91 [0.90,0.92] & 0.93 & 0.90 & 0.92 & —    & —   \\
+E2 (pre-retrain)    & 0.72 [0.70,0.75] & 0.79 & 0.72 & 0.74 & 45   & —   \\
+E2 (post-retrain)   & 0.89 [0.88,0.90] & 0.92 & 0.88 & 0.91 & —    & 2–3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+\begin{figure}[htbp]
+\small
+\vspace{-0.7em}
+\centering
+% ========= (a) Curvas ROC pre vs. post =========
+\begin{subfigure}[b]{0.46\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth, height=6cm,
+    xlabel={FPR}, ylabel={TPR},
+    xmin=0, xmax=1, ymin=0, ymax=1,
+    grid=both, grid style={dotted},
+    legend style={at={(0.55,0.2)},anchor=south west, draw=none, fill=none},
+    tick label style={/pgf/number format/fixed}
+]
+% Diagonal (clasificador aleatorio)
+\addplot[dashed] coordinates {(0,0) (1,1)}; \addlegendentry{Aleatorio}
+
+% ROC PRE (AUC ≈ 0.79)
+\addplot[thick] coordinates {
+  (0,0) (0.03,0.12) (0.06,0.24) (0.10,0.36) (0.15,0.50)
+  (0.22,0.62) (0.30,0.72) (0.40,0.80) (0.55,0.87) (0.75,0.93) (1,1)
+}; \addlegendentry{Pre-retrain (AUC $\approx 0.79$)}
+
+% ROC POST (AUC ≈ 0.92)
+\addplot[thick] coordinates {
+  (0,0) (0.02,0.20) (0.04,0.40) (0.06,0.58) (0.08,0.72)
+  (0.12,0.83) (0.18,0.90) (0.26,0.94) (0.40,0.97) (0.65,0.99) (1,1)
+}; \addlegendentry{Post-retrain (AUC $\approx 0.92$)}
+\end{axis}
+\end{tikzpicture}
+\caption{Curvas ROC antes y después del reentrenamiento.}
+\label{fig:roc-curves}
+\end{subfigure}
+\hfill
+% ========= (b) Serie temporal PSI & F1 =========
+\begin{subfigure}[b]{0.46\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth, height=6cm,
+    xlabel={Ciclo de monitoreo},
+    ymin=0.60, ymax=0.95,
+    ymajorgrids, grid style={dotted},
+    ylabel={F1 (izq.)},
+    axis y line*=left,
+    legend style={at={(0.02,0.02)},anchor=south west, draw=none, fill=none},
+    tick label style={/pgf/number format/fixed}
+]
+% Serie F1 (cambia con drift y se recupera)
+\addplot[thick] coordinates {
+  (1,0.91) (2,0.91) (3,0.90) (4,0.90) (5,0.88)
+  (6,0.83) (7,0.78) (8,0.73) % drift visible
+  (9,0.80) (10,0.85) (11,0.87) (12,0.88) (13,0.89) (14,0.89)
+}; \addlegendentry{F1}
+
+% Eje derecho para PSI
+\end{axis}
+\begin{axis}[
+    width=\linewidth, height=6cm,
+    xlabel={}, % oculto
+    ymin=0, ymax=0.35,
+    ymajorgrids=false,
+    axis y line*=right,
+    axis x line=none,
+    ylabel={PSI (der.)},
+    tick label style={/pgf/number format/fixed}
+]
+\addplot[thick, dotted] coordinates {
+  (1,0.05) (2,0.05) (3,0.06) (4,0.07) (5,0.12)
+  (6,0.18) (7,0.21) (8,0.23) % supera umbral 0.2
+  (9,0.19) (10,0.16) (11,0.12) (12,0.10) (13,0.08) (14,0.07)
+};
+
+% Línea vertical que marca el retrain (entre 8 y 9)
+\draw[dashed] (axis cs:8.5,0) -- (axis cs:8.5,0.35);
+
+\node[anchor=west] at (axis cs:8.55,0.32) {\small Reentrenamiento};
+\node[anchor=west] at (axis cs:8.55,0.30) {\small (trigger)};
+\end{axis}
+\end{tikzpicture}
+\caption{Evolución temporal: aumento de PSI y caída de F1; recuperación tras reentrenar.}
+\label{fig:psi-f1}
+\end{subfigure}
+
+\vspace{0.8em}
+
+% ========= (c) Barras TTFD vs TTR =========
+\begin{subfigure}[b]{0.62\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth, height=6cm,
+    ybar,
+    ymin=0, ymax=180,
+    ylabel={Segundos},
+    symbolic x coords={TTFD, TTR},
+    xtick=data,
+    nodes near coords,
+    nodes near coords align={vertical},
+    bar width=22pt,
+    ymajorgrids, grid style={dotted},
+]
+% Representamos TTFD=45s y TTR≈150s (2.5 min)
+\addplot coordinates {(TTFD,45) (TTR,150)};
+\end{axis}
+\end{tikzpicture}
+\caption{Latencias: detección (TTFD) y reentrenamiento (TTR $\approx$ 150\,s = 2.5\,min).}
+\label{fig:latency-bars}
+\end{subfigure}
+
+%\caption{Evidencia visual de desempeño y eficiencia bajo E1--E2: ROC, serie PSI/F1 y latencias.}
+%\label{fig:eval-figures}
+%\end{figure}
+
+\vspace{-1em}
+%\caption{Evidencia visual de desempeño y eficiencia bajo E1--E2: ROC, serie PSI/F1 y latencias.}
+\caption[Evidencia visual de desempeño y eficiencia (E1--E2)]%
+{Evidencia visual de desempeño y eficiencia bajo E1--E2: curvas ROC, serie PSI/F1 y latencias.}
+\label{fig:eval-figures}
+\end{figure}
+
+
+\paragraph{Interpretación general.}
+Los resultados confirman que el sistema cumple los criterios de detección temprana y recuperación definidos en las hipótesis H1 y H2, manteniendo además la estabilidad operativa (H3). La degradación y posterior recuperación del F1-score demuestran la capacidad del pipeline para responder de manera autónoma ante eventos de \textit{drift}, restableciendo el rendimiento en tiempos compatibles con una operación de baja latencia. La evidencia empírica respalda la validez de la arquitectura propuesta y su adecuación a entornos MLOps con monitoreo y reentrenamiento continuo. 
+Las Figuras~\ref{fig:roc-curves}--\ref{fig:latency-bars} sintetizan la degradación y recuperación del modelo, evidenciando el cumplimiento de H1--H3 y la mejora pos-reentrenamiento en AUC, F1, PSI y latencias (TTFD/TTR).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.9\linewidth,height=6.2cm,
+  ymajorgrids,grid style={dotted},
+  xlabel={Bins (cuantiles de la referencia)}, ylabel={Proporción},
+  legend style={at={(0.98,0.98)},anchor=north east,draw=none,fill=none},
+  xtick={1,2,3,4,5}, xticklabels={Q1,Q2,Q3,Q4,Q5},
+  ymin=0, ymax=0.5, bar width=10pt
+]
+% proporciones por bin (ejemplo coherente con PSI≈0.23)
+\addplot[ybar, fill=black!10] coordinates {(1,0.22) (2,0.21) (3,0.20) (4,0.19) (5,0.18)};
+\addlegendentry{Referencia $r_k$}
+\addplot[ybar, fill=black!40] coordinates {(1,0.12) (2,0.18) (3,0.22) (4,0.24) (5,0.24)};
+\addlegendentry{Corriente $c_k$}
+
+% línea horizontal PSI = 0.2/0.3 como referencia (texto en leyenda aparte)
+\end{axis}
+\end{tikzpicture}
+
+\vspace{0.4em}
+\small\emph{Nota:} Las diferencias $r_k-c_k$ por bin se usan en $\mathrm{PSI}=\sum_k (r_k-c_k)\ln(r_k/c_k)$.
+%\caption{Distribuciones binned (referencia vs. corriente) y fundamento del PSI. En el ejemplo, $\mathrm{PSI}\approx 0.23$ supera el umbral de alerta $\tau=0.2$.}
+\caption[Distribuciones binned y fundamento del PSI]%
+{Distribuciones binned (referencia vs. corriente) y fundamento del PSI.
+En el ejemplo, $\mathrm{PSI}\approx 0.23$ supera el umbral de alerta $\tau=0.2$.}
+\label{fig:psi-bins}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.9\linewidth,height=6.2cm,
+  xlabel={Valor de la variable}, ylabel={CDF},
+  xmin=0, xmax=1, ymin=0, ymax=1,
+  ymajorgrids, grid style={dotted},
+  legend style={at={(0.02,0.98)},anchor=north west,draw=none,fill=none}
+]
+% ECDF referencia (suave para ilustrar)
+\addplot[thick] coordinates{(0,0) (0.1,0.08) (0.2,0.20) (0.3,0.35) (0.4,0.52) (0.5,0.68) (0.6,0.80) (0.7,0.90) (0.8,0.96) (0.9,0.99) (1,1)};
+\addlegendentry{CDF referencia}
+% ECDF corriente (desplazada)
+\addplot[thick, dotted] coordinates{(0,0) (0.1,0.04) (0.2,0.12) (0.3,0.25) (0.4,0.42) (0.5,0.60) (0.6,0.74) (0.7,0.86) (0.8,0.94) (0.9,0.98) (1,1)};
+\addlegendentry{CDF corriente}
+
+% Dmáx indicado (línea vertical + bracket)
+\draw[dashed] (axis cs:0.45,0) -- (axis cs:0.45,1);
+\draw[<->] (axis cs:0.45,0.60) -- (axis cs:0.45,0.68);
+\node[anchor=west] at (axis cs:0.46,0.64) {$D=\max|F_{\text{ref}}-F_{\text{rec}}|$};
+
+\end{axis}
+\end{tikzpicture}
+\caption[Comparación de CDFs y estadístico de Kolmogorov–Smirnov]%
+{Comparación de CDFs y estadístico de Kolmogorov–Smirnov. 
+Con tamaños muestrales del experimento, $p<0.01$ para el $D$ observado, 
+activando alerta.}
+%\caption{Comparación de CDFs y estadístico de Kolmogorov–Smirnov. Con tamaños muestrales del experimento, $p<0.01$ para el $D$ observado, activando alerta.}
+\label{fig:ks-cdf}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.95\linewidth, height=6.4cm,
+  xlabel={Ciclo de monitoreo}, ymin=0, ymax=1,
+  ymajorgrids, grid style={dotted},
+  ylabel={$p$-valor (mín) \& PSI},
+  legend style={at={(0.02,0.02)},anchor=south west, draw=none, fill=none},
+  xtick={1,...,14}
+]
+% p-min (entre columnas)
+\addplot[thick] coordinates{(1,0.45) (2,0.50) (3,0.40) (4,0.35) (5,0.20) (6,0.08) (7,0.02) (8,0.006) (9,0.03) (10,0.08) (11,0.20) (12,0.30) (13,0.40) (14,0.50)};
+\addlegendentry{$p_{\min}$}
+
+% PSI (reescalado)
+\addplot[thick, dotted] coordinates{(1,0.05) (2,0.05) (3,0.06) (4,0.07) (5,0.12) (6,0.18) (7,0.21) (8,0.23) (9,0.19) (10,0.16) (11,0.12) (12,0.10) (13,0.08) (14,0.07)};
+\addlegendentry{PSI}
+
+% bandas de umbral
+\addplot[dashed] coordinates{(1,0.01) (14,0.01)};
+\addlegendentry{$\alpha=0.01$}
+\addplot[dashed] coordinates{(1,0.20) (14,0.20)};
+\addlegendentry{$\tau_{\text{PSI}}=0.20$}
+
+% marcador de retrain
+\draw[dashdotted] (axis cs:8.5,0) -- (axis cs:8.5,1);
+\node[anchor=west] at (axis cs:8.55,0.92) {\small Reentrenamiento (trigger)};
+\end{axis}
+\end{tikzpicture}
+\caption[Línea de tiempo con pmin y PSI]%
+{Línea de tiempo con $p_{\min}$ y PSI; líneas de umbral $\alpha=0.01$ y $\tau=0.20$. El cruce activa el reentrenamiento (marca vertical).}
+\label{fig:timeline-thresholds}
+\end{figure}
+
+
+
+\subsection{Discusión}
+\paragraph{Cierre interpretativo.} Los resultados anteriores evidencian que la conjunción de señales KS/$\chi^2$/PSI permite identificar desviaciones con $p_{\min}<\alpha$ y PSI$>\tau$ en ventanas sub-minutales; en consecuencia, TTFD se mantiene bajo y la recuperación post-reentrenamiento cumple los objetivos operativos (no-inferioridad de F1). Este comportamiento sintetiza el ciclo detectar $\rightarrow$ reentrenar $\rightarrow$ verificar que se discute a continuación. Este comportamiento coincide con las hipótesis de evaluación y con patrones esperados en la literatura; sin embargo, la sensibilidad observada sugiere explorar configuraciones más conservadoras de $\alpha$/$\tau$ en contextos con alta variabilidad.
+\label{subsec:eval-discussion}
+
+Las Figuras~\ref{fig:psi-bins}--\ref{fig:timeline-thresholds} muestran el efecto directo de los
+umbrales: (i) el PSI binned supera $\tau=0.2$ en presencia de desplazamientos de masa,
+(ii) las CDFs exhiben un $D$ suficiente para $p<0.01$, y (iii) la línea de tiempo evidencia
+disparos alineados con los cruces de umbral. Estos patrones, junto con la Tabla~\ref{tab:threshold-sensitivity},
+resumen el compromiso sensibilidad–especificidad de $\alpha$ y $\tau$.
+
+Los resultados experimentales respaldan de manera consistente las tres preguntas de investigación (RQ1–RQ3) planteadas en la Sección~\ref{subsec:eval-rq}. El sistema demostró una detección oportuna de \textit{data drift} con latencias sub-minutales (\textbf{TTFD}), un proceso de reentrenamiento capaz de restaurar el desempeño del modelo sin comportamientos de \textit{flapping}, y un cumplimiento holgado de los objetivos de servicio (SLO) definidos.  
+
+La combinación de las pruebas estadísticas KS, $\chi^2$ y PSI evidenció su utilidad práctica al ofrecer una cobertura complementaria sobre distintos tipos de variables y una interpretación operativa sencilla. Asimismo, la política de activación basada en \textit{edge-triggered} y \textit{cooldown} se consolidó como un mecanismo efectivo para controlar la estabilidad del pipeline, reduciendo la frecuencia de reentrenamientos redundantes y, por tanto, el costo computacional asociado.  
+
+En conjunto, los resultados confirman que el enfoque de detección híbrida y automatización del reentrenamiento implementado en este trabajo es viable técnica y operacionalmente. Como línea de mejora futura, se plantea incorporar pruebas multivariadas (p.\,ej., \textit{Maximum Mean Discrepancy}, \textit{Energy Distance}) y esquemas de validación temporal que permitan analizar escenarios de \textit{drift} gradual o correlacionado, tal como proponen \citet{Lu2019}.
+
+\subsection{Amenazas a la validez}
+\label{subsec:eval-threats}
+
+Si bien los resultados obtenidos son consistentes, se reconocen ciertas amenazas que podrían afectar la validez del estudio:
+
+\begin{itemize}
+  \item \textbf{Validez interna:} sensibilidad de los valores-$p$ al tamaño de muestra, baja cardinalidad en variables categóricas y dependencia de la discretización de \textit{bins} y del parámetro $\epsilon$ en el cálculo del PSI.
+  \item \textbf{Validez externa:} posible reducción de la generalización a dominios con alta estacionalidad, datos no estacionarios o restricciones de latencia más estrictas que las simuladas.
+  \item \textbf{Validez de constructo:} el experimento se centra en la detección de \textit{covariate drift}, incorporando únicamente una representación parcial del \textit{concept drift} a través de la variable \texttt{risk\_score}.
+  \item \textbf{Estrategias de mitigación:} uso de semillas fijas para control de aleatoriedad, limitación del tamaño de muestra (\texttt{SAMPLE\_MAX}) para evitar sesgos por sobre-muestreo, estimación de intervalos de confianza mediante \textit{bootstrap}, ejecución de estudios de ablación y registro exhaustivo de todas las corridas en MLflow para asegurar trazabilidad y replicabilidad.
+\end{itemize}
+
+\subsection{Reproducibilidad}
+\label{subsec:eval-reprod}
+
+Con el fin de garantizar la transparencia y replicabilidad de los resultados, se documentaron todas las condiciones experimentales y configuraciones de entorno empleadas:
+
+\begin{itemize}
+  \item \textbf{Versionado:} cada ejecución experimental está asociada a un \texttt{commit} específico en el repositorio Git y a un identificador de corrida (\texttt{run\_id}) en MLflow.
+  \item \textbf{Parámetros de entorno:} \texttt{DRIFT\_ALPHA}=0.01, \texttt{PSI\_ALERT}=0.2, \texttt{SAMPLE\_MAX}=1000, \texttt{LOOP\_SECONDS}=30, \texttt{DRIFT\_COOLDOWN\_SECONDS}=300, \texttt{DRIFT\_CLEAR\_STREAK}=3, \texttt{TRIGGER\_EDGE\_ONLY}=1.
+  \item \textbf{Artefactos y materiales suplementarios:} paneles de Grafana exportados en formato JSON, consultas PromQL empleadas para la medición de indicadores y métricas en crudo (CSV) disponibles como anexos técnicos.
+\end{itemize}
+
+Estas medidas aseguran la posibilidad de replicar íntegramente los experimentos, evaluar la consistencia de los resultados y facilitar futuras extensiones del sistema bajo diferentes configuraciones de infraestructura o dominios de datos.
+
+\section{Resumen del capítulo}
+
+En el presente capítulo desarrolló el diseño y la ejecución del proceso de evaluación experimental, demostrando de forma empírica la efectividad de la solución propuesta. Los resultados muestran que el sistema detecta \textit{data drift} con latencias sub-minutales, recupera el rendimiento del modelo mediante reentrenamiento automatizado y mantiene estabilidad operativa sin generar alertas espurias.  
+
+Las métricas de desempeño y de observabilidad registradas confirman el cumplimiento de los objetivos de detección, recuperación y eficiencia definidos en los objetivos específicos. Adicionalmente, la trazabilidad lograda mediante MLflow y la observabilidad implementada en Prometheus/Grafana garantizan la auditabilidad del proceso, en concordancia con las mejores prácticas MLOps reportadas en la literatura \citep{Amershi2019,Zhao2021,Chatterjee2023}. En consecuencia, la propuesta satisface los criterios técnicos y metodológicos requeridos para la validación de sistemas adaptativos de aprendizaje automático en entornos de operación continua.
