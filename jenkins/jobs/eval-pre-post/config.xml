@@ -1,0 +1,95 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1540.v295eccc9778f">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2265.v140e610fe9d5"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2265.v140e610fe9d5">
+      <jobProperties/>
+      <triggers/>
+      <parameters/>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@4183.v94b_6fd39da_c1">
+    <script>pipeline {
+  agent any
+  environment {
+    TRAINING_LOG = &apos;/tmp/arlequin-logs/training_log.csv&apos;
+    DRIFT_LOG    = &apos;/tmp/arlequin-logs/drift_log.csv&apos;
+  }
+  stages {
+    stage(&apos;Resolve containers&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          CID_PY=$(docker ps -qf &quot;label=com.docker.compose.service=pyspark-client&quot; || true)
+          if [ -z &quot;$CID_PY&quot; ]; then CID_PY=$(docker ps -qf &quot;name=pyspark-client&quot;); fi
+          [ -n &quot;$CID_PY&quot; ] || { echo &quot;[ERROR] pyspark-client no encontrado&quot;; docker ps; exit 1; }
+          echo &quot;$CID_PY&quot; &gt; .cid_py
+        &apos;&apos;&apos;
+      }
+    }
+    stage(&apos;Prep evaluator deps&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          CID_PY=$(cat .cid_py)
+          docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 - &lt;&lt;PY
+try:
+ import scipy, pandas, numpy
+ print(&quot;eval deps OK&quot;)
+except Exception:
+ raise SystemExit(1)
+PY&apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 -m pip install --no-cache-dir -r /scripts/requirements-drift.txt&apos;
+        &apos;&apos;&apos;
+      }
+    }
+    stage(&apos;Eval pre-training metrics&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          PHASE=&quot;pre&quot;
+          CID_PY=$(cat .cid_py)
+          METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
+          mkdir -p &quot;$METRICS_DIR&quot;
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;[ -f ${TRAINING_LOG} ] || { echo &apos;[ERROR] training_log.csv no existe dentro del contenedor&apos;; exit 2; }&quot;
+          OUT_PATH=&quot;/tmp/arlequin-logs/mannwhitney_results_${PHASE}.csv&quot;
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;python3 /scripts/eval_stats.py --input ${TRAINING_LOG} --drift-input ${DRIFT_LOG} --out ${OUT_PATH} --fdr || true&quot;
+          docker cp &quot;$CID_PY&quot;:&quot;$OUT_PATH&quot; &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:&quot;${TRAINING_LOG}&quot; &quot;$METRICS_DIR/training_log_${PHASE}.csv&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:&quot;${DRIFT_LOG}&quot; &quot;$METRICS_DIR/drift_log_${PHASE}.csv&quot; 2&gt;/dev/null || true
+        &apos;&apos;&apos;
+      }
+    }
+    stage(&apos;Eval post-training metrics&apos;) {
+      steps {
+        sh &apos;&apos;&apos;
+          set -eu
+          PHASE=&quot;post&quot;
+          CID_PY=$(cat .cid_py)
+          METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
+          mkdir -p &quot;$METRICS_DIR&quot;
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;[ -f ${TRAINING_LOG} ] || { echo &apos;[ERROR] training_log.csv no existe dentro del contenedor&apos;; exit 2; }&quot;
+          OUT_PATH=&quot;/tmp/arlequin-logs/mannwhitney_results_${PHASE}.csv&quot;
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;python3 /scripts/eval_stats.py --input ${TRAINING_LOG} --drift-input ${DRIFT_LOG} --out ${OUT_PATH} --fdr || true&quot;
+          docker cp &quot;$CID_PY&quot;:&quot;$OUT_PATH&quot; &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:&quot;${TRAINING_LOG}&quot; &quot;$METRICS_DIR/training_log_${PHASE}.csv&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:&quot;${DRIFT_LOG}&quot; &quot;$METRICS_DIR/drift_log_${PHASE}.csv&quot; 2&gt;/dev/null || true
+        &apos;&apos;&apos;
+      }
+    }
+  }
+  post {
+    always {
+      echo &apos;Evaluation-only pipeline finished.&apos;
+    }
+  }
+}
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
