@@ -15,15 +15,16 @@ Ejemplo de uso:
 La salida imprime un resumen y guarda una tabla con:
   metric, A, B, nA, nB, pvalue, cliffs_delta
 
-Se aplica corrección FDR de Benjamini–Hochberg sobre todos los p-values
-calculados, y se añade la columna pvalue_fdr si se usa --fdr.
+Si no existen al menos dos escenarios se genera un resumen global con
+estadísticos descriptivos (media, std, cuantiles) que se concatena en el
+mismo CSV. Para comparaciones, se aplica corrección FDR de
+Benjamini–Hochberg sobre todos los p-values calculados, y se añade la
+columna pvalue_fdr si se usa --fdr.
 """
 
 from __future__ import annotations
 import argparse
-import itertools
 import math
-from dataclasses import dataclass
 from typing import List, Dict
 
 import numpy as np
@@ -85,11 +86,11 @@ def fdr_bh(pvals: List[float]) -> List[float]:
 
 def compute_tests(df: pd.DataFrame, metrics: List[str], scenarios: List[str]) -> pd.DataFrame:
     rows = []
-    pairs = [("E1", "E2"), ("E2", "E3"), ("E1", "E3")]
-    # If user provided custom order, build the three pairs if possible
-    if scenarios and set(scenarios) >= {"E1", "E2", "E3"}:
-        pairs = list(zip(["E1", "E2", "E1"], ["E2", "E3", "E3"]))
-
+    pairs = []
+    if len(scenarios) >= 2:
+        for idx, a in enumerate(scenarios[:-1]):
+            for b in scenarios[idx + 1:]:
+                pairs.append((a, b))
     for m in metrics:
         if m not in df.columns:
             continue
@@ -113,6 +114,43 @@ def compute_tests(df: pd.DataFrame, metrics: List[str], scenarios: List[str]) ->
                 "nB": int(len(vb)),
                 "pvalue": pval,
                 "cliffs_delta": delta,
+                "row_type": "mannwhitney",
+            })
+    return pd.DataFrame(rows)
+
+
+def summarize_metrics(df: pd.DataFrame, metrics: List[str], scenarios: List[str]) -> pd.DataFrame:
+    """Return descriptive stats for global data + each scenario."""
+    rows = []
+    scopes = [("global", df)]
+    for sc in scenarios:
+        scoped = df[df["scenario"] == sc]
+        scopes.append((f"scenario:{sc}", scoped))
+
+    for scope_name, scoped_df in scopes:
+        for m in metrics:
+            series = pd.to_numeric(scoped_df[m], errors="coerce").dropna()
+            n = len(series)
+            if n == 0:
+                continue
+            rows.append({
+                "metric": m,
+                "A": scope_name,
+                "B": "",
+                "nA": int(n),
+                "nB": 0,
+                "pvalue": float("nan"),
+                "cliffs_delta": float("nan"),
+                "row_type": "summary",
+                "summary_scope": scope_name,
+                "summary_n": int(n),
+                "summary_mean": float(series.mean()),
+                "summary_std": float(series.std(ddof=0)),
+                "summary_min": float(series.min()),
+                "summary_p25": float(series.quantile(0.25)),
+                "summary_median": float(series.median()),
+                "summary_p75": float(series.quantile(0.75)),
+                "summary_max": float(series.max()),
             })
     return pd.DataFrame(rows)
 
@@ -137,12 +175,25 @@ def main():
     if "scenario" not in df.columns:
         raise SystemExit("El CSV debe contener la columna 'scenario'.")
 
+    df["scenario"] = df["scenario"].fillna("").astype(str)
+    if not df["scenario"].str.strip().any():
+        # Fallback so we can at least emit resumen global
+        df["scenario"] = "default"
+    else:
+        df.loc[df["scenario"].str.strip() == "", "scenario"] = "default"
+
     metrics = [c for c in ("f1", "psi", "ttfd", "ttr") if c in df.columns]
     if not metrics:
         raise SystemExit("No se encontraron columnas de métricas esperadas (f1, psi, ttfd, ttr).")
 
-    scenarios = sorted(df["scenario"].dropna().unique().tolist())
+    # Preserve order of appearance for scenarios to keep comparisons legible
+    scenarios = []
+    for val in df["scenario"]:
+        if val not in scenarios:
+            scenarios.append(val)
+
     res = compute_tests(df, metrics, scenarios)
+    summaries = summarize_metrics(df, metrics, scenarios)
 
     if args.fdr and len(res) and res["pvalue"].notna().any():
         res["pvalue_fdr"] = fdr_bh(res["pvalue"].fillna(1.0).tolist())
@@ -161,10 +212,28 @@ def main():
                 pv_str = f"{pv:.4g}" if math.isfinite(pv) else "nan"
                 cd_str = f"{cd:.3f}" if math.isfinite(cd) else "nan"
                 print(f"  {r['A']} vs {r['B']}: p={pv_str}; δ={cd_str}")
+    else:
+        print("[INFO] No hay al menos dos escenarios etiquetados; se mostrará resumen global.")
+
+    if len(summaries):
+        global_rows = summaries[summaries["summary_scope"] == "global"]
+        if len(global_rows):
+            print("Resumen global por métrica:")
+            for _, row in global_rows.iterrows():
+                mean = row["summary_mean"]
+                std = row["summary_std"]
+                n = row["summary_n"]
+                print(f"- {row['metric']}: media={mean:.4f}, std={std:.4f}, n={int(n)}")
 
     if args.out:
         out_path = args.out
-        pd.DataFrame(res).to_csv(out_path, index=False)
+        if len(res):
+            out_df = res
+        else:
+            out_df = pd.DataFrame(columns=["metric", "A", "B", "nA", "nB", "pvalue", "cliffs_delta"])
+        if len(summaries):
+            out_df = pd.concat([out_df, summaries], ignore_index=True, sort=False)
+        out_df.to_csv(out_path, index=False)
         print("Guardado:", out_path)
 
 
