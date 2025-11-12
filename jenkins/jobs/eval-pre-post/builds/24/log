@@ -1,0 +1,206 @@
+Started by user unknown or anonymous
+[8mha:////4Dg0lofcHc3blb2tWvJQLY4UgmFe/3qWhOzKa74XwBrdAAAAoh+LCAAAAAAAAP9tjTEOwjAQBM8BClpKHuFItIiK1krDC0x8GCfWnbEdkooX8TX+gCESFVvtrLSa5wtWKcKBo5UdUu8otU4GP9jS5Mixv3geZcdn2TIl9igbHBs2eJyx4YwwR1SwULBGaj0nRzbDRnX6rmuvydanHMu2V1A5c4MHCFXMWcf8hSnC9jqYxPTz/BXAFEIGsfuclm8zQVqFvQAAAA==[0m[Pipeline] Start of Pipeline
+[8mha:////4GWmmwr/swDno9hrbT7SbKEuocJgW6BaJ/0/qNoY5mgiAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycohUghExsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jduZBmjwAAAAA==[0m[Pipeline] node
+Running on [8mha:////4KaUya+WUX7T9R1duA6rZ2Tr9BIUqF/o+kSOPwaH3cqjAAAAoR+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAz2EgZR/eT83ILSktQifY2k0sycEt3MPE19AHHxbH3KAAAA[0mJenkins in /var/jenkins_home/workspace/eval-pre-post
+[8mha:////4PSXudAluoPcd+mgeFKmyuSlkTGZLZ3A5ZDBHaInVYBhAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0gA0xsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jfoP95RwAAAAA==[0m[Pipeline] {
+[8mha:////4BRbMsnnHEpqfk0ERU7TjOJE/UuoR08adWgDoFPo+JG6AAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0gQkxsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jc09154wAAAAA==[0m[Pipeline] withEnv
+[8mha:////4Op+QZtALvOp3Q3Wess6+p2lMzmsC6Lv3TAxlkSzUFQcAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0ggUxsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jek7ggRwAAAAA==[0m[Pipeline] {
+[8mha:////4IwzZoa8bDksoxGlFKBOqby9wU0hZk2AW2K0v2gc3ASsAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0gwExsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jcChmMxwAAAAA==[0m[Pipeline] stage
+[8mha:////4HBAUomVn5ecE6tKE58f/6UnogCceipmfR1YoISclyngAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0BAkxsUZZOEFIQkgb/d8mKe3EibgadyBQiQlLlmxL1nu+oE4RjhQdby12HpP2vA+jK4lPFLtroIm3dOGaMFGwXNpJkrGnpUrKFhaxClYC1hZ1oOTRZdiIVt1VExS65pxj2Q4CKm8GeAAThZxVzN8yR9jeRpMIf5y/AJj7DGxXvP/86jfpX/cvwAAAAA==[0m[Pipeline] { (Seleccionar escenario)
+[8mha:////4A7D/8A02xAmhm34i3Zcc1yBYP5ozYFPmL5izZ08PXbjAAAApR+LCAAAAAAAAP9tjTEOwjAUQ3+KOrAycoh0BSEm1igLJwhJCGmj/9skpZ04EVfjDgQqMWHJkm3Jes8X1CnCkaLjrcXOY9Ke92F0JfGJYncNNPGWLlwTJgqWSztJMva0VEnZwiJWwUrA2qIOlDy6DBvRqrtqgkLXnHMs20FA5c0AD2CikLOK+VvmCNvbaBLhj/MXAHOfge2K959f/QbB16AVwAAAAA==[0m[Pipeline] script
+[8mha:////4NgJvAgFx7LAoqE3PbXre+evq/vlSKstL/8A7++IIwvYAAAAph+LCAAAAAAAAP9tjTEOwjAQBM9BKWgpeYQDJUJUtJYbXmBiY5xYd8G+kFS8iK/xBwKRqNhqZ6XVPF9Q5gQHSl42DtuAuQ6yi72fmhwotZdIg2zoLGvCTNFJ7QZN1h1n1MQO5ogCFgqWDutIOaBnWKnG3E0VDfrqxGna9gqKYG/wAKEmM5vEXxgTrK+9zYQ/z18BjB2D2DEU283nWL4Bsam+msEAAAA=[0m[Pipeline] {
+[8mha:////4CjQDGvAZRQJ49FdudRjqqKYt+lgcf1w1iupQYltD/u7AAAAox+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOJCakRFa6XhBSYxxo5159gOTsWL+Bp/IBCJii1WO9vM8wXrGODIQaNV1BuKrUHvRj0vzBz6q+OMli/YMkV2ChuVG+7UacGGk4IlRQkrARtFreNoSCfYCivvsnKSdHVOYf4OAkrTDfCAQszmJEP6whRgdxu7yPTz/BXA5BOU9f5TtX8D0loxuL4AAAA=[0m[Pipeline] input
+[8mha:////4CdoTQFYSpczjS/DGgtSbFqT6xWNfFCOqpljHg1fqxlOAAAAnR+LCAAAAAAAAP9b85aBtbiIQSajNKU4P08vOT+vOD8nVc+jsiC1KCczL9svvyTVzHb1RttJBUeZGJg8GdhyUvPSSzJ8GJhLi3JKGIR8shLLEvVzEvPS9YNLijLz0q0rihik0IxzhtAgwxgggJGJgaGiAMjgL2GQ0c/KT9JPLUvM0S0oStUtyC8u0Tcy0c/MKygt0QcApjVSwqEAAAA=[0mInput requested
+[8mha:////4I3t7vzKujfpgGjQBPANjTQsiGeGXsUQHb+bO/NFBxPhAAAAox+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOICtIgqreWGF5jYGCfWnbEdkooX8TX+QCASFVusdraZ5wuWKcKRo8XWUOcoNQ6D7+20cODYXTwP2PIZG6bE3qA0g2Rt6hklZwNzihIWAlaGGs/Jkc2wFq26q8orstUpx+k7CCidvsEDCjGZs4r5C2OEzbXXienn+SuAMWQod9tP7cMbEQkck74AAAA=[0m[Pipeline] writeFile
+[8mha:////4A5h+Txh/ICmMom9IapzrzKxkv/Efli9tQwXz2UsCYmfAAAAox+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOICokRUaS03vMDExjix7oztkFS8iK/xBwKRqNhitbPNPF+wTBGOHC22hjpHqXEYfG+nhQPH7uJ5wJbP2DAl9galGSRrU88oORuYU5SwELAy1HhOjmyGtWjVXVVeka1OOU7fQUDp9A0eUIjJnFXMXxgjbK69Tkw/z18BjCFDudt+ah/eUDgHir4AAAA=[0m[Pipeline] echo
+Escenario seleccionado: pre
+[8mha:////4P/LRPljPDMbfGpu+lkqOlBxwa4mpplzp7mwqCqt5GVOAAAApB+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOICEh2iSmu54QUmNsaJdWdsh6TiRXyNPxCIRMUWq51t5vmCZYpw5GixNdQ5So3D4Hs7LRw4dhfPA7Z8xoYpsTcozSBZm3pGydnAnKKEhYCVocZzcmQzrEWr7qryimx1ynH6DgJKp2/wgEJM5qxi/sIYYXPtdWL6ef4KYAwhQ7nbf2r7Bq/le42+AAAA[0m[Pipeline] }
+[8mha:////4LiPRMp7vSidJZTrvadfESACm6ZFh0yntki6fTHnM5i9AAAApB+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMIRBQVCVLRWGl5gEmOcWHfBvpBUvIiv8QciIlGx1c4083pjmSKOHJ1qLLWeUuVVF3o3PTVwbK+BB9XwRVVMiYNVpR1Kru1pxpLFYl6WY6GxslQFTp6cYK0b8zBFMOSKs8TJHTRyX9/xRKanspgoXxgjNre+Tky/zt8Axq4T5NudINt/AEjYFGS9AAAA[0m[Pipeline] // script
+[8mha:////4OKingkYr+uZJxbh521k5pv2nuDAavs3ZqdJlgIssgZ3AAAApB+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMIRDUJCVLRWGl5gEmOcWHfBvpBUvIiv8QciIlGx1c4083pjmSKOHJ1qLLWeUuVVF3o3PTVwbK+BB9XwRVVMiYNVpR1Kru1pxpLFYl6WY6GxslQFTp6cYK0b8zBFMOSKs8TJHTRyX9/xRKanspgoXxgjNre+Tky/zt8Axq4T5NudINt/AA6Ss1S9AAAA[0m[Pipeline] }
+[8mha:////4M2i8ZkgJcJaJSVq5zlEJk38RGRDiXCE+eBbtmZDrakYAAAAox+LCAAAAAAAAP9tjTESgjAQRT84FraWHiKMFYVjZZuh8QQRYgxkdjFZhMoTeTXvICMzVv7qv9e81xvrFHHk6FRrqfOUaq/6MLj5qZFjdw08qpYvqmZKHKyq7FhxY08LViwWy7IcK42NpTpw8uQEW92ahymCIVecJc7uoJH75o4nMj2XxUT5whSxuw1NYvp1/gYw9b0g35eCrPwAL6Zs+b0AAAA=[0m[Pipeline] // stage
+[8mha:////4DlEQygE53f0Es437K95pB+6pHMmD0Z+o599yBAm3fz8AAAApx+LCAAAAAAAAP9tjTEOwjAQBM9BKWgpeYQjGoSEqGgtN7zAxMY4se6CfSGpeBFf4w8EIlGx1c5Kq3m+oMwJDpS8bBy2AXMdZBd7PzU5UGovkQbZ0FnWhJmik9oNmqw7zqiJHcwRBSwULB3WkXJAz7BSjbmbKhr01YnTtO0VFMHe4AFCTWY2ib8wJlhfe5sJf56/Ahg7BrFlKDa7z7F8AxrfFeXBAAAA[0m[Pipeline] stage
+[8mha:////4Ic9Qm1lKqEZn3mSY46hGL1RuwUHpYjdEyK3+ts0PjZsAAAApx+LCAAAAAAAAP9tjTEOwjAUQ3+LOrAycohUbCDE1DXKwglCE0La6P/yk9JOnIircQdaKjHhwbItWe/1hiIynIidaCy2HmPtRRd6NyUxELfXQINo6CJqwkjBCmUHRcZWS1WULCzKclhJWFusA0WPLsFGNvqhy6DRlefE03aUkHtzhydkciInzelbRobtrTeR8Mf5C4CxS5Dv9rMd5mfxASnCIIrCAAAA[0m[Pipeline] { (Resolve containers)
+[8mha:////4Ft4s9Z4mHUwDuvmwBFeyitLzMnbJe8QTs48T1SJkECoAAAApB+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOICdAilorXc8AKTGOPEugu2g1PxIr7GH7CIRMUWq51t5vWGZfBQszfYaeothcbi4EaTFyb2/dVxwo4v2DAFdhqlTpJbfZpRctQwpyhhIWClqXEcLJkIa9Gph6qcIlOdo8/fUUBp2zs8oRDZHJWPX5g8bG5jG5h+nr8CmIYI5e6Qa78dPhmQ9Da+AAAA[0m[Pipeline] sh
++ set -eu
++ docker ps -qf label=com.docker.compose.service=pyspark-client
++ CID_PY=1bdc45b62cc9
++ [ -z 1bdc45b62cc9 ]
++ [ -n 1bdc45b62cc9 ]
++ echo 1bdc45b62cc9
+[8mha:////4EJfQfcf/tx42XuVj9Lh9VZCLpCfhdUHMrPNLBJnjqWPAAAApB+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOKi0CFEldZKwwtMbIwT687YDknFi/gaf8AiEhVbrHa2mdcb1jHAiYPBXtNgKXYWvRtNXjhxGK6OJ+z5gh1TZKex1VPLSjcLtpw0LClKWAnYaOocR0smwVb08iErJ8lU5xTydxRQWnWHJxQim5MM6QtzgN1tVJHp5/krgNn7BOW+zlUfPiXWgpW+AAAA[0m[Pipeline] }
+[8mha:////4ABt/DmvypE4bTXPvGefwxEVPp+8Y/6K0XW5D3WUFkMWAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPMIRqZAQVVorDS8w8WGcWHfGdkgqXsTX+AMWkajYYrWzzbzesI4BThyM6JEGS7GzwrvR5CUmDsPV8SR6voiOKbJD0eLUssZmwZYTwpKihJWEDVLnOFoyCbayVw9VOUWmOqeQv6OE0uo7PKGQ2ZxUSF+YA+xuo45MP89fAczeJyjrOtf+8AEdlBFkvgAAAA==[0m[Pipeline] // stage
+[8mha:////4Nb0S38/BdN4jNZW4Z7YzLGEF/9+JKsggU5XDO4DaS8IAAAApx+LCAAAAAAAAP9tjTEOwjAQBM9BKWgpeYQjgUSDqGgtN7zAxMY4se6CfSGpeBFf4w8EIlGx1c5Kq3m+oMwJDpS8bBy2AXMdZBd7PzU5UGovkQbZ0FnWhJmik9oNmqw7zqiJHcwRBSwULB3WkXJAz7BSjbmbKhr01YnTtO0VFMHe4AFCTWY2ib8wJlhfe5sJf56/Ahg7BrFjKDbbz7F8A0Q1Or7BAAAA[0m[Pipeline] stage
+[8mha:////4F+Me/NJHid1xgeufWzvdQx+kl0Owb/9kLaW8wRl9GhoAAAApx+LCAAAAAAAAP9tjTEOwjAUQ3+LOrAycohUAjbE1DXKwglCE0La6P/yk9JOnIircQdaKjHhwbItWe/1hiIynIidaCy2HmPtRRd6NyUxELfXQINo6CJqwkjBCmUHRcZWS1WULCzKclhJWFusA0WPLsFGNvqhy6DRlefE03aUkHtzhydkciInzelbRobtrTeR8Mf5C4CxS5Dv9rMd5mfxAd6e6VPCAAAA[0m[Pipeline] { (Prep evaluator deps)
+[8mha:////4BaEBK7pI4KUX8jGY9uTVgKUV9Fq0kBpVkeQmYws3/75AAAApB+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIiIagQVVrLDS8wsTFOrDtjOyQVL+Jr/IFAJCq2WO1sM88XLFOEI0eLraHOUWocBt/baeHAsbt4HrDlMzZMib1BaQbJ2tQzSs4G5hQlLASsDDWekyObYS1adVeVV2SrU47TdxBQOn2DBxRiMmcV8xfGCJtrrxPTz/NXAGPIUG53n9qHN38C26S+AAAA[0m[Pipeline] sh
++ set -eu
++ cat .cid_py
++ CID_PY=1bdc45b62cc9
++ docker exec -i 1bdc45b62cc9 sh -lc python3 - <<PY
+try:
+ import scipy, pandas, numpy
+ print("eval deps OK")
+except Exception:
+ raise SystemExit(1)
+PY
+eval deps OK
+[8mha:////4M3EwWDwWtgkW5Y+RFL9tbP6u0GWYyUdVczpgxp9BNaDAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIiIUSDqNJabniBiY1xYt0Z2yGpeBFf4w8EIlGxxWpnm3m+YJkiHDlabA11jlLjMPjeTgsHjt3F84Atn7FhSuwNSjNI1qaeUXI2MKcoYSFgZajxnBzZDGvRqruqvCJbnXKcvoOA0ukbPKAQkzmrmL8wRthce52Yfp6/AhhDyFBu95/avQHjyRvdvgAAAA==[0m[Pipeline] }
+[8mha:////4L1CCbVbsYA1My5Pk9LwWQOTSbBCisEMO0CmVCbtuiQjAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIiQUGBqNJabniBiY1xYt0Z2yGpeBFf4w8EIlGxxWpnm3m+YJkiHDlabA11jlLjMPjeTgsHjt3F84Atn7FhSuwNSjNI1qaeUXI2MKcoYSFgZajxnBzZDGvRqruqvCJbnXKcvoOA0ukbPKAQkzmrmL8wRthce52Yfp6/AhhDyFBu95/avQHljyOIvgAAAA==[0m[Pipeline] // stage
+[8mha:////4FFPp8fMbuN3UK0yPMtoq0agT+9xR9PV08hmgrGPJPI4AAAApx+LCAAAAAAAAP9tjTEOwjAQBM9BKWgpeYQjUSAkREVrueEFJjbGiXUX7AtJxYv4Gn8gEImKrXZWWs3zBWVOcKDkZeOwDZjrILvY+6nJgVJ7iTTIhs6yJswUndRu0GTdcUZN7GCOKGChYOmwjpQDeoaVaszdVNGgr06cpm2voAj2Bg8QajKzSfyFMcH62ttM+PP8FcDYMYgtQ7HZfY7lG4fF/dTBAAAA[0m[Pipeline] stage
+[8mha:////4N8Dgpi1gufK1x3RRVjUzpnMxRUmnDYxPIGMjeI3V9LTAAAApx+LCAAAAAAAAP9tjTEOwjAUQ3+LOrAycohUYgIhpq5RFk4QmhDSRv+Xn5R24kRcjTvQUokJD5ZtyXqvNxSR4UTsRGOx9RhrL7rQuymJgbi9BhpEQxdRE0YKVig7KDK2WqqiZGFRlsNKwtpiHSh6dAk2stEPXQaNrjwnnrajhNybOzwhkxM5aU7fMjJsb72JhD/OXwCMXYJ8t5/tMD+LD0QKVszCAAAA[0m[Pipeline] { (Evaluate latest partitions)
+[8mha:////4LNqZDM/T9wm1IRDQ3isJpMIafZBjJ+uu6Z+zFQCLK9RAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOKCoEIoFa3lhheYxBgn1l2wHZyKF/E1/oBFJCq2WO1sM683LIOHmr3BTlNvKTQWBzeavDCx76+OE3Z8wYYpsNModZLc6tOMkqOGOUUJCwErTY3jYMlEWItOPVTlFJnqHH3+jgJK297hCYXI5qh8/MLkYXMb28D08/wVwDREKHeHXPvt8AHN/bm5vgAAAA==[0m[Pipeline] sh
++ set -eu
++ cat .cid_py
++ CID_PY=1bdc45b62cc9
++ SCENARIO=manual
++ METRICS_DIR=/var/jenkins_home/workspace/eval-pre-post/metrics
++ mkdir -p /var/jenkins_home/workspace/eval-pre-post/metrics
++ RUNS_CSV=/var/jenkins_home/workspace/eval-pre-post/metrics/jenkins_runs.csv
++ [ ! -f /var/jenkins_home/workspace/eval-pre-post/metrics/jenkins_runs.csv ]
++ date +%s
++ start_ts=1762966258
++ docker stats --no-stream --format {{.CPUPerc}},{{.MemUsage}},{{.MemPerc}} 1bdc45b62cc9
++ stats=0.00%,128.8MiB / 3.577GiB,3.52%
++ echo+ +  0.00%,128.8MiB / 3.577GiB,3.52%
+cuttr -d -d, %
+ -f1
++ cpu=0.00
++ + echo+ cut 0.00%,128.8MiB / 3.577GiB,3.52%
+tr -d, -d -f3
+ %
++ mem_perc=3.52
++ + echo+ cut 0.00%,128.8MiB / 3.577GiB,3.52%
+tr -d -d,   -f2
+
++ mem_pair=128.8MiB/3.577GiB
++ + echo+ cut 128.8MiB/3.577GiB
+sed -d/ -f1 s/[^0-9.]*//g
+
++ used=128.8
++ + + echocut -d/sed 128.8MiB/3.577GiB
+ -f2
+ s/[^0-9.]*//g
++ limit=3.577
++ + printf %s+ tr+  manualtr [:upper:]tr
+   _ [:lower:] -cd
+
+ a-z0-9._-
++ scenario_tag=manual
++ [ -n manual ]
++ date -Iseconds
++ echo 2025-11-12T16:51:00+00:00,24,eval-manual-pre,0.00,3.52,128.8,3.577,0
++ docker exec -i -e MLFLOW_TRACKING_URI=http://mlflow:5000 -e EXPERIMENT_LOG_FILE=/tmp/arlequin-logs/training_log.csv -e EVAL_SCENARIO=manual 1bdc45b62cc9 sh -lc set -eu
+              mkdir -p "$(dirname "$EXPERIMENT_LOG_FILE")"
+              spark-submit --master spark://spark-master:7077 --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000 /scripts/train_model.py
+            
+/usr/local/lib/python3.9/dist-packages/mlflow/utils/requirements_utils.py:20: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources  # noqa: TID251
+25/11/12 16:51:10 INFO SparkContext: Running Spark version 3.5.1
+25/11/12 16:51:10 INFO SparkContext: OS info Linux, 5.15.153.1-microsoft-standard-WSL2, amd64
+25/11/12 16:51:10 INFO SparkContext: Java version 11.0.16
+25/11/12 16:51:10 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+25/11/12 16:51:11 INFO ResourceUtils: ==============================================================
+25/11/12 16:51:11 INFO ResourceUtils: No custom resources configured for spark.driver.
+25/11/12 16:51:11 INFO ResourceUtils: ==============================================================
+25/11/12 16:51:11 INFO SparkContext: Submitted application: TrainModel
+25/11/12 16:51:11 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+25/11/12 16:51:11 INFO ResourceProfile: Limiting resource is cpu
+25/11/12 16:51:11 INFO ResourceProfileManager: Added ResourceProfile id: 0
+25/11/12 16:51:11 INFO SecurityManager: Changing view acls to: root
+25/11/12 16:51:11 INFO SecurityManager: Changing modify acls to: root
+25/11/12 16:51:11 INFO SecurityManager: Changing view acls groups to: 
+25/11/12 16:51:11 INFO SecurityManager: Changing modify acls groups to: 
+25/11/12 16:51:11 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root; groups with view permissions: EMPTY; users with modify permissions: root; groups with modify permissions: EMPTY
+25/11/12 16:51:12 INFO Utils: Successfully started service 'sparkDriver' on port 45179.
+25/11/12 16:51:12 INFO SparkEnv: Registering MapOutputTracker
+25/11/12 16:51:12 INFO SparkEnv: Registering BlockManagerMaster
+25/11/12 16:51:12 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+25/11/12 16:51:12 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+25/11/12 16:51:12 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+25/11/12 16:51:12 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-1122aa5b-651c-4a85-9e31-a3c69482aebf
+25/11/12 16:51:12 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+25/11/12 16:51:12 INFO SparkEnv: Registering OutputCommitCoordinator
+25/11/12 16:51:13 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+25/11/12 16:51:13 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+25/11/12 16:51:13 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+25/11/12 16:51:13 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.8:7077 after 93 ms (0 ms spent in bootstraps)
+25/11/12 16:51:14 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20251112165114-0029
+25/11/12 16:51:14 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20251112165114-0029/0 on worker-20251112144524-172.18.0.10-44175 (172.18.0.10:44175) with 1 core(s)
+25/11/12 16:51:14 INFO StandaloneSchedulerBackend: Granted executor ID app-20251112165114-0029/0 on hostPort 172.18.0.10:44175 with 1 core(s), 1024.0 MiB RAM
+25/11/12 16:51:14 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 38419.
+25/11/12 16:51:14 INFO NettyBlockTransferService: Server created on pyspark-client:38419
+25/11/12 16:51:14 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+25/11/12 16:51:14 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, pyspark-client, 38419, None)
+25/11/12 16:51:14 INFO BlockManagerMasterEndpoint: Registering block manager pyspark-client:38419 with 434.4 MiB RAM, BlockManagerId(driver, pyspark-client, 38419, None)
+25/11/12 16:51:14 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, pyspark-client, 38419, None)
+25/11/12 16:51:14 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, pyspark-client, 38419, None)
+25/11/12 16:51:14 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20251112165114-0029/0 is now RUNNING
+25/11/12 16:51:15 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+/usr/local/lib/python3.9/dist-packages/_distutils_hack/__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+Logged to MLflow: http://mlflow:5000 F1: 0.807721309003167
++ date +%s
++ end_ts=1762966360
++ dur=102
++ docker stats --no-stream --format {{.CPUPerc}},{{.MemUsage}},{{.MemPerc}} 1bdc45b62cc9
++ stats=0.00%,58.7MiB / 3.577GiB,1.60%
++ + echo 0.00%,58.7MiB / 3.577GiB,1.60%+ cut
+tr -d, -d % -f1
+
++ cpu=0.00
++ + echo+ cut 0.00%,58.7MiB / 3.577GiB,1.60%tr -d,
+ -d -f3
+ %
++ mem_perc=1.60
++ + echo+ cut 0.00%,58.7MiB / 3.577GiB,1.60%
+tr -d, -d -f2
+  
++ mem_pair=58.7MiB/3.577GiB
++ echo+ +  58.7MiB/3.577GiB
+cutsed -d/ s/[^0-9.]*//g
+ -f1
++ used=58.7
++ + + echocutsed 58.7MiB/3.577GiB
+ -d/ s/[^0-9.]*//g -f2
+
++ limit=3.577
++ date -Iseconds
++ echo 2025-11-12T16:52:40+00:00,24,eval-manual-post,0.00,1.60,58.7,3.577,102
++ docker cp 1bdc45b62cc9:/tmp/arlequin-logs/training_log.csv /var/jenkins_home/workspace/eval-pre-post/metrics/training_log.csv
++ docker cp 1bdc45b62cc9:/tmp/arlequin-logs/drift_log.csv /var/jenkins_home/workspace/eval-pre-post/metrics/drift_log.csv
++ true
+[8mha:////4P9ZUzxiQr5ZE530EDUGLQInJqRpPbIfXWN+45lL1mVZAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIioEIoFa3lhheYxBgn1l2wHZyKF/E1/oBFJCq2WO1sM683LIOHmr3BTlNvKTQWBzeavDCx76+OE3Z8wYYpsNModZLc6tOMkqOGOUUJCwErTY3jYMlEWItOPVTlFJnqHH3+jgJK297hCYXI5qh8/MLkYXMb28D08/wVwDQMEcr9Ntfu8AFSjtgYvgAAAA==[0m[Pipeline] }
+[8mha:////4IxezHvjO9W0zgWkizXq2abVRIYnkDvguIYUeqgSTiN3AAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIihQYJUaW10vACExvjxLoztkNS8SK+xh+wiETFFqudbeb1hnUMcOJgsNc0WIqdRe9GkxdOHIar4wl7vmDHFNlpbPXUstLNgi0nDUuKElYCNpo6x9GSSbAVvXzIykky1TmF/B0FlFbd4QmFyOYkQ/rCHGB3G1Vk+nn+CmD2PkG5r3PVhw9qzEvpvgAAAA==[0m[Pipeline] // stage
+[8mha:////4CAoJBWfw/g+bXe1aCMhnrf0oY44hCPfR1Vme00laTz8AAAAph+LCAAAAAAAAP9tjTEOwjAQBC9BKWgpeYRTRKJBVLSWG15gYmOcWHfBvpBUvIiv8QcMkajYamel1TxfUKUIB4pOdBZ7j6n1Ygijy01MFPtLoEl0dBYtYaJghbKTImOPCypiC0uKElYS1hbbQMmjY9jITt91HTS6+sQxb3sJpTc3eEAhs5l15C/MEbbX0STCn+evAOaBodgxlE3zOVZv8D5NGMEAAAA=[0m[Pipeline] stage
+[8mha:////4HzW4qY9/8xGNFNQTWknEaBQL3KL08r9y7pQGEwpG81uAAAAph+LCAAAAAAAAP9tjTEOwjAUQ3+LOrAycoh0KBtiYo2ycILQhJA0+r9NUtKJE3E17kBLJSY8WLYl673eUMUAJwqGOY2dxdha1vvRzIllCt3NU2aOrqwljOQ1EzoLUvq8VkFJw6qihA2HrcbWU7RoEuy4kw9Ze4mmvqQwb0cOpVUDPKHgMznJkL5lCrC/jyoS/jh/ATD1CcqmWeywPKsPBdk7bsIAAAA=[0m[Pipeline] { (Generar resumen de métricas)
+[8mha:////4HC7g300vZD01AfZLs6L0zlR2ClsRmilV/l33eB2fAgsAAAApB+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOJSABWiSmu54QUmNsaJdWdsh6TiRXyNPxCIRMUWq51t5vmCZYpw5GixNdQ5So3D4Hs7LRw4dhfPA7Z8xoYpsTcozSBZm3pGydnAnKKEhYCVocZzcmQzrEWr7qryimx1ynH6DgJKp2/wgEJM5qxi/sIYYXPtdWL6ef4KYAwZyu3uU/vwBtZos2m+AAAA[0m[Pipeline] sh
++ set -eu
++ cat .cid_py
++ CID_PY=1bdc45b62cc9
++ METRICS_DIR=/var/jenkins_home/workspace/eval-pre-post/metrics
++ mkdir -p /var/jenkins_home/workspace/eval-pre-post/metrics
++ docker exec -i 1bdc45b62cc9 sh -lc python3 /scripts/eval_stats.py --input /tmp/arlequin-logs/training_log.csv --drift-input /tmp/arlequin-logs/drift_log.csv --out /tmp/arlequin-logs/mannwhitney_results.csv --fdr || true
+[WARN] No se pudo combinar drift-input: [Errno 2] No such file or directory: '/tmp/arlequin-logs/drift_log.csv'
+Mann–Whitney por métrica y comparación:
+- f1:
+  default vs manual: p=0.002599; δ=0.672
+Resumen global por métrica:
+- f1: media=0.8215, std=0.0114, n=28
+Guardado: /tmp/arlequin-logs/mannwhitney_results.csv
++ docker cp 1bdc45b62cc9:/tmp/arlequin-logs/mannwhitney_results.csv /var/jenkins_home/workspace/eval-pre-post/metrics/
++ docker cp 1bdc45b62cc9:/tmp/arlequin-logs/training_log.csv /var/jenkins_home/workspace/eval-pre-post/metrics/training_log.csv
++ docker cp 1bdc45b62cc9:/tmp/arlequin-logs/drift_log.csv /var/jenkins_home/workspace/eval-pre-post/metrics/drift_log.csv
++ true
+[8mha:////4FzFWJh3qFQ2XsPp1AXfPOp0UJuPfE/B8Og3l3RKppcsAAAApB+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOJSgGgQVVrLDS8wsTFOrDtjOyQVL+Jr/IFAJCq2WO1sM88XLFOEI0eLraHOUWocBt/baeHAsbt4HrDlMzZMib1BaQbJ2tQzSs4G5hQlLASsDDWekyObYS1adVeVV2SrU47TdxBQOn2DBxRiMmcV8xfGCJtrrxPTz/NXAGMIGcrt/lO7Nxbzd2K+AAAA[0m[Pipeline] }
+[8mha:////4FOVwTPS1uamKwDk4Mdxdzbs2a+4T5ULGwQky94YwiOmAAAApB+LCAAAAAAAAP9tjTESwiAURH/iWNhaeghSpLBwrGwZGk+ACSKE+Z8AkVSeyKt5B9HMWLnFzr5t3vMF6xjgSEEzq3AwGDvDvJt0WSxTGK6OMrN0YR1hJKeYUFlQr04LCkoKllQ1rDhsFHaOokGdYMutvMvGSdTNOYXyHTjUph/hARUv5iRD+sIcYHeb+kj48/wVwOx9grrdf6p9AxC1Tze+AAAA[0m[Pipeline] // stage
+[8mha:////4O/hkd74CFx6p/nohP59yoDX8Nb8Dp8uRCLnkt2EEBiBAAAApx+LCAAAAAAAAP9tjTEOwjAQBM9BKWgpeYRTICEkREVrueEFJjbGiXUX7AtJxYv4Gn8gEImKrXZWWs3zBWVOcKDkZeOwDZjrILvY+6nJgVJ7iTTIhs6yJswUndRu0GTdcUZN7GCOKGChYOmwjpQDeoaVaszdVNGgr06cpm2voAj2Bg8QajKzSfyFMcH62ttM+PP8FcDYMYgtQ7HZfY7lGzPOinLBAAAA[0m[Pipeline] stage
+[8mha:////4GpzBc4eIh2e59NGv5uZMU6CXaL7dsLfncM28IDxkbGfAAAApx+LCAAAAAAAAP9tjTEOwjAUQ3+LOrAycoh0YAEhpq5RFk4QmhDSRv+Xn5R24kRcjTvQUokJD5ZtyXqvNxSR4UTsRGOx9RhrL7rQuymJgbi9BhpEQxdRE0YKVig7KDK2WqqiZGFRlsNKwtpiHSh6dAk2stEPXQaNrjwnnrajhNybOzwhkxM5aU7fMjJsb72JhD/OXwCMXYJ8t5/tMD+LD59NhPHCAAAA[0m[Pipeline] { (Declarative: Post Actions)
+[8mha:////4A3pedJu/+A/cNUasWypic/1dzxiKaCg7VWb+ig5FBPRAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOKCBA1CqWgtN7zAJMY4se6C7eBUvIiv8QcsIlGxxWpnm3m9YRk81OwNdpp6S6GxOLjR5IWJfX91nLDjCzZMgZ1GqZPkVp9mlBw1zClKWAhYaWocB0smwlp06qEqp8hU5+jzdxRQ2vYOTyhENkfl4xcmD5vb2Aamn+evAKYhQrk75Npvhw/W61xwvgAAAA==[0m[Pipeline] echo
+Evaluation-only pipeline finished.
+[8mha:////4JczCtGEP4qWCIrpApDbqIfz6Wjn8VwkT0Ecs3Q0yL1GAAAApR+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIiBA1CqWgtN7zAJMY4se6C7eBUvIiv8QcsIlGxxWpnm3m9YRk81OwNdpp6S6GxOLjR5IWJfX91nLDjCzZMgZ1GqZPkVp9mlBw1zClKWAhYaWocB0smwlp06qEqp8hU5+jzdxRQ2vYOTyhENkfl4xcmD5vb2Aamn+evAKZhiFDut7l2hw+dgWTEvgAAAA==[0m[Pipeline] }
+[8mha:////4EP1OIKTI1NC5zraGDqLJKv8msY9XqPt5ctyRtkDQXXiAAAAph+LCAAAAAAAAP9tjTEOwjAQBC9BFLSUPOIiAQUSSkVrueEFJjHGiXUXbAen4kV8jT9gEYmKLVY728zrDcvgoWZvsNPUWwqNxcGNJi9M7Pur44QdX7BhCuw0Sp0kt/o0o+SoYU5RwkLASlPjOFgyEdaiUw9VOUWmOkefv6OA0rZ3eEIhsjkqH78wedjcxjYw/Tx/BTANQ4Ryv821O3wApcP3Nb4AAAA=[0m[Pipeline] // stage
+[8mha:////4EKZUPufQmO7FS8s/CWSgRViDgbHFXXcMUIbHuzc0SfzAAAAox+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMIpQDSIitZKwwtMYowT6y7YF5KKF/E1/kBEJCq22plmXm8sU8SRo1ONpdZTqrzqQu+mpwaO7TXwoBq+qIopcbCqtEPJtT3NWLJYzMtyLDRWlqrAyZMTrHVjHqYIhlxxlji5g0bu6zueyPRUFhPlC2PE5tbXienX+RvA2HWCfLcVZPsPyqEmK70AAAA=[0m[Pipeline] }
+[8mha:////4H8UIMam0nBIou9L5D4L7O39n3TvQZDQXq4z75IYh9VvAAAAoh+LCAAAAAAAAP9tjTESgjAQRT84FraWHiI0WDlWthkaTxAhxkBmF5NFqDyRV/MOMjJj5a/+e817vbFOEUeOTrWWOk+p9qoPg5ufGjl218CjavmiaqbEwarKjhU39rRgxWKxLMux0thYqgMnT06w1a15mCIYcsVZ4uwOGrlv7ngi03NZTJQvTBG729Akpl/nbwBT3wvyshRk+w9gLA8AvQAAAA==[0m[Pipeline] // withEnv
+[8mha:////4Nf0N5Z5cehMGcN7ZD25Tt/Lfz6HgwoaTUEPmIsYpl9eAAAAoh+LCAAAAAAAAP9tjTESgjAQRT84FraWHiI0WDlWthkaTxAhxkBmF5NFqDyRV/MOMjJj5a/+e817vbFOEUeOTrWWOk+p9qoPg5ufGjl218CjavmiaqbEwarKjhU39rRgxWKxLMux0thYqgMnT06w1a15mCIYcsVZ4uwOGrlv7ngi03NZTJQvTBG729Akpl/nbwBT3wvyci/Iyg9GNWhKvQAAAA==[0m[Pipeline] }
+[8mha:////4KQlZlukjfqxUmkw28obPZKsIj2m2LFzfodhVAxj7HL0AAAAox+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMIpQDSIitZKwwtMYowT6y7YF5KKF/E1/kBEJCq22plmXm8sU8SRo1ONpdZTqrzqQu+mpwaO7TXwoBq+qIopcbCqtEPJtT3NWLJYzMtyLDRWlqrAyZMTrHVjHqYIhlxxlji5g0bu6zueyPRUFhPlC2PE5tbXienX+RvA2HWCfLcXZNsPNdqsk70AAAA=[0m[Pipeline] // node
+[8mha:////4OBG4jVwLf0WlqvGReVjNUHIU+P/munRYue2ONrSj1sdAAAApB+LCAAAAAAAAP9tjTEOwjAQBDdBFLSUPMKREBIFoqK10vACkxjjxLoL9oWk4kV8jT8QEYmKrXammdcbyxRx5OhUY6n1lCqvutC76amBY3sNPKiGL6piShysKu1Qcm1PM5YsFvOyHAuNlaUqcPLkBGvdmIcpgiFXnCVO7qCR+/qOJzI9lcVE+cIYsbn1dWL6df4GMHadIN/tBdn2AxPDy9m9AAAA[0m[Pipeline] End of Pipeline
+Finished: SUCCESS

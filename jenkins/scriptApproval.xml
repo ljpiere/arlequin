@@ -6,6 +6,12 @@
   <approvedClasspathEntries/>
   <forceSandbox>false</forceSandbox>
   <pendingScripts/>
-  <pendingSignatures/>
+  <pendingSignatures>
+    <pendingSignature>
+      <context/>
+      <signature>method org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper getRawBuild</signature>
+      <dangerous>true</dangerous>
+    </pendingSignature>
+  </pendingSignatures>
   <pendingClasspathEntries/>
 </scriptApproval>

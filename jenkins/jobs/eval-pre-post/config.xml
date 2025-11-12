@@ -16,10 +16,59 @@
     <script>pipeline {
   agent any
   environment {
-    TRAINING_LOG = &apos;/tmp/arlequin-logs/training_log.csv&apos;
-    DRIFT_LOG    = &apos;/tmp/arlequin-logs/drift_log.csv&apos;
+    SPARK_MASTER_URL = &apos;spark://spark-master:7077&apos;
+    HDFS_URI         = &apos;hdfs://namenode:9000&apos;
+    TRAIN_SCRIPT     = &apos;/scripts/train_model.py&apos;
+    MLFLOW_URL       = &apos;http://mlflow:5000&apos;
+    TRAINING_LOG     = &apos;/tmp/arlequin-logs/training_log.csv&apos;
+    DRIFT_LOG        = &apos;/tmp/arlequin-logs/drift_log.csv&apos;
+    MANN_LOG         = &apos;/tmp/arlequin-logs/mannwhitney_results.csv&apos;
+    EVAL_SCENARIO    = &apos;&apos;
   }
   stages {
+    stage(&apos;Seleccionar escenario&apos;) {
+      steps {
+        script {
+          boolean remoteTriggered = false
+          try {
+            def remoteCauses = currentBuild.getBuildCauses(&apos;hudson.model.Cause$RemoteCause&apos;)
+            remoteTriggered = remoteCauses &amp;&amp; !remoteCauses.isEmpty()
+          } catch (ignored) {
+            remoteTriggered = false
+          }
+          if (!remoteTriggered) {
+            def causeEnv = (env.BUILD_CAUSE ?: &apos;&apos;)
+            remoteTriggered = causeEnv.tokenize(&apos;,&apos;).any { it.trim().equalsIgnoreCase(&apos;REMOTECAUSE&apos;) }
+          }
+
+          String scenarioValue
+          if (remoteTriggered) {
+            scenarioValue = &apos;drift_detectado&apos;
+            echo &quot;Build disparado remotamente (probable drift_watch). Se usará escenario &apos;${scenarioValue}&apos;.&quot;
+          } else {
+            def response = input(
+              message: &apos;Selecciona el escenario a evaluar (pre/post)&apos;,
+              ok: &apos;Continuar&apos;,
+              parameters: [
+                choice(
+                  name: &apos;SCENARIO&apos;,
+                  choices: [&apos;pre&apos;, &apos;post&apos;, &apos;drift&apos;].join(&apos;\n&apos;),
+                  description: &apos;Etiqueta que se guardará en training_log.csv para distinguir corridas.&apos;
+                )
+              ]
+            )
+            scenarioValue = (response instanceof Map) ? response[&apos;SCENARIO&apos;] : response?.toString()
+          }
+          scenarioValue = scenarioValue?.trim()
+          if (!scenarioValue) {
+            scenarioValue = &apos;manual&apos;
+          }
+          env.EVAL_SCENARIO = scenarioValue
+          writeFile file: &apos;.scenario&apos;, text: scenarioValue
+          echo &quot;Escenario seleccionado: ${scenarioValue}&quot;
+        }
+      }
+    }
     stage(&apos;Resolve containers&apos;) {
       steps {
         sh &apos;&apos;&apos;
@@ -46,37 +95,66 @@ PY&apos; || docker exec -i &quot;$CID_PY&quot; sh -lc &apos;python3 -m pip insta
         &apos;&apos;&apos;
       }
     }
-    stage(&apos;Eval pre-training metrics&apos;) {
+    stage(&apos;Evaluate latest partitions&apos;) {
       steps {
         sh &apos;&apos;&apos;
           set -eu
-          PHASE=&quot;pre&quot;
           CID_PY=$(cat .cid_py)
+          SCENARIO=&quot;${EVAL_SCENARIO:-manual}&quot;
           METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
           mkdir -p &quot;$METRICS_DIR&quot;
-          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;[ -f ${TRAINING_LOG} ] || { echo &apos;[ERROR] training_log.csv no existe dentro del contenedor&apos;; exit 2; }&quot;
-          OUT_PATH=&quot;/tmp/arlequin-logs/mannwhitney_results_${PHASE}.csv&quot;
-          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;python3 /scripts/eval_stats.py --input ${TRAINING_LOG} --drift-input ${DRIFT_LOG} --out ${OUT_PATH} --fdr || true&quot;
-          docker cp &quot;$CID_PY&quot;:&quot;$OUT_PATH&quot; &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
-          docker cp &quot;$CID_PY&quot;:&quot;${TRAINING_LOG}&quot; &quot;$METRICS_DIR/training_log_${PHASE}.csv&quot; 2&gt;/dev/null || true
-          docker cp &quot;$CID_PY&quot;:&quot;${DRIFT_LOG}&quot; &quot;$METRICS_DIR/drift_log_${PHASE}.csv&quot; 2&gt;/dev/null || true
+
+          RUNS_CSV=&quot;$METRICS_DIR/jenkins_runs.csv&quot;
+          if [ ! -f &quot;$RUNS_CSV&quot; ]; then
+            echo &quot;timestamp,build,stage,cpu_perc,mem_perc,mem_used_mb,mem_limit_mb,duration_s&quot; &gt; &quot;$RUNS_CSV&quot;
+          fi
+
+          start_ts=$(date +%s)
+          stats=$(docker stats --no-stream --format &apos;{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}&apos; &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
+          mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
+          mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos;)
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | sed &apos;s/[^0-9.]*//g&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | sed &apos;s/[^0-9.]*//g&apos;)
+          scenario_tag=$(printf &apos;%s&apos; &quot;$SCENARIO&quot; | tr &apos;[:upper:]&apos; &apos;[:lower:]&apos; | tr &apos; &apos; &apos;_&apos; | tr -cd &apos;a-z0-9._-&apos;)
+          [ -n &quot;$scenario_tag&quot; ] || scenario_tag=&quot;manual&quot;
+          echo &quot;$(date -Iseconds),$BUILD_NUMBER,eval-${scenario_tag}-pre,$cpu,$mem_perc,$used,$limit,0&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
+
+          docker exec -i \
+            -e MLFLOW_TRACKING_URI=${MLFLOW_URL} \
+            -e EXPERIMENT_LOG_FILE=${TRAINING_LOG} \
+            -e EVAL_SCENARIO=&quot;$SCENARIO&quot; \
+            &quot;$CID_PY&quot; sh -lc &apos;set -eu
+              mkdir -p &quot;$(dirname &quot;$EXPERIMENT_LOG_FILE&quot;)&quot;
+              spark-submit --master &apos;&quot;${SPARK_MASTER_URL}&quot;&apos; --conf spark.hadoop.fs.defaultFS=&apos;&quot;${HDFS_URI}&quot;&apos; &apos;&quot;${TRAIN_SCRIPT}&quot;&apos;
+            &apos;
+
+          end_ts=$(date +%s)
+          dur=$((end_ts - start_ts))
+          stats=$(docker stats --no-stream --format &apos;{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}&apos; &quot;$CID_PY&quot; || echo &quot;,,&quot;)
+          cpu=$(echo &quot;$stats&quot; | cut -d, -f1 | tr -d &apos;%&apos;)
+          mem_perc=$(echo &quot;$stats&quot; | cut -d, -f3 | tr -d &apos;%&apos;)
+          mem_pair=$(echo &quot;$stats&quot; | cut -d, -f2 | tr -d &apos; &apos;)
+          used=$(echo &quot;$mem_pair&quot; | cut -d/ -f1 | sed &apos;s/[^0-9.]*//g&apos;)
+          limit=$(echo &quot;$mem_pair&quot; | cut -d/ -f2 | sed &apos;s/[^0-9.]*//g&apos;)
+          echo &quot;$(date -Iseconds),$BUILD_NUMBER,eval-${scenario_tag}-post,$cpu,$mem_perc,$used,$limit,$dur&quot; &gt;&gt; &quot;$RUNS_CSV&quot;
+
+          docker cp &quot;$CID_PY&quot;:&quot;${TRAINING_LOG}&quot; &quot;$METRICS_DIR/training_log.csv&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:&quot;${DRIFT_LOG}&quot; &quot;$METRICS_DIR/drift_log.csv&quot; 2&gt;/dev/null || true
         &apos;&apos;&apos;
       }
     }
-    stage(&apos;Eval post-training metrics&apos;) {
+    stage(&apos;Generar resumen de métricas&apos;) {
       steps {
         sh &apos;&apos;&apos;
           set -eu
-          PHASE=&quot;post&quot;
           CID_PY=$(cat .cid_py)
           METRICS_DIR=&quot;$WORKSPACE/metrics&quot;
           mkdir -p &quot;$METRICS_DIR&quot;
-          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;[ -f ${TRAINING_LOG} ] || { echo &apos;[ERROR] training_log.csv no existe dentro del contenedor&apos;; exit 2; }&quot;
-          OUT_PATH=&quot;/tmp/arlequin-logs/mannwhitney_results_${PHASE}.csv&quot;
-          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;python3 /scripts/eval_stats.py --input ${TRAINING_LOG} --drift-input ${DRIFT_LOG} --out ${OUT_PATH} --fdr || true&quot;
-          docker cp &quot;$CID_PY&quot;:&quot;$OUT_PATH&quot; &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
-          docker cp &quot;$CID_PY&quot;:&quot;${TRAINING_LOG}&quot; &quot;$METRICS_DIR/training_log_${PHASE}.csv&quot; 2&gt;/dev/null || true
-          docker cp &quot;$CID_PY&quot;:&quot;${DRIFT_LOG}&quot; &quot;$METRICS_DIR/drift_log_${PHASE}.csv&quot; 2&gt;/dev/null || true
+          docker exec -i &quot;$CID_PY&quot; sh -lc &quot;python3 /scripts/eval_stats.py --input ${TRAINING_LOG} --drift-input ${DRIFT_LOG} --out ${MANN_LOG} --fdr || true&quot;
+          docker cp &quot;$CID_PY&quot;:&quot;${MANN_LOG}&quot; &quot;$METRICS_DIR/&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:&quot;${TRAINING_LOG}&quot; &quot;$METRICS_DIR/training_log.csv&quot; 2&gt;/dev/null || true
+          docker cp &quot;$CID_PY&quot;:&quot;${DRIFT_LOG}&quot; &quot;$METRICS_DIR/drift_log.csv&quot; 2&gt;/dev/null || true
         &apos;&apos;&apos;
       }
     }
