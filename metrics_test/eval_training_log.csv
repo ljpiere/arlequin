@@ -37,3 +37,5 @@ timestamp,scenario,mlflow_run_id,label_strategy,total_rows,positives,negatives,m
 2025-11-12T19:14:38,manual,7febb0c1af934c83807a184201919b70,existing_is_suspicious,73900,19269,54631,logreg,0.8038875390489414
 2025-11-12T19:20:05,manual,6e6749bf793d47c08e63c0bf87b51ec3,existing_is_suspicious,76400,20452,55948,logreg,0.8085198399827008
 2025-11-12T19:24:58,,9516e3e4737b4dd1b1a2b5f7a8e3f13f,existing_is_suspicious,76400,20452,55948,logreg,0.8085198399827008
+2025-11-12T19:29:12,manual,b9e6fcbb21624c0d88d8c2a5c53dccc7,existing_is_suspicious,76400,20452,55948,logreg,0.8085198399827008
+2025-11-12T19:36:29,manual,d89c32a828e14ca1aeeba4cc85ab289f,existing_is_suspicious,81400,20452,60948,logreg,0.7975921745673439
