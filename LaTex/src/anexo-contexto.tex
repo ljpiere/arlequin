@@ -14,3 +14,13 @@ Este anexo consolida cifras y referencias de contexto global, regional y naciona
 
 \noindent Notas: cuando es pertinente, las cifras incluyen supuestos, periodos de medici\'on y referencias a series hist\'oricas. Se privilegia la trazabilidad a fuentes originales y estimaciones reconocidas por la industria/academia.
 
+\section{Detalle te\'orico de detectores de \textit{data drift}}\label{ann:detectors}
+
+Esta secci\'on complementa la discusi\'on de la Secci\'on~\ref{subsec:cuadro-detectores}, documentando los aspectos m\'as t\'ecnicos que fueron resumidos en el cuerpo principal.
+\begin{itemize}
+  \item \textbf{Cobertura de variables.} KS supone variables continuas y requiere ordenamiento; $\chi^2$ opera sobre tablas de contingencia y se vuelve inestable si las frecuencias esperadas son bajas; PSI admite num\'ericas y categ\'oricas siempre que el \textit{binning} mantenga al menos 5\% de soporte por caj\'on; KL exige discretizaci\'on o estimaci\'on de densidad para variables continuas.
+  \item \textbf{Modo y latencia.} En ventanas \textit{batch} se trabaja con muestras independientes de referencia/actual; el retardo equivale a la longitud de la ventana. En flujo continuo, ADWIN y EDDM mantienen estructuras adaptativas (colas con p\'erdida exponencial y contadores de distancia entre errores) que permiten reaccionar en $\mathcal{O}(1)$--$\mathcal{O}(\log n)$ por evento.
+  \item \textbf{Costo computacional.} PSI y $\chi^2$ dependen de conteos ($\mathcal{O}(k)$); KS implica ordenar o calcular CDFs emp\'iricas ($\mathcal{O}(n\log n)$); KL suma un costo adicional por suavizado/regularizaci\'on para evitar probabilidades nulas; ADWIN amortiza memoria proporcional a la cantidad de niveles de confianza.
+  \item \textbf{Calibraci\'on y gobernanza.} PSI utiliza umbrales operativos ($<0.1$ estable, 0.1--0.25 bajo observaci\'on, $>0.25$ severo). KS y $\chi^2$ requieren ajustar $\alpha$ y controlar multiplicidad (Holm/BH) cuando se monitorean numerosas columnas. KL necesita $\epsilon$ de suavizado; los detectores \textit{online} exigen definir niveles de confianza y tama\~no m\'inimo de ventana adaptativa.
+  \item \textbf{Extensi\'on multivariada.} Se recomienda combinar pruebas univariantes con control de tasa de descubrimiento falso (FDR) para mantener interpretabilidad. Para dependencias fuertes puede recurrirse a MMD, Energy Distance o a clasificadores meta que distingan entre referencia y corriente; dichos casos superan el alcance de esta tesis y se listan como trabajo futuro.
+\end{itemize}

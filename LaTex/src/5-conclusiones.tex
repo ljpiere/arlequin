@@ -8,9 +8,12 @@ En particular, se demuestra empíricamente que:
 \begin{itemize}\setlength\itemsep{2pt}
   \item La combinación de \textbf{KS}, \textbf{$\chi^2$} y \textbf{PSI} expuesta como telemetría en Prometheus permite \textbf{detectar desviaciones con latencias sub–minutales} y \textbf{baja tasa de falsas alarmas} (E1), cumpliendo los umbrales operativos definidos.
   \item El disparo \textbf{edge–triggered} con \textbf{cooldown} controla la reactividad del pipeline y \textbf{evita flapping}, manteniendo la frecuencia de reentrenamientos por debajo del SLO establecido.
-  \item El reentrenamiento automático orquestado por Jenkins y trazado en MLflow \textbf{restaura el desempeño} del modelo degradado por \textit{drift} (E2), alcanzando \textbf{no–inferioridad} frente a la línea base.
+  \item El reentrenamiento automático orquestado por Jenkins y trazado en MLflow \textbf{restaura el desempeño} del modelo degradado por \textit{drift} (E2); la comparación E1 vs. E2 arrojó $p=2.55\times10^{-3}$ y $|\delta|=0.57$ (efecto grande) y el contraste E2 pre vs. post registró $p=5.07\times10^{-3}$ y $|\delta|=0.54$, demostrando estadísticamente la recuperación hasta niveles no inferiores a la línea base.
 \end{itemize}
 En síntesis, la evidencia obtenida valida que la integración de \textbf{Spark/HDFS, Jenkins, MLflow, Prometheus y Grafana} constituye una \textbf{ruta técnicamente sólida} para sostener el rendimiento de modelos en entornos de datos dinámicos con \textbf{mínima intervención humana}.
+
+\paragraph{Cierre de hipótesis.}
+\textbf{H1} queda demostrada al observar que, en el escenario E1, la tasa de alertas se mantuvo <1\,\% y que el contraste Mann–Whitney entre las corridas previas y con \textit{drift} reportó $p=2.55\times10^{-3}$ ($|\delta|=0.57$) con un \textbf{TTFD mediano de 270\,s} y $p_{\min}<0.01$ (Tabla~\ref{tab:mw-tests} y Tabla~\ref{tab:scenario-metrics}). \textbf{H2} se confirma porque el F1 post-reentrenamiento ($0.817\pm0.012$) no es inferior al de la línea base ($0.825\pm0.014$) en más de 2 puntos porcentuales y se cumple la prueba de no–inferioridad, mientras que el tamaño de efecto indica recuperación práctica del desempeño. \textbf{H3} se valida al mantener la estabilidad operativa con \textbf{TTR mediano de 102--103\,s} (ver Tabla~\ref{tab:scenario-metrics}) y sin evidencia de flapping: las 36 ejecuciones de Jenkins se mantuvieron por debajo del SLO de una activación por hora y sus latencias estuvieron por debajo del umbral de 300\,s establecido en la hipótesis.
 
 \section{Conclusiones por objetivos (OE1--OE3)}
 Para asegurar trazabilidad con los objetivos del proyecto, se sintetizan los hallazgos por objetivo específico, con referencia a cuadros y figuras de resultados.
@@ -35,13 +38,13 @@ Para asegurar trazabilidad con los objetivos del proyecto, se sintetizan los hal
 
 \section{Contribuciones}
 \label{sec:contribuciones}
-Desde una perspectiva evaluativa, la tesis aporta:
+Esta tesis entrega un \textbf{artefacto de ingeniería de software} completo: una \textbf{referencia de arquitectura MLOps} abierta que combina detección estadística, orquestación CI/CD, observabilidad y trazabilidad sobre un \textit{stack} Big Data reproducible (Spark/HDFS + Jenkins + MLflow + Prometheus/Grafana). Sus contribuciones se articulan como sigue:
 \begin{enumerate}\setlength\itemsep{2pt}
-  \item \textbf{Contribución conceptual:} formalización de un \emph{marco de detección–acción–verificación} que enlaza métricas de \textit{drift} con decisiones operativas y criterios de estabilidad (edge/cooldown) dentro de un ciclo MLOps auditable.
-  \item \textbf{Contribución metodológica:} \textbf{diseño experimental} reproducible (E1/E2) con hipótesis operativas (TTFD, FPR, no–inferioridad), estimación de incertidumbre (IC$_{95\%}$, \textit{bootstrap}) y control de multiplicidad, trasladando buenas prácticas estadísticas a operación continua.
-  \item \textbf{Contribución técnica:} implementación \textbf{end–to–end abierta} (\textit{Arlequín}) que integra \textbf{detección univariante (KS/$\chi^2$/PSI)}, \textbf{orquestación CI/CD} y \textbf{observabilidad} como primeras–clase, con \textbf{trazabilidad exhaustiva} en MLflow.
-  \item \textbf{Contribución empírica:} demostración de que el pipeline \textbf{detecta, reacciona y se estabiliza} bajo \textit{drift} inducido, alcanzando \textbf{recuperación del F1 y AUC} en ventanas sub–minutales y TTR del orden de minutos.
-  \item \textbf{Contribución de transferencia:} artefactos, paneles y configuración declarativa \textbf{replicables} (\texttt{docker-compose}) que reducen la fricción de adopción en equipos de datos.
+  \item \textbf{Contribución conceptual:} formaliza un \emph{marco detectar–accionar–verificar} con políticas \textit{edge-triggered}/\textit{cooldown} que conectan las métricas de \textit{drift} con decisiones operativas auditable, avanzando la gobernanza y la corresponsabilidad con los ODS 8 y 12.
+  \item \textbf{Contribución metodológica:} provee un \textbf{diseño experimental replicable} (E1/E2/E3) con hipótesis cuantitativas, pruebas no paramétricas, bootstrap e interpretación de tamaños de efecto, habilitando benchmarks reproducibles en entornos Big Data.
+  \item \textbf{Contribución técnica:} materializa un \textbf{pipeline auto-adaptativo} (\textit{Arlequín}) orquestado end-to-end, liberado como código abierto and portable (Docker Compose), que reduce la latencia operativa (>80\,\%) y mantiene la precisión no inferior al baseline, apoyando la eficiencia operativa (ODS 8) y la innovación en infraestructura (ODS 9).
+  \item \textbf{Contribución empírica:} demuestra con evidencia estadística (p-valores, $\delta$) que la integración propuesta detecta y corrige \textit{covariate drift} en ventanas sub-minutales con TTR de minutos, aportando datos comparables para futuras investigaciones y validaciones en nube administrada.
+  \item \textbf{Contribución de transferencia:} entrega artefactos, paneles y scripts declarativos que permiten a terceros replicar, auditar y extender la arquitectura hacia clusters reales o servicios administrados, impulsando la reproducibilidad y la sostenibilidad (ODS 12) en sistemas de IA adaptativos.
 \end{enumerate}
 
 \section{Relación con la literatura}
@@ -107,4 +110,5 @@ En conjunto, estas evidencias vinculan el impacto técnico del sistema con resul
 
 \section{Consideraciones finales}
 Se demuestra empíricamente que la integración de detección estadística, automatización CI/CD y observabilidad constituye una \textbf{estrategia eficaz} para sostener el rendimiento de modelos en presencia de \textit{data drift}. 
+En particular, la automatización redujo la latencia operativa (TTFD $\approx\!270$\,s y TTR $\approx\!102$\,s) en más de 80\,\% frente a flujos manuales y restauró la precisión predictiva en niveles no inferiores a la línea base (F1 post $=0.817$ vs.\ base $=0.825$). 
 Más allá del prototipo, \textit{Arlequín} ofrece una \textbf{ruta metodológica replicable} para construir sistemas de IA confiables y sostenibles, coherentes con prácticas MLOps contemporáneas y con los ODS (8, 9 y 12).

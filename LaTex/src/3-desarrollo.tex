@@ -18,7 +18,7 @@ La propuesta adopta una \textbf{arquitectura abierta y modular} (Spark/HDFS, Jen
 Se implementó una infraestructura escalable, reproducible y \textit{cloud-ready} orientada a la evaluación continua de \textit{data drift} y al soporte operacional de pipelines MLOps. La solución combina Apache Spark sobre HDFS para cómputo/almacenamiento distribuido \citep{Zaharia2016,Meng2020}, contenedores para portabilidad y control de configuración \citep{Merkel2014,Patel2020} y un \textit{stack} de observabilidad (Prometheus/Grafana) que expone tanto métricas de plataforma como telemetría estadística del \textit{drift} \citep{Zhao2021}. Los resultados muestran operación reproducible con sobrecosto acotado, \textit{scraping} sub-minutal y trazabilidad integral mediante MLflow \citep{Chen2022}, habilitando la detección y respuesta automática vía Jenkins.
 
 \subsection{Introducción}
-El \textit{data drift} degrada el rendimiento de modelos en producción y requiere mecanismos continuos de detección y reacción \citep{Gama2014,Lu2019,Chawla2021}. OE1 busca sustentar los OE posteriores mediante una capa de infraestructura que garantice: (i) escalabilidad horizontal, (ii) observabilidad de extremo a extremo, (iii) portabilidad entre entornos on-prem y nube (alternables con Azure ML/Azure Monitor \citep{AzureML2023,AzureMonitor2022}), y (iv) trazabilidad y versionado del ciclo de vida de modelos.
+El \textit{data drift} degrada el rendimiento de modelos en producción y requiere mecanismos continuos de detección y reacción \citep{Gama2014,Lu2019,Chawla2021}. OE1 busca sustentar los OE posteriores mediante una capa de infraestructura que garantice: (i) escalabilidad horizontal, (ii) observabilidad de extremo a extremo, (iii) portabilidad entre entornos on-prem y nube (alternables con Azure ML/Azure Monitor \citep{Berberi2025,Bhatt2025,AzureML2023,AzureMonitor2022}), y (iv) trazabilidad y versionado del ciclo de vida de modelos.
 
 \subsection{Planteamiento y alcance}
 El alcance de OE1 comprende: provisión de cómputo distribuido (Spark) y almacenamiento (HDFS), canalización de ingestas particionadas en formato \texttt{Parquet}, instrumentación de métricas operativas y estadísticas (KS, $\chi^2$, PSI), \textit{alerting} por umbrales y registro de ejecuciones/artefactos en MLflow, con orquestación de reentrenos mediante Jenkins. No se consideran servicios administrados ni autoscaling por orquestadores tipo Kubernetes; se prioriza simplicidad y control experimental con Docker~Compose.
@@ -177,7 +177,7 @@ En la práctica, se consideran umbrales de interpretación: \(\mathrm{PSI}>0.2\)
 A diferencia de las pruebas KS o \(\chi^2\), el PSI proporciona una métrica continua y fácilmente interpretable que complementa el análisis de estabilidad poblacional.
 
 
-\subsection{Implementación}
+\subsection{Implementación e instrumentación}
 
 \paragraph{Que se hizo.}
 \begin{itemize}\setlength\itemsep{2pt}
@@ -278,7 +278,7 @@ El sistema obtenido se caracteriza, por tanto, por su capacidad de medición, co
 \subsection{Discusión}
 \paragraph{Cierre interpretativo.} Los resultados anteriores muestran que la combinación KS/$\chi^2$/PSI, integrada con observabilidad y reentrenamiento automático, no solo detecta desviaciones con oportunidad, sino que además reduce el TTFD y habilita la recuperación del desempeño (F1) al cerrar el ciclo detectar $\rightarrow$ reentrenar $\rightarrow$ verificar.
 Este comportamiento coincide con los criterios de diseño planteados y con prácticas recomendadas en MLOps; sin embargo, la sensibilidad observada exige seguir equilibrando especificidad mediante la calibración de umbrales y políticas de cooldown.
-Una arquitectura modular desacoplada (Spark/HDFS, MLflow, Jenkins, Prometheus/Grafana) facilita sustituciones tecnológicas (p.\,ej., Azure Monitor/Log Analytics en la nube \citep{AzureMonitor2022}) y reduce deuda técnica \citep{Sculley2015}. La exposición explícita de señales de \textit{drift} como métricas de \textit{observabilidad} conecta natural y operativamente la ciencia de datos con SRE/DevOps, alineando prácticas CI/CD con MLOps \citep{Amershi2019,Lwakatare2020,Kapoor2023}.
+Una arquitectura modular desacoplada (Spark/HDFS, MLflow, Jenkins, Prometheus/Grafana) facilita sustituciones tecnológicas (p.\,ej., Azure Monitor/Log Analytics en la nube \citep{Bhatt2025,AzureMonitor2022}) y reduce deuda técnica \citep{Sculley2015}. La exposición explícita de señales de \textit{drift} como métricas de \textit{observabilidad} conecta natural y operativamente la ciencia de datos con SRE/DevOps, alineando prácticas CI/CD con MLOps \citep{Amershi2019,Lwakatare2020,Kapoor2023}.
 
 \subsection{Amenazas a la validez}
 
@@ -581,39 +581,27 @@ Para cada variable y ciclo: \emph{KS/$\chi^2$}: $D$ o $\chi^2$, $p_{\text{adj}}$
 
 \subsection{Metodología}
 
-\paragraph{Diseño experimental.}  
-El proceso experimental se organizó en \textbf{ciclos de evaluación de corta duración} (sub-minutales), garantizando un monitoreo continuo sin sobrecargar la cola de procesamiento.  
-En cada iteración, el detector realiza tres operaciones consecutivas: lectura de los datos más recientes, contraste frente a la distribución de referencia y actualización de las métricas de observabilidad expuestas a Prometheus.  
-Este enfoque permitió mantener un flujo constante de evaluación en tiempo casi real.
-
-Para preservar la estabilidad estadística entre ciclos, se estableció un \textbf{límite superior de muestreo} (\textit{sampling cap}) que restringe el número máximo de filas por ventana.  
-Dicha medida reduce la variabilidad entre ejecuciones y mejora la comparabilidad de los resultados.  
-Las variables se procesaron según su tipo: las \textbf{numéricas} se analizaron mediante Kolmogorov–Smirnov, las \textbf{categóricas} con $\chi^2$, y la \textbf{salida del modelo (\textit{score})} con el índice PSI, mitigando posibles efectos de \textit{aliasing} o transformaciones no lineales.  
-Este diseño posibilitó una detección ágil, reproducible y específica según la naturaleza de cada variable, manteniendo la consistencia de los resultados entre iteraciones sucesivas.
-
-\paragraph{Indicadores y métricas (KPIs).}  
-El comportamiento del detector se evaluó mediante un conjunto de \textbf{indicadores clave de rendimiento (KPIs)} que permiten cuantificar su precisión, eficiencia y estabilidad operativa:
+La infraestructura descrita en este capítulo habilita el entorno necesario para ejecutar los experimentos; el \textbf{diseño formal}, los \textbf{escenarios E1--E3}, las \textbf{métricas} y los \textbf{KPIs} se documentan íntegramente en el Capítulo~\ref{sec:eval-results}.  
+Aquí sólo se puntualizan los elementos operativos:
 \begin{itemize}\setlength\itemsep{2pt}
-  \item \textbf{TTFD (Time-To-First-Detection):} intervalo entre la aparición del \textit{drift} y su detección estadísticamente válida, indicador de la rapidez de respuesta del sistema.
-  \item \textbf{Tasa de falsas alarmas:} proporción de alertas generadas sin que exista un cambio real en la distribución, métrica esencial para calibrar la sensibilidad y especificidad del detector.
-  \item \textbf{MTTR (Mean Time To Recovery):} tiempo medio requerido para restablecer la condición de normalidad tras una detección de \textit{drift}, reflejando la capacidad de recuperación del sistema.
-  \item \textbf{Overhead computacional:} incremento en el uso de recursos (CPU, RAM, I/O) derivado de la ejecución del monitor, determinante para validar su viabilidad en entornos productivos.
-  \item \textbf{Estabilidad del disparo:} grado en que el sistema evita el \textit{flapping}, es decir, la activación y desactivación repetida de alertas provocadas por fluctuaciones menores o ruido estadístico.
+  \item Los ciclos de monitoreo se ejecutan en ventanas sub-minutales coordinadas por \texttt{drift\_watch.py}, que lee, contrasta y publica métricas en Prometheus.
+  \item El muestreo se limita mediante \texttt{SAMPLE\_MAX} para evitar sesgos por tamaños de ventana variables; los detalles estadísticos (bootstrap, pruebas, IC) se presentan en Cap.~4.
+  \item Las métricas expuestas (TTFD, MTTR, tasas de alerta, overhead) se consumen posteriormente para la evaluación cuantitativa, manteniendo la definición de indicadores en la sección de resultados.
 \end{itemize}
+De este modo, Cap.~3 se centra en la habilitación tecnológica, mientras que Cap.~4 compila los análisis comparativos y la discusión estadística.
 
 \subsection{Criterios de parametrización y robustez}
 
-La calibración de $\alpha$, $\tau$ y del tamaño de ventana se realizó bajo un criterio de riesgo operativo: 
-(i) fijar $\alpha=0{,}01$ para controlar la tasa de FP por columna, 
-(ii) usar $\tau\in[0{,}2,0{,}3]$ como banda de alerta/alarma para PSI (convención industrial), y 
-(iii) limitar \texttt{SAMPLE\_MAX} para estabilizar varianza del estimador por ciclo. 
-El \emph{cooldown} se fijó para cubrir al menos un ciclo completo de reentrenamiento (evitando \emph{pile-ups}) y la \emph{clear streak} se ajustó para cubrir variabilidad intra-hora. 
-Estos parámetros maximizan la sensibilidad sujeta a la restricción de estabilidad (\emph{no flapping}) y el presupuesto de cómputo.
+La configuración detallada de umbrales ($\alpha$, $\tau$), tamaños de ventana y políticas de \textit{cooldown} se discute en la Sección~\ref{subsec:eval-design-formal} y en los resultados experimentales (Tablas~\ref{tab:scenario-metrics} y \ref{tab:mw-tests}).  
+En el contexto de infraestructura sólo se destaca que:
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \texttt{DRIFT\_ALPHA}, \texttt{PSI\_ALERT}, \texttt{SAMPLE\_MAX} y \texttt{DRIFT\_COOLDOWN\_SECONDS} son parámetros de entorno versionados en \texttt{.env} y en los scripts de despliegue.
+  \item Las combinaciones de umbrales se prueban mediante \texttt{drift\_watch.py} y quedan registradas en MLflow para su análisis posterior.
+  \item Las decisiones sobre sensibilidad/estabilidad se justifican con evidencia estadística en Cap.~4, evitando duplicidad en la descripción metodológica.
+\end{itemize}
 
-Como verificación, se ejecutaron pruebas A/B de umbrales (banda $\alpha\in\{0{,}05,0{,}01,0{,}001\}$; $\tau\in\{0{,}1,0{,}2,0{,}3\}$) y de tamaño de ventana, registrando \emph{TTFD}, FP/FN y \emph{MTTR}. La combinación adoptada logró el mejor compromiso entre \emph{TTFD} y tasa de falsas alarmas sin penalizar la frecuencia de monitoreo.
 
-
-\subsection{Implementación}
+\subsection{Implementación e instrumentación}
 
 El núcleo funcional del detector se materializa en el servicio \texttt{drift\_watch.py}, implementado sobre \textbf{PySpark} y ejecutado como un proceso continuo de lectura, evaluación y publicación de métricas.  
 Su objetivo es supervisar de forma ininterrumpida la estabilidad estadística de los datos y comunicar los resultados a la infraestructura de observabilidad mediante un \textit{exporter} compatible con \textbf{Prometheus}, asegurando la integración con el resto del ecosistema MLOps.
@@ -644,6 +632,33 @@ Entre las principales se incluyen:
 
 Estos parámetros permiten ajustar la sensibilidad y la frecuencia de respuesta del sistema, equilibrando la capacidad de detección temprana con la estabilidad operativa bajo diferentes cargas de trabajo.
 
+\paragraph{Algoritmo del servicio \textit{drift-watcher}.}
+\begin{algorithm}[H]
+\caption{Servicio de monitoreo y disparo de reentrenamiento}
+\begin{algorithmic}[1]
+\State Inicializar ventanas de referencia y reciente con tamaño \texttt{SAMPLE\_MAX}
+\State Fijar parámetros: $\alpha$, $\tau$, \texttt{COOLDOWN}, \texttt{CLEAR\_STREAK}
+\While{servicio activo}
+  \State Obtener lote reciente $X_{\text{rec}}$, actualizar ventana deslizante
+  \State Calcular $p_{\mathrm{KS}}$, $p_{\chi^2}}$ y $\mathrm{PSI}$
+  \State $trigger \gets (p_{\mathrm{KS}} < \alpha) \lor (p_{\chi^2} < \alpha) \lor (\mathrm{PSI} > \tau)$
+  \If{$trigger$ y no en \texttt{COOLDOWN}}
+     \State Registrar métricas en Prometheus/MLflow
+     \State Invocar \texttt{JENKINS\_JOB} (reentrenamiento automático)
+     \State Iniciar temporizador \texttt{COOLDOWN} y reiniciar \texttt{CLEAR\_STREAK}
+  \Else
+     \State Incrementar \texttt{CLEAR\_STREAK} si $trigger = \texttt{false}$
+     \If{\texttt{CLEAR\_STREAK} $\geq$ umbral}
+        \State Reestablecer estado “sin drift”
+     \EndIf
+  \EndIf
+  \State Esperar \texttt{LOOP\_SECONDS} y repetir
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+Este pseudo-código sintetiza la lógica del \textit{drift watcher}: cálculo estadístico por ventana, regla de fusión ($p < \alpha$ o $\mathrm{PSI}>\tau$), disparo por flanco con \textit{cooldown} y rearme condicionado a rachas limpias.
+
 \paragraph{Orquestación y automatización.}  
 Cuando se cumplen las condiciones de disparo —ya sea por \(p < \alpha\) o \(\mathrm{PSI} > \tau\)—, el servicio ejecuta automáticamente el flujo de reentrenamiento definido en \textbf{Jenkins} a través de la variable \texttt{JENKINS\_JOB}.  
 La autenticación se gestiona mediante credenciales seguras (\texttt{JENKINS\_USER} y \texttt{JENKINS\_API\_TOKEN}) o, en versiones heredadas, por medio de \texttt{JENKINS\_TOKEN}.  
@@ -654,7 +669,7 @@ Una vez finalizada la ejecución, los resultados son registrados en \textbf{MLfl
 Este flujo cierra el ciclo de \textbf{detección–acción–verificación}, garantizando trazabilidad completa y reproducibilidad experimental en el entorno MLOps \citep{Chen2022}.
 
 %\subsubsection{Realización técnica e instrumentación (scripts y métricas)}
-\subsection{Realización técnica e instrumentación (scripts y métricas)}
+\subsection{Implementación e instrumentación práctica}
 \label{subsec:oe2-impl-practica}
 
 Para vincular el diseño de \autoref{fig:oe2-flujo} con artefactos ejecutables, este objetivo se materializa en tres scripts principales y un conjunto de métricas expuestas a Prometheus:
@@ -798,7 +813,7 @@ Estas mejoras fortalecerían la robustez estadística del detector y aumentaría
 Se realizó una \textbf{validación experimental controlada} con el fin de evaluar la efectividad del sistema de detección y reentrenamiento automático frente a distintos escenarios de estabilidad y cambio en los datos.  
 El estudio se estructuró en dos condiciones comparativas:  
 (i) un escenario base sin alteraciones, denominado \textbf{E1 (sin \textit{drift})}, que representa el comportamiento normal del modelo, y  
-(ii) un escenario \textbf{E2 (con \textit{drift} inducido)}, en el cual se introdujeron perturbaciones deliberadas sobre variables clave para simular tanto \textit{covariate shift} como \textit{concept shift}.  
+(ii) un escenario \textbf{E2 (con \textit{drift} inducido)}, en el cual se introdujeron perturbaciones deliberadas sobre \textit{covariate shifts}; la variación del \texttt{risk\_score} aporta sólo una representación parcial de \textit{concept drift}.  
 
 En cada caso se evaluaron métricas de desempeño predictivo —F1, AUC, \textit{precision} y \textit{recall}—, junto con indicadores operativos del sistema como la latencia de detección y el tiempo total de reentrenamiento.  
 Los resultados mostraron que, tras la detección y el reentrenamiento automatizado, el modelo recupera significativamente su nivel de desempeño, confirmando la eficacia del ciclo de adaptación propuesto y su capacidad para mantener la estabilidad predictiva en presencia de \textit{data drift} \citep{Singh2023,Chatterjee2023,Lu2019}.
