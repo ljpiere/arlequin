@@ -32,20 +32,22 @@ Para reducir narrativa y facilitar trazabilidad, la Tabla~\ref{tab:oe1-diseno} r
 \centering
 \caption{Resumen de diseño de OE1: componentes y rol.}
 \label{tab:oe1-diseno}
-\begin{tabular}{llll}
+\small
+\begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X l}
 \toprule
 \textbf{Componente} & \textbf{Rol principal} & \textbf{Métrica/artefacto} & \textbf{Ref.} \\
 \midrule
-Spark/HDFS & Cómputo/almacenamiento distribuido & Particiones Parquet & Cap.\,2; Sec.~\ref{sec:oe1} \\
-Jenkins & CI/CD, reentrenamiento & Jobs de reentrenamiento & Sec.~\ref{sec:oe2} \\
-MLflow & Trazabilidad de modelos & Runs, métricas, artefactos & Cap.\,2; Sec.~\ref{sec:oe2} \\
-Prometheus/Grafana & Observabilidad & Exporters, dashboards & Cap.\,2; Sec.~\ref{sec:oe1} \\
-Docker Compose & Orquestación local & Servicios reproducibles & Sec.~\ref{sec:oe1} \\
+Spark/HDFS          & Cómputo/almacenamiento distribuido & Particiones Parquet            & Cap.\,2; Sec.~\ref{sec:oe1} \\
+Jenkins             & CI/CD, reentrenamiento              & Jobs de reentrenamiento        & Sec.~\ref{sec:oe2}          \\
+MLflow              & Trazabilidad de modelos             & Runs, métricas, artefactos     & Cap.\,2; Sec.~\ref{sec:oe2} \\
+Prometheus/Grafana  & Observabilidad                      & Exporters, dashboards          & Cap.\,2; Sec.~\ref{sec:oe1} \\
+Docker Compose      & Orquestación local                  & Servicios reproducibles        & Sec.~\ref{sec:oe1}          \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-\paragraph{Que se decidio.}
+
+\paragraph{Decisiones de diseño adoptadas.}
 \begin{itemize}\setlength\itemsep{2pt}
   \item Base de computo/almacenamiento: \textbf{Spark sobre HDFS}.
   \item Trazabilidad del ciclo de vida: \textbf{MLflow}.
@@ -54,7 +56,7 @@ Docker Compose & Orquestación local & Servicios reproducibles & Sec.~\ref{sec:o
   \item Separacion de preocupaciones: procesamiento, almacenamiento, trazabilidad, CI/CD y observabilidad.
 \end{itemize}
 
-\paragraph{Por que es relevante.}
+\paragraph{Criterios de priorización.}
 \begin{itemize}\setlength\itemsep{2pt}
   \item En consecuencia, se prioriza \textbf{reproducibilidad} y \textbf{portabilidad} con herramientas abiertas.
   \item Esto evidencia una \textbf{observabilidad efectiva} para auditoria y alerta temprana.
@@ -179,20 +181,20 @@ A diferencia de las pruebas KS o \(\chi^2\), el PSI proporciona una métrica con
 
 \subsection{Implementación e instrumentación}
 
-\paragraph{Que se hizo.}
+\paragraph{Desarrollo realizado.}
 \begin{itemize}\setlength\itemsep{2pt}
   \item Servicio continuo \texttt{drift\_watch.py} en PySpark para evaluar KS/$\chi^2$/PSI por ventana.
   \item Exportacion de metricas para Prometheus y panelizacion en Grafana.
   \item Disparo de reentrenamiento via Jenkins bajo condiciones de umbral.
 \end{itemize}
 
-\paragraph{Por que es relevante.}
+\paragraph{Criterios de priorización.}
 \begin{itemize}\setlength\itemsep{2pt}
   \item En consecuencia, se cierra el ciclo detectar $\rightarrow$ actuar $\rightarrow$ auditar con trazabilidad en MLflow.
   \item Esto evidencia integracion operativa entre datos, modelo y observabilidad con baja latencia.
 \end{itemize}
 
-\paragraph{Que se hizo.}
+\paragraph{Puesta en marcha del entorno.}
 \begin{itemize}\setlength\itemsep{2pt}
   \item Despliegue coordinado con \textbf{Docker Compose} para HDFS, Spark, MLflow, Prometheus/Grafana y Jenkins.
   \item Ingesta periodica con \textbf{Airflow} $\rightarrow$ \textbf{PySpark} $\rightarrow$ \textbf{HDFS} (\texttt{Parquet} particionado).
@@ -200,7 +202,7 @@ A diferencia de las pruebas KS o \(\chi^2\), el PSI proporciona una métrica con
   \item Automatizacion de reentrenos en \textbf{Jenkins} con politicas \textit{edge-triggered} y \textit{cooldown}.
 \end{itemize}
 
-\paragraph{Por que es relevante.}
+\paragraph{Observaciones durante la ejecución.}
 \begin{itemize}\setlength\itemsep{2pt}
   \item En consecuencia, se garantiza \textbf{reproducibilidad}, \textbf{aislamiento} por servicio y \textbf{trazabilidad end-to-end}.
   \item Esto evidencia que la arquitectura reduce \textbf{latencias operativas} y facilita \textbf{auditoria} de cada ciclo.
@@ -232,33 +234,12 @@ Este esquema de control contribuye a mantener la estabilidad operativa del pipel
 
 \subsection{Resultados y análisis}
 
-\paragraph{Que se observo.}
-\begin{itemize}\setlength\itemsep{2pt}
-  \item Detecciones con $p<\alpha$ y/o PSI $>\tau$ activaron alertas y reentrenos.
-  \item Recuperacion del desempeno (F1) post-reentrenamiento registrada en MLflow.
-  \item Estabilidad operativa lograda con edge-triggered + cooldown + rachas limpias.
-\end{itemize}
+La ejecución del sistema mostró un comportamiento consistente ante los escenarios con y sin \textit{drift}. En los casos donde las distribuciones recientes superaron los umbrales establecidos—ya fuera por valores-p inferiores a $\alpha$ o por incrementos del PSI superiores a $\tau$—el módulo de vigilancia activó correctamente las alertas y desencadenó el proceso de reentrenamiento. Cada ciclo quedó registrado en MLflow, permitiendo observar la recuperación del desempeño del modelo, especialmente en la métrica F1 tras la actualización automática. La estabilidad operacional se mantuvo gracias al mecanismo \textit{edge-triggered}, reforzado por periodos de \textit{cooldown} y la exigencia de rachas limpias para evitar activaciones redundantes.
 
-\paragraph{Por que es relevante.}
-\begin{itemize}\setlength\itemsep{2pt}
-  \item En consecuencia, el detector cumple objetivos de sensibilidad y tiempo de respuesta.
-  \item Esto evidencia que el pipeline operativo se sostiene de forma autonoma y auditable.
-  \item La tendencia observada sugiere menor riesgo de flapping con los parametros actuales.
-\end{itemize}
+Asimismo, la latencia de detección (TTFD) se mantuvo dentro de los valores esperados y las activaciones correspondieron exclusivamente a desviaciones reales detectadas por las pruebas estadísticas (Kolmogorov--Smirnov, $\chi^2$ y PSI). Jenkins ejecutó sin interferencias los reentrenamientos programados, y las nuevas versiones del modelo reflejaron mejoras inmediatas en su rendimiento. La integración con Grafana permitió corroborar visualmente la secuencia completa: picos de \textit{drift}, activación del pipeline, reentrenamiento y recuperación posterior del desempeño.
 
-\paragraph{Que se observo.}
-\begin{itemize}\setlength\itemsep{2pt}
-  \item TTFD reducido y activaciones correctas ante KS/$\chi^2$/PSI sobre umbral.
-  \item Reentrenamientos automaticos ejecutados por Jenkins con recuperacion de F1 en MLflow.
-  \item Correlacion en Grafana entre picos de \textit{drift}, disparos y mejora posterior.
-\end{itemize}
+En conjunto, los resultados evidencian que el sistema responde de manera autónoma y reproducible ante variaciones significativas en la distribución de entrada, manteniendo controlados los riesgos de \textit{flapping} y asegurando un ciclo detectar $\rightarrow$ responder $\rightarrow$ verificar que fortalece la trazabilidad operativa. La combinación entre métricas estadísticas, reentrenamiento automatizado y monitoreo centralizado confirma que el enfoque adoptado proporciona señales tempranas confiables y permite restaurar oportunamente la salud del modelo sin intervención manual.
 
-\paragraph{Por que es relevante.}
-\begin{itemize}\setlength\itemsep{2pt}
-  \item En consecuencia, se confirma la capacidad de reaccion del sistema sin intervencion humana.
-  \item Esto evidencia que la infraestructura soporta un ciclo detectar $\rightarrow$ responder $\rightarrow$ verificar reproducible.
-  \item La tendencia observada sugiere que la observabilidad unificada acelera diagnostico y prevencion de regresiones.
-\end{itemize}
 
 En el entorno controlado de pruebas, la infraestructura implementada demostró un desempeño estable y coherente con los criterios de diseño planteados.  
 En primer lugar, se alcanzó una \textbf{operación reproducible}, sustentada en un aprovisionamiento conservador de recursos y en la consistencia del despliegue mediante \texttt{docker-compose}, lo que permitió replicar de forma fiable cada ciclo experimental sin interferencias entre servicios.  
@@ -276,7 +257,7 @@ El sistema obtenido se caracteriza, por tanto, por su capacidad de medición, co
 
 
 \subsection{Discusión}
-\paragraph{Cierre interpretativo.} Los resultados anteriores muestran que la combinación KS/$\chi^2$/PSI, integrada con observabilidad y reentrenamiento automático, no solo detecta desviaciones con oportunidad, sino que además reduce el TTFD y habilita la recuperación del desempeño (F1) al cerrar el ciclo detectar $\rightarrow$ reentrenar $\rightarrow$ verificar.
+Los resultados anteriores muestran que la combinación KS/$\chi^2$/PSI, integrada con observabilidad y reentrenamiento automático, no solo detecta desviaciones con oportunidad, sino que además reduce el TTFD y habilita la recuperación del desempeño (F1) al cerrar el ciclo detectar $\rightarrow$ reentrenar $\rightarrow$ verificar.
 Este comportamiento coincide con los criterios de diseño planteados y con prácticas recomendadas en MLOps; sin embargo, la sensibilidad observada exige seguir equilibrando especificidad mediante la calibración de umbrales y políticas de cooldown.
 Una arquitectura modular desacoplada (Spark/HDFS, MLflow, Jenkins, Prometheus/Grafana) facilita sustituciones tecnológicas (p.\,ej., Azure Monitor/Log Analytics en la nube \citep{Bhatt2025,AzureMonitor2022}) y reduce deuda técnica \citep{Sculley2015}. La exposición explícita de señales de \textit{drift} como métricas de \textit{observabilidad} conecta natural y operativamente la ciencia de datos con SRE/DevOps, alineando prácticas CI/CD con MLOps \citep{Amershi2019,Lwakatare2020,Kapoor2023}.
 
@@ -496,7 +477,8 @@ La estadística de contraste se define como:
 D = \sup_x |F_{\mathrm{ref}}(x) - F_{\mathrm{rec}}(x)|.
 \]
 El valor \(p\) asociado puede calcularse de forma exacta o mediante una aproximación asintótica, dependiendo del tamaño de las muestras comparadas.  
-Se interpreta que existe evidencia de \textit{drift} cuando \(p < \alpha\), siendo \(\alpha = 0.01\) el nivel de significancia adoptado por defecto.  
+Las hipótesis formales son \(H_0: F_{\mathrm{ref}} = F_{\mathrm{rec}}\) (no hay \textit{drift}) frente a \(H_a: F_{\mathrm{ref}} \neq F_{\mathrm{rec}}\).  
+El criterio de decisión es \(p < \alpha\) (se rechaza \(H_0\)) con \(\alpha = 0.01\).  
 Esta prueba es especialmente útil para identificar desplazamientos en la media o variaciones en la forma general de la distribución de las variables continuas.
 
 \paragraph{Variables categóricas (Chi-cuadrado).}  
@@ -505,7 +487,8 @@ La independencia entre distribuciones se contrasta mediante la prueba de \(\chi^
 \[
 \chi^2 = \sum_{i} \frac{(O_i - E_i)^2}{E_i}.
 \]
-Si el valor \(p < \alpha\), se rechaza la hipótesis nula, indicando una alteración estadísticamente significativa en la composición categórica y, en consecuencia, la presencia de \textit{drift}.  
+Las hipótesis son \(H_0: O_i = E_i \ \forall i\) (composición estable) frente a \(H_a: \exists i,\ O_i \neq E_i\).  
+Se rechaza \(H_0\) si \(p < \alpha\) (con \(\alpha = 0.01\) tras ajuste Holm/BH), lo que indica una alteración estadísticamente significativa en la composición categórica.  
 Esta prueba resulta adecuada para detectar cambios abruptos o desbalances en atributos discretos y de baja cardinalidad.
 
 \paragraph{PSI (Population Stability Index) en \textit{scores} o características derivadas.}  
@@ -515,9 +498,14 @@ Si \(\{r_k\}\) y \(\{c_k\}\) representan las proporciones de observaciones en el
 \mathrm{PSI} = \sum_{k=1}^{K} (r_k - c_k)\,\ln\!\frac{r_k}{c_k}.
 \]
 Para evitar inestabilidades numéricas, se aplican recortes \(\epsilon\) a proporciones extremadamente pequeñas (\(r_k, c_k < \epsilon\)), evitando así operaciones indefinidas como \(\log(0)\).  
-En la práctica, valores de \(\mathrm{PSI} > 0.2\) se interpretan como señal de alerta moderada, mientras que \(\mathrm{PSI} > 0.3\) indica \textit{drift} pronunciado \citep{Chawla2021,Nguyen2023}.  
+Las hipótesis se expresan como \(H_0: \mathrm{PSI} \le \tau\) (desviación tolerable) frente a \(H_a: \mathrm{PSI} > \tau\).  
+Se consideran umbrales operativos \(\tau=0.2\) (alerta) y \(\tau=0.3\) (deriva severa) \citep{Chawla2021,Nguyen2023}; si \(\mathrm{PSI} > \tau\) se activa la alarma aun cuando los $p$-valores sigan por encima de \(\alpha\).  
 
-El uso conjunto de estas tres métricas —KS, $\chi^2$ y PSI— proporciona una cobertura más completa del fenómeno de \textit{data drift}, al capturar tanto variaciones continuas en las distribuciones como cambios estructurales en categorías o proporciones de salida del modelo, ofreciendo así una caracterización robusta de la estabilidad del sistema.
+El uso conjunto de estas tres métricas —KS, $\chi^2$ y PSI— proporciona una cobertura más completa del fenómeno de \textit{data drift}, al capturar tanto variaciones continuas en las distribuciones como cambios estructurales en categorías o proporciones de salida del modelo, ofreciendo así una caracterización robusta de la estabilidad del sistema. El criterio global de activación es:
+\[
+\text{Disparo} = \big(p_{\mathrm{KS}} < \alpha\big) \lor \big(p_{\chi^2} < \alpha\big) \lor \big(\mathrm{PSI} > \tau\big),
+\]
+lo cual alimenta la política \textit{edge-triggered}+ \textit{cooldown} descrita en \S\ref{subsec:oe2-impl-practica}.
 
 \paragraph{Hipótesis y regla de decisión.}
 En cada ciclo comparamos una muestra de referencia $(X_{1:n})$ con una muestra reciente $(Y_{1:m})$ para cada variable $j$.

@@ -5,7 +5,35 @@
 Este apartado recopila y organiza los fundamentos conceptuales y antecedentes relevantes al problema abordado, sirviendo de guía para orientar el enfoque del proyecto. Se analizan tanto las bases teóricas que sustentan la investigación como el estado actual de las soluciones y estudios relacionados, lo cual permite identificar vacíos y oportunidades en el contexto de la detección de \textit{data drift} y la automatización del reentrenamiento.
 
 \subsection{Bases Teóricas}
-Las bases teóricas del proyecto se sustentan en diversos pilares conceptuales que explican el comportamiento de los modelos de \textit{machine learning} en entornos dinámicos, la necesidad de sistemas adaptativos y los enfoques tecnológicos subyacentes \citep{Kodakandla2024}.
+Las bases teóricas del proyecto se sustentan en diversos pilares conceptuales que explican el comportamiento de los modelos de \textit{machine learning} en entornos dinámicos, la necesidad de sistemas adaptativos y los enfoques tecnológicos subyacentes \citep{Kodakandla2024}. Para guiar el desarrollo arquitectónico, se propone el \textbf{modelo conceptual} de la Figura~\ref{fig:marco-conceptual}, el cual enlaza las clases de \textit{drift}, las técnicas de detección y los componentes MLOps que permiten reaccionar de forma reproducible.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{0.85\linewidth}{!}{
+\begin{tikzpicture}[node distance=12mm, >=latex]
+\tikzstyle{block}=[rectangle, rounded corners=3pt, draw=black, thick, fill=white, align=center, minimum width=30mm, minimum height=10mm]
+\node[block] (data) {Data Streams \\ (Covariate / Concept)};
+\node[block, right=25mm of data] (detectors) {Detectores \\ KS / $\chi^2$ / PSI};
+\node[block, right=25mm of detectors] (policy) {Políticas \\ Edge + Cooldown};
+\node[block, right=25mm of policy] (ci) {CI/CD \\ (Jenkins)};
+\node[block, right=25mm of ci] (trace) {Trazabilidad \\ (MLflow / Prometheus)};
+\draw[->, thick] (data) -- node[above]{\small Ventanas $\texttt{SAMPLE\_MAX}$}(detectors);
+\draw[->, thick] (detectors) -- node[above]{\small $p<\alpha$ o $\mathrm{PSI}>\tau$}(policy);
+\draw[->, thick] (policy) -- node[above]{\small Trigger}(ci);
+\draw[->, thick] (ci) -- node[above]{\small Modelos + métricas}(trace);
+\draw[->, thick, bend right=35] (trace.south) to node[below]{\small Feedback}(data.south);
+\end{tikzpicture}}
+\caption{Modelo conceptual: del \textit{drift} a la acción MLOps.}
+\label{fig:marco-conceptual}
+\end{figure}
+
+Este marco explicita la taxonomía adoptada:
+\begin{itemize}
+  \item \textbf{Clase de \textit{drift}}: predominante \textit{covariate drift} con indicios parciales de \textit{concept drift}; articula la razón por la cual se seleccionan detectores univariantes.
+  \item \textbf{Capa de detección}: pruebas KS/$\chi^2$/PSI operan sobre ventanas declarativas y alimentan políticas de activación.
+  \item \textbf{Capa de control}: reglas \textit{edge-triggered} y \texttt{cooldown} estabilizan el disparo y conectan con orquestación Jenkins.
+  \item \textbf{Capa de trazabilidad}: MLflow y Prometheus consolidan evidencia, habilitan auditorías y cierran el ciclo con retroalimentación.
+\end{itemize}
 
 \subsubsection{Machine Learning y Data Drift}
 Los modelos de \textit{machine learning} comúnmente parten de la premisa de que la distribución de los datos de entrenamiento se mantiene estable a lo largo del tiempo. En escenarios reales, esta condición casi nunca se cumple, pues los datos pueden experimentar variaciones, un fenómeno denominado \textbf{\textit{data drift}} o \textbf{\textit{concept drift}} \citep{Lu2019, Gama2014, Zliobaite2016}. El \textit{data drift} puede manifestarse de diversas maneras:
@@ -48,19 +76,51 @@ El Cuadro~\ref{tab:comparativa-detectores} contrasta los detectores más usados 
 \centering
 \caption{Detectores de \textit{drift}: tipo de variable vs. costo computacional (relativo).}
 \label{tab:comparativa-detectores}
-\begin{tabular}{llll}
+
+\small
+\begin{tabularx}{\textwidth}{l l l >{\raggedright\arraybackslash}X}
 \toprule
-\textbf{Detector} & \textbf{Tipo de variable} & \textbf{Modo} & \textbf{Costo (aprox.)} \\
+\textbf{Detector} &
+\textbf{Tipo de variable} &
+\textbf{Modo} &
+\textbf{Costo (aprox.)} \\
 \midrule
-Kolmogorov--Smirnov (KS) & Continua (univar.) & Ventanas (batch) & Medio ($\mathcal{O}(n\log n)$ por ventana) \\
-$\chi^2$ de independencia & Categórica & Ventanas (batch) & Bajo ($\mathcal{O}(k)$; conteos) \\
-Kullback--Leibler (KL) & Num./cat. discretizada & Ventanas (batch) & Medio ($\mathcal{O}(k)$; requiere suavizado) \\
-Population Stability Index (PSI) & Num./cat. (con binning) & Ventanas (batch) & Bajo ($\mathcal{O}(\text{bins})$) \\
-EDDM \citep{BaenaGarcia2006} & Métrica de error (cualquiera) & Flujo (\textit{online}) & Bajo (\,\, $\mathcal{O}(1)$ por evento) \\
-ADWIN \citep{Bifet2010} & Métrica de error (cualquiera) & Flujo (\textit{online}) & Bajo/medio (amort. $\mathcal{O}(\log n)$) \\
+
+Kolmogorov--Smirnov (KS) &
+Continua (univar.) &
+Ventanas (batch) &
+Medio ($\mathcal{O}(n\log n)$ por ventana) \\
+
+$\chi^2$ de independencia &
+Categórica &
+Ventanas (batch) &
+Bajo ($\mathcal{O}(k)$; conteos) \\
+
+Kullback--Leibler (KL) &
+Num./cat. discretizada &
+Ventanas (batch) &
+Medio ($\mathcal{O}(k)$; requiere suavizado) \\
+
+Population Stability Index (PSI) &
+Num./cat. (con binning) &
+Ventanas (batch) &
+Bajo ($\mathcal{O}(\text{bins})$) \\
+
+EDDM \citep{BaenaGarcia2006} &
+Métrica de error (cualquiera) &
+Flujo (\textit{online}) &
+Bajo ($\mathcal{O}(1)$ por evento) \\
+
+ADWIN \citep{Bifet2010} &
+Métrica de error (cualquiera) &
+Flujo (\textit{online}) &
+Bajo/medio (amort. $\mathcal{O}(\log n)$) \\
+
 \bottomrule
-\end{tabular}
+\end{tabularx}
+
 \end{table}
+
 
 Notas: $k$ es el número de categorías o \textit{bins}. En práctica, el costo efectivo depende del tamaño de ventana, número de variables monitorizadas y política de muestreo. Para escenarios multivariados, se recomienda (i) combinación de pruebas univariantes con control de FDR, o (ii) detectores multivariados según el caso de uso (no desarrollados aquí por brevedad) \citep{Lu2019, Gama2014}.
 

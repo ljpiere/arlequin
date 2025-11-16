@@ -8,6 +8,9 @@
 
 %\documentclass[11pt,twoside]{thesis}
 \documentclass[11pt,oneside]{thesis}
+\newcommand{\codebreak}[1]{%
+  \texttt{\begingroup\def\_\allowbreak\_\relax #1\endgroup}%
+}
 \usepackage{enumerate}
 \usepackage{longtable}
 \usepackage{url}
@@ -15,6 +18,11 @@
 \usepackage{makeidx}
 \usepackage{graphics}
 \usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{makecell}
+\setlength{\tabcolsep}{3pt}  % reduce el espacio horizontal interno
+\renewcommand{\arraystretch}{0.9}  % reduce espacio vertical
 \usepackage[spanish,es-nodecimaldot,es-noshorthands]{babel}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.misc,fit,backgrounds,calc}

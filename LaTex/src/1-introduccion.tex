@@ -13,7 +13,8 @@ La solución se valida en un entorno simulado que replica condiciones operativas
 
 \section{Definición del problema}
 \subsection{Planteamiento del problema}
-Para evitar redundancia, se sintetizan aqu\'i datos clave; el detalle ampliado se presenta en el Anexo \ref{ann:contexto}.
+En la literatura académica persiste una brecha entre las \textbf{pruebas estadísticas de drift} y su \textbf{integración operativa} en pipelines MLOps reproducibles: los estudios reportan $KS/\chi^2/PSI$ u otros detectores, pero rara vez documentan cómo se enlazan con orquestación CI/CD abierta, políticas anti-\emph{flapping} o trazabilidad completa. Este vacío teórico-práctico es especialmente notorio en entornos Big Data abiertos, donde no existen benchmarks estandarizados ni referencias arquitectónicas auditables. Sobre esta brecha técnica se sustenta la justificación económica posterior: sin un pipeline integrado y comprobable, los costos por degradación del modelo y la deuda técnica continúan escalando.
+
 En el contexto global actual, caracterizado por una explosión de datos sin precedentes, se estima que el \emph{Global DataSphere} alcanzará los 181 Zettabytes en 2025 \citep{IDC2024}. Esta expansión está impulsada por el crecimiento acelerado de tecnologías como la inteligencia artificial generativa, el Internet de las Cosas (IoT), y la digitalización masiva de procesos. Sin embargo, la utilidad real de estos datos se ve comprometida por problemas de calidad y gobernanza. Según Gartner, la mala calidad de los datos le cuesta a las organizaciones, en promedio, 12,9 millones de dólares anuales \citep{Gartner2024}, mientras que el costo promedio por brecha de datos se sitúa en 4,88 millones de dólares \citep{IBM2024}.
 
 En este escenario, el uso de modelos de machine learning se ha generalizado como herramienta para la toma de decisiones automatizadas. No obstante, estudios recientes revelan que cerca del 91\% de los modelos desplegados en producción sufren algún tipo de \emph{model drift} en su primer año de operación \citep{AIMultiple2025,Breck2019}. Este fenómeno, conocido como \emph{data drift} cuando afecta la distribución de entrada de los datos, degrada el rendimiento predictivo, comprometiendo decisiones operativas, regulatorias y comerciales.
@@ -100,7 +101,7 @@ Para la validación del sistema, se desarrolló dos escenarios de prueba mediant
 
 Finalmente, aunque el prototipo se implementa en un entorno local con Docker y Docker Compose, la arquitectura propuesta es \textbf{portátil hacia la nube}, pudiendo migrarse de manera sencilla a plataformas como \textbf{Azure Machine Learning}. Esto permitiría aprovechar clústeres administrados de cómputo, escalado automático de recursos y la integración con \textbf{Azure Monitor} para fortalecer las capacidades de observabilidad y operación continua del sistema.
 
-\textbf{Tipo de \textit{drift} evaluado.} La validación experimental se enfoca principalmente en \textbf{covariate drift} (cambios en la distribución de las variables de entrada) inducido de forma controlada en las variables financieras y de riesgo; se incorpora una representación limitada del \textbf{concept drift} únicamente a través de la variable \texttt{risk\_score}. Las conclusiones deben interpretarse bajo esta delimitación: el pipeline muestra sensibilidad y recuperación frente a \textit{covariate drift} y sienta las bases para extender la estrategia a escenarios de \textit{concept drift} reforzado.
+\textbf{Tipo de \textit{drift} evaluado.} La validación empírica se concentra en \textbf{covariate drift} (alteraciones de las distribuciones de entrada) controlado sobre las variables financieras y de riesgo. La modificación del \texttt{risk\_score} introduce sólo una aproximación parcial al \textbf{concept drift}; no se manipula directamente la etiqueta ni se simula un cambio estructural en la función objetivo. En consecuencia, los resultados demuestran sensibilidad y recuperación frente a \textit{covariate drift} y establecen un punto de partida para futuras extensiones que aborden \textit{concept drift} reforzado o supervisado.
 
 \section{Justificación del trabajo de grado}
 La creciente dependencia de modelos de \emph{machine learning} para la toma de decisiones estratégicas en entornos productivos obliga a mantener altos niveles de precisión y rendimiento. Sin embargo, cambios continuos en la distribución de los datos, conocidos como \emph{data drift}, generan degradaciones críticas en la precisión de los modelos, incrementando costos operativos y riesgos regulatorios cuando no son detectados y gestionados oportunamente.
@@ -777,8 +778,7 @@ En términos de \textbf{evidencia empírica}, los principales resultados son:
 \noindent
 \textbf{Fundamentaci\'on estad\'istica e IC95\%.} Para F1, PSI, \textit{TTFD} y \textit{TTR} se estimaron intervalos de confianza al 95\,\% mediante \textbf{bootstrap percentil} ($B=1000$) sobre r\'eplicas experimentales por escenario; para tiempos se reportan intervalos percentil adecuados a distribuciones sesgadas. Las definiciones y pruebas formales aparecen en el Cap\'itulo~\ref{sec:eval-design}.
 
-\noindent
-\textbf{Interpretación.} En conjunto, la combinación de KS/$\chi^2$/PSI ofrece señales operativas útiles (detección + severidad), mientras que el gatillo de reentrenamiento restituye el desempeño con costos temporales controlados. Esta evidencia soporta la hipótesis de que un ciclo MLOps automatizado \emph{reduce latencias} y \emph{restaura} la precisión bajo no–estacionariedad.
+En conjunto, la combinación de KS/$\chi^2$/PSI ofrece señales operativas útiles (detección + severidad), mientras que el gatillo de reentrenamiento restituye el desempeño con costos temporales controlados. Esta evidencia soporta la hipótesis de que un ciclo MLOps automatizado \emph{reduce latencias} y \emph{restaura} la precisión bajo no–estacionariedad.
 
 
 Consistente con H1 y H2 del Capitulo~4 (Seccion~\ref{subsec:eval-rq}).
@@ -796,15 +796,38 @@ En cada escenario se registraron métricas clave en MLflow y Prometheus: \textit
 \centering
 \caption{Resumen comparativo de métricas por escenario experimental.}
 \label{tab:metricas-resultados}
+\small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lccccc}
 \toprule
-\textbf{Escenario} & \textbf{F1 (IC95\%)} & \textbf{Recall} & \textbf{PSI (IC95\%)} & \textbf{TTFD (s, IC95\%)} & \textbf{TTR (s, IC95\%)} \\
+\textbf{Escenario} &
+\textbf{F1 (IC95\%)} &
+\textbf{Recall} &
+\textbf{PSI (IC95\%)} &
+\textbf{TTFD (s, IC95\%)} &
+\textbf{TTR (s, IC95\%)} \\
 \midrule
-E1 -- Base (sin drift)   & 0.825 (IC95\%: [0.818, 0.832]) & 0.84 & 0.005 (IC95\%: [0.000, 0.010]) & -- & -- \\
-E2 -- Con drift inducido & 0.811 (IC95\%: [0.808, 0.814]) & 0.65 & 0.230 (IC95\%: [0.200, 0.260]) & 270 (IC95\%: [180, 360]) & 102 (IC95\%: [84, 151]) \\
-E3 -- Reentrenado        & 0.817 (IC95\%: [0.813, 0.821]) & 1.00 & 0.010 (IC95\%: [0.000, 0.020]) & 271 (IC95\%: [180, 360]) & 103 (IC95\%: [90, 124]) \\
+E1 -- Base (sin drift)   &
+0.825 (IC95\%: [0.818, 0.832]) &
+0.84 &
+0.005 (IC95\%: [0.000, 0.010]) &
+-- &
+-- \\
+E2 -- Con drift inducido &
+0.811 (IC95\%: [0.808, 0.814]) &
+0.65 &
+0.230 (IC95\%: [0.200, 0.260]) &
+270 (IC95\%: [180, 360]) &
+102 (IC95\%: [84, 151]) \\
+E3 -- Reentrenado        &
+0.817 (IC95\%: [0.813, 0.821]) &
+1.00 &
+0.010 (IC95\%: [0.000, 0.020]) &
+271 (IC95\%: [180, 360]) &
+103 (IC95\%: [90, 124]) \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \noindent\footnotesize\emph{Nota:} Los IC$_{95\%}$ de TTFD y TTR se obtuvieron mediante \textit{bootstrap} percentil ($B=1000$) sobre las 9 transiciones continuas registradas en las 5 réplicas experimentales. Los intervalos inter-réplica superiores a 5\,000\,s (debidos a reinicios manuales sin flujo de datos) se excluyeron del cómputo porque no representan la latencia operativa del detector.

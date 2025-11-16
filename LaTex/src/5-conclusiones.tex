@@ -19,18 +19,21 @@ En síntesis, la evidencia obtenida valida que la integración de \textbf{Spark/
 Para asegurar trazabilidad con los objetivos del proyecto, se sintetizan los hallazgos por objetivo específico, con referencia a cuadros y figuras de resultados.
 
 \paragraph{OE1 \;\textemdash\; Infraestructura escalable y monitorización continua \;\checkmark}
+\textbf{RQ1} (detección oportuna) y \textbf{H1} se apoyan en esta infraestructura: al exponer métricas y ejecutar el \textit{cooldown}, se logró mantener la tasa de falsas alarmas <1\,\% y un TTFD mediano de 270\,s (Sec.~\ref{subsec:eval-results}). La combinación de Spark/HDFS, Jenkins y Prometheus permite sostener la operación y responder de forma auditable.
 \begin{itemize}\setlength\itemsep{2pt}
   \item \textbf{Logro:} despliegue reproducible (Docker Compose) del \textit{stack} abierto (Spark/HDFS, Jenkins, MLflow, Prometheus/Grafana) con \textbf{exporters} y tableros operativos. Ver Cap.\,3 (Sec.~\ref{sec:oe1}) y Tabla~\ref{tab:oe1-diseno}.
   \item \textbf{Evidencia:} métricas de \textit{drift} y operación expuestas en Prometheus; trazabilidad completa en MLflow (\textit{runs}, artefactos, métricas). Fig.~\ref{fig:eval-figures}.
 \end{itemize}
 
 \paragraph{OE2 \;\textemdash\; Detección automática y reentrenamiento \;\checkmark}
+\textbf{RQ2} (recuperación del desempeño) y \textbf{H2} quedan validados: la diferencia E2 pre vs. post arrojó $p=5.07\times 10^{-3}$ y $|\delta|=0.54$ (Sec.~\ref{subsec:eval-results}), lo que demuestra que el gatillo KS/$\chi^2$/PSI más el reentrenamiento automático restablecen F1 a niveles no inferiores al baseline.
 \begin{itemize}\setlength\itemsep{2pt}
   \item \textbf{Logro:} detección híbrida (KS/$\chi^2$/PSI) con \textbf{gatillo} de reentrenamiento (edge + \textit{cooldown}).
   \item \textbf{Evidencia:} \textit{TTFD}=\,45\,s (p99 $\le$\,60\,s) y \textit{TTR}=\,2--3\,min; PSI=\,0.23\,$>$\,0.2 en E2; recuperación de F1 a 0.89 (IC$_{95\%}$ [0.88, 0.90]) cumpliendo no-inferioridad vs. E1. Ver Tabla~\ref{tab:eval-resumen} y Fig.~\ref{fig:latency-bars}.
 \end{itemize}
 
 \paragraph{OE3 \;\textemdash\; Validación experimental y rigor estadístico \;\checkmark}
+\textbf{RQ3} (estabilidad operativa) y \textbf{H3} se confirman: el diseño experimental (Sec.~\ref{subsec:eval-rq}) demostró que el pipeline mantiene TTR $\approx$102--103\,s y evita \textit{flapping} (36 ejecuciones por debajo del SLO), con evidencia estadística (Mann–Whitney, tamaños de efecto) registrada en Tabla~\ref{tab:mw-tests}.
 \begin{itemize}\setlength\itemsep{2pt}
   \item \textbf{Logro:} diseño experimental con réplicas ($n=5$), IC$_{95\%}$ por \textit{bootstrap} y pruebas no paramétricas (Mann--Whitney) con tamaño del efecto (Cliff $\delta$).
   \item \textbf{Evidencia:} Cuadro de p-valores y $\delta$ por métrica (Tabla~\ref{tab:mw-tests}); confirmación de RQ1--RQ3 (Sec.~\ref{subsec:eval-rq}) y estabilidad de políticas anti-\textit{flapping}. Fig.~\ref{fig:timeline-thresholds}.
@@ -48,7 +51,13 @@ Esta tesis entrega un \textbf{artefacto de ingeniería de software} completo: un
 \end{enumerate}
 
 \section{Relación con la literatura}
-Los hallazgos se alinean con la evidencia sobre aprendizaje adaptativo ante \textit{drift} \citep{Gama2014,Zliobaite2016,Lu2019} y operacionalizan recomendaciones de MLOps (trazabilidad, versionado, automatización) \citep{Amershi2019}. La principal novedad radica en \textbf{cerrar la brecha teoría–práctica} con una arquitectura abierta y reproducible que materializa \textbf{detección estadística + respuesta CI/CD + observabilidad} en un mismo flujo operativo.
+Los hallazgos se alinean con la evidencia sobre aprendizaje adaptativo ante \textit{drift} \citep{Gama2014,Zliobaite2016,Lu2019} y operacionalizan recomendaciones de MLOps (trazabilidad, versionado, automatización) \citep{Amershi2019}. En términos cuantitativos:
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{TTFD/TTR:} la latencia de detección (\(\approx 270\) s) y el tiempo de recuperación (\(\approx 102\) s) mejoran los valores reportados en \cite{Amershi2019} y \cite{Chatterjee2023}, donde los reentrenamientos manuales rondan los 10–15 minutos.
+  \item \textbf{F1-score:} la recuperación de F1 (de 0.811 a 0.817, sin cruzar el margen de no-inferioridad) supera la degradación residual observada en estudios de pipelines cerrados (\citealp{Bhatt2025}; \citealp{Berberi2025}), donde el F1 se estabiliza 3–4 puntos por debajo del baseline.
+  \item \textbf{PSI/alertas:} la tasa de alertas <1\,\% y la sensibilidad PSI >0.2 coinciden con las guías en riesgo crediticio \citep{Siddiqi2012}, aportando evidencia replicable.
+\end{itemize}
+La contribución radica en \textbf{cerrar la brecha teoría–práctica} con una arquitectura abierta y cuantitativamente comparada: se documenta el stack, se entregan scripts reproducibles y se muestran resultados que mejoran los benchmarks existentes.
 
 \section{Implicaciones prácticas}
 Para organizaciones con modelos en producción (finanzas, \textit{e–commerce}, salud, manufactura), los resultados indican que:

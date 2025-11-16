@@ -38,8 +38,8 @@ Para contrastar las hipótesis y diferencias entre condiciones se emplean prueba
 \toprule
 \textbf{Fuente} & $\boldsymbol{n_{\text{pre}}}$ vs. $\boldsymbol{n_{\text{drift}}}$ & $\boldsymbol{p}$-valor & $\boldsymbol{|\delta|}$ (Cliff) \\
 \midrule
-Job de evaluación (\texttt{metrics\_test/eval\_training\_log.csv}) & $16$ vs. $24$ & $2.55\times10^{-3}$ & $0.57$ (grande) \\
-Drift-watcher (\texttt{metrics\_test/watcher\_training\_log.csv}) & $16$ vs. $22$ & $5.07\times10^{-3}$ & $0.54$ (grande) \\
+Job de evaluación  & $16$ vs. $24$ & $2.55\times10^{-3}$ & $0.57$ (grande) \\
+Drift-watcher & $16$ vs. $22$ & $5.07\times10^{-3}$ & $0.54$ (grande) \\
 \bottomrule
 \end{tabular}
 \\[2pt]
@@ -100,6 +100,14 @@ Las métricas instrumentadas (F1, AUC, Precisión, Recall, PSI, $p_{\min}$, TTFD
 Para RQ2 se aplica una prueba de no–inferioridad ($\delta=0.02$) y para RQ1 una prueba unilateral de proporciones con intervalo de Wilson.  
 Las medidas de tamaño del efecto (Cohen’s~$d$ y Cliff’s~$\delta$) complementan la significancia estadística, aportando evidencia práctica del impacto del reentrenamiento y de las diferencias entre condiciones.
 
+\paragraph{Definición operativa de TTFD y TTR.}
+\textbf{TTFD (Time To First Detection)} es el intervalo entre la última observación etiquetada como “normal” y la primera corrida que activa la regla $p<\alpha$ o $\mathrm{PSI}>\tau$; se estima a partir de \texttt{training\_log.csv} siguiendo la noción de latencia de detección descrita en \cite{Sethi2017,Chawla2021}.  
+\textbf{TTR (Time To Recovery)} corresponde al intervalo entre la detección y la finalización del reentrenamiento automático (etapas \texttt{post} en Jenkins), análogo al \textit{mean time to recovery} en MLOps/DevOps \citep{Amershi2019}. Ambos KPIs se reportan como medianas (TTFD$_{50}$, TTR$_{50}$) y sustentan las hipótesis H1 y H3.
+
+\paragraph{Definición operativa de TTFD y TTR.}
+\textbf{TTFD (Time To First Detection)} es el intervalo entre la última observación etiquetada como “normal” y la primera corrida que activa la regla $p<\alpha$ o $\mathrm{PSI}>\tau$; se estima a partir de \texttt{training\_log.csv} siguiendo la noción de latencia de detección descrita en \cite{Sethi2017,Chawla2021}.\\
+\textbf{TTR (Time To Recovery)} corresponde al intervalo entre la detección y la finalización del reentrenamiento automático (etapas \texttt{post} en Jenkins), análogo al \textit{mean time to recovery} en MLOps/DevOps \citep{Amershi2019}. Ambos KPIs se reportan como medianas (TTFD$_{50}$, TTR$_{50}$) y sustentan las hipótesis H1 y H3.
+
 
 \subsection{Ablaciones y análisis de sensibilidad}
 \label{subsec:eval-ablation}
@@ -112,6 +120,8 @@ Cada experimento se repitió cinco veces y se compararon los resultados en térm
 \begin{enumerate}
   \item \textbf{Ablación–PSI:} se desactiva el componente del \textit{Population Stability Index} manteniendo las pruebas KS y $\chi^2$ activas.  
   Este ensayo evalúa la contribución específica del PSI a la detección de \textit{drift} numérico, midiendo la variación $\Delta \text{TTFD}$ y el incremento en la tasa de falsos negativos. Se espera un aumento significativo en el tiempo medio de detección, dado que el PSI ofrece mayor sensibilidad a desplazamientos graduales en las distribuciones continuas \citep{Sethi2017,Lu2019}.
+  
+  \item \textbf{Ablación–KS:} se deshabilita la prueba de Kolmogorov–Smirnov para cuantificar la pérdida de sensibilidad en variables numéricas. El objetivo es medir cuánto aporta el contraste continuo (media/forma de la distribución) frente a operar sólo con PSI/$\chi^2$, observando variaciones en \textbf{TTFD} y tasa de falsos negativos.
   
   \item \textbf{Ablación–$\chi^2$:} se deshabilita la prueba de independencia para variables categóricas, con el fin de medir la pérdida de sensibilidad frente a alteraciones en \texttt{account\_type}.  
   El objetivo es cuantificar la dependencia del sistema respecto a la detección de \textit{concept drift} categórico, especialmente en escenarios donde las proporciones de clases varían lentamente.
@@ -167,7 +177,7 @@ Cada experimento se repitió cinco veces y se compararon los resultados en térm
 \subsection{Análisis estadístico}
 \label{subsec:eval-stats}
 
-El análisis estadístico se diseñó para cuantificar la confiabilidad de los resultados y contrastar las hipótesis planteadas en la Sección~\ref{subsec:eval-rq}. Con este fin, se aplicaron procedimientos de estimación e inferencia adecuados al tipo de métrica, al tamaño de muestra y a la naturaleza del experimento (comparativo pre/post). Todas las pruebas se realizaron con un nivel de significancia $\alpha = 0.05$.
+El análisis estadístico se diseñó para cuantificar la confiabilidad de los resultados y contrastar las hipótesis planteadas en la Sección~\ref{subsec:eval-rq}. Se optó por métodos no paramétricos y procedimientos de remuestreo debido a que (i) las métricas como F1 y PSI provienen de muestras moderadas ($n\leq 24$) con distribuciones potencialmente no normales/sesgadas, (ii) los registros de TTFD/TTR contienen valores atípicos y colas largas, y (iii) la combinación de condiciones pre/post no garantiza homocedasticidad. Bajo estas circunstancias, técnicas como \textit{bootstrap}, Mann–Whitney o DeLong aportan estimaciones robustas sin exigir supuestos fuertes de normalidad. Todas las pruebas se realizaron con un nivel de significancia $\alpha = 0.05$ salvo indicación contraria.
 
 \paragraph{Estimación de intervalos de confianza.}
 Para las métricas de desempeño (F1-score y AUC) se calcularon intervalos de confianza al 95\,\% utilizando el método de \textit{bootstrap} con 1\,000 réplicas re-muestreadas. Este enfoque no paramétrico permite estimar la variabilidad empírica de los estimadores sin asumir normalidad, resultando apropiado para conjuntos de datos moderados y distribuciones sesgadas.
@@ -535,11 +545,21 @@ Con el fin de garantizar la transparencia y replicabilidad de los resultados, se
 
 \begin{itemize}
   \item \textbf{Versionado:} cada ejecución experimental está asociada a un \texttt{commit} específico en el repositorio Git y a un identificador de corrida (\texttt{run\_id}) en MLflow.
-  \item \textbf{Parámetros de entorno:} \texttt{DRIFT\_ALPHA}=0.01, \texttt{PSI\_ALERT}=0.2, \texttt{SAMPLE\_MAX}=1000, \texttt{LOOP\_SECONDS}=30, \texttt{DRIFT\_COOLDOWN\_SECONDS}=300, \texttt{DRIFT\_CLEAR\_STREAK}=3, \texttt{TRIGGER\_EDGE\_ONLY}=1.
+
+  \item \textbf{Parámetros de entorno:} Algunos de los parámetros de ejecución utilizados fueron:\\
+  {\small
+  \texttt{DRIFT\_ALPHA}=0.01, \texttt{PSI\_ALERT}=0.2, \texttt{SAMPLE\_MAX}=1000, \texttt{LOOP\_SECONDS}=30,\\
+  \texttt{DRIFT\_COOLDOWN\_SECONDS}=300, \texttt{DRIFT\_CLEAR\_STREAK}=3, \texttt{TRIGGER\_EDGE\_ONLY}=1.
+  }\normalsize
+
   \item \textbf{Artefactos y materiales suplementarios:} paneles de Grafana exportados en formato JSON, consultas PromQL empleadas para la medición de indicadores y métricas en crudo (CSV) disponibles como anexos técnicos.
+
   \item \textbf{Semillas y replicación:} la generación sintética y la perturbación controlada utilizan \texttt{seed}=42 y \texttt{seed}=7, respectivamente, lo que permite reproducir tanto la línea base como el patrón de \textit{drift}. Las ventanas de monitoreo se fijaron en 1000 registros (\texttt{SAMPLE\_MAX}) y 30\,s (\texttt{LOOP\_SECONDS}), sincronizadas con el lazo del \textit{watcher}.
+
   \item \textbf{Pipelines deterministas:} los jobs de Jenkins y Airflow emplean imágenes contenedorizadas versionadas; todos los servicios se orquestan con Docker~Compose y se inician mediante los mismos scripts incluidos en el repositorio (\texttt{docker-compose.yml} y \texttt{scripts/*}).
 \end{itemize}
+
+
 
 Para facilitar la reproducción exacta por terceros, la Tabla~\ref{tab:exp-config} resume las versiones efectivas de cada servicio y librería empleada durante la campaña experimental.
 
@@ -547,25 +567,64 @@ Para facilitar la reproducción exacta por terceros, la Tabla~\ref{tab:exp-confi
 \centering
 \caption{Configuración del experimento (semillas, ventanas y versiones).}
 \label{tab:exp-config}
-\begin{tabular}{lll}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{0.9}
+
+\begin{tabular}{p{4cm} p{4cm} p{5.2cm}}
 \toprule
 \textbf{Elemento} & \textbf{Valor} & \textbf{Fuente / Nota} \\
 \midrule
-Semilla generación sintética & 42 & Scripts \texttt{scripts/generate\_data.py} \\
-Semilla perturbación (\textit{drift}) & 7 & \texttt{scripts/drift\_injector.py} \\
-Tamaño ventana (\texttt{SAMPLE\_MAX}) & 1000 filas & \texttt{.env}, \texttt{drift\_watch.py} \\
-Periodo muestreo (\texttt{LOOP\_SECONDS}) & 30\,s & \texttt{docker-compose.yml} (\texttt{drift-watch}) \\
-Spark / PySpark & 3.5.1 (\texttt{pyspark==3.5.1}) & \texttt{spark-base/Dockerfile} \\
-MLflow & 2.14.x & Servicio \texttt{mlflow} (pip install) \\
-Airflow scheduler & \texttt{apache/airflow:2.8.1-python3.9} & \texttt{docker-compose.yml} \\
-Jenkins CI & \texttt{jenkins/jenkins:lts} (base 2.462.x) & \texttt{jenkins/Dockerfile} \\
-Prometheus / Grafana & \texttt{prom/prometheus:latest}, \texttt{grafana/grafana:latest} & \texttt{docker-compose.yml} (pull 2025-05-10) \\
-Python runtime (watcher / MLflow) & \texttt{python:3.11-slim} & Servicios \texttt{drift-watch}, \texttt{mlflow} \\
+
+Semilla generación sintética &
+42 &
+Scripts \texttt{scripts/generate\_data.py} \\
+
+Semilla perturbación (\textit{drift}) &
+7 &
+\texttt{scripts/drift\_injector.py} \\
+
+Tamaño ventana (\texttt{SAMPLE\_MAX}) &
+1000 filas &
+\texttt{.env}, \texttt{drift\_watch.py} \\
+
+Periodo muestreo (\texttt{LOOP\_SECONDS}) &
+30\,s &
+\texttt{docker-compose.yml} (\texttt{drift-watch}) \\
+
+Spark / PySpark &
+3.5.1 (\texttt{pyspark==3.5.1}) &
+\texttt{spark-base/Dockerfile} \\
+
+MLflow &
+2.14.x &
+Servicio \texttt{mlflow} (pip install) \\
+
+Airflow scheduler &
+\texttt{apache/airflow:2.8.1 - python3.9} &
+\texttt{docker-compose.yml} \\
+
+Jenkins CI &
+\texttt{jenkins/jenkins:lts} (2.462.x) &
+\texttt{jenkins/Dockerfile} \\
+
+Prometheus / Grafana &
+\texttt{prom/prometheus:latest}, \texttt{grafana/grafana:latest} &
+\texttt{docker-compose.yml} (pull 2025-05-10) \\
+
+Python runtime (watcher / MLflow) &
+\texttt{python:3.11-slim} &
+Servicios \texttt{drift-watch}, \texttt{mlflow} \\
+
 \bottomrule
 \end{tabular}
-\\[2pt]
-\footnotesize Los valores reflejan la configuración usada en las 5 réplicas experimentales; cualquier cambio en semillas o ventanas debe documentarse en MLflow junto con el \texttt{run\_id} correspondiente. Los contenedores se construyen con \texttt{docker compose build}.
+
+\vspace{3pt}
+\footnotesize
+Los valores reflejan la configuración usada en las 5 réplicas experimentales; cualquier cambio debe documentarse en MLflow junto con el \texttt{run\_id} correspondiente.
 \end{table}
+
+
 
 Estas medidas aseguran la posibilidad de replicar íntegramente los experimentos, evaluar la consistencia de los resultados y facilitar futuras extensiones del sistema bajo diferentes configuraciones de infraestructura o dominios de datos.
 
