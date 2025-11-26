@@ -93,6 +93,12 @@ SCORE_COL          = os.getenv("SCORE_COL", "score")
 POSITIVE_THRESHOLD = float(os.getenv("POSITIVE_THRESHOLD", "0.5"))
 PSI_ALERT          = float(os.getenv("PSI_ALERT", "0.2"))
 SAMPLE_MAX         = int(os.getenv("SAMPLE_MAX", "1000"))
+# Categóricas/mistas
+CAT_COL_HINTS = {
+    c.strip() for c in os.getenv("CAT_COL_HINTS", "").split(",") if c.strip()
+}
+AUTO_CAT_FROM_NUMERIC = os.getenv("AUTO_CAT_NUMERIC", "1") == "1"
+AUTO_CAT_CARDINALITY = int(os.getenv("AUTO_CAT_CARDINALITY", "12"))
 #SAMPLE_MAX         = int(os.getenv("SAMPLE_MAX", "5000"))
 
 # Jenkins
@@ -193,7 +199,36 @@ def string_columns(sdf):
     Returns:
         list[str]: Lista de nombres de columnas de tipo string para Chi-cuadrado.
     """
-    return [f.name for f in sdf.schema.fields if isinstance(f.dataType, StringType)]
+    cols = {f.name for f in sdf.schema.fields if isinstance(f.dataType, StringType)}
+    hints = {c for c in CAT_COL_HINTS if c in sdf.columns}
+    return sorted(cols | hints)
+
+def infer_low_cardinality_cats(num_cols, pdf_ref, pdf_rec):
+    """Detecta columnas numéricas con baja cardinalidad para tratarlas como categóricas.
+
+    Args:
+        num_cols (list[str]): Columnas numéricas originales.
+        pdf_ref (pd.DataFrame): Muestra de referencia (numérica).
+        pdf_rec (pd.DataFrame): Muestra reciente (numérica).
+
+    Returns:
+        set[str]: Conjunto de columnas numéricas que deberían evaluarse con Chi².
+    """
+    if not AUTO_CAT_FROM_NUMERIC or AUTO_CAT_CARDINALITY <= 1:
+        return set()
+    out = set()
+    for c in num_cols:
+        if c not in pdf_ref.columns or c not in pdf_rec.columns:
+            continue
+        try:
+            ref_unique = pd.Series(pdf_ref[c]).dropna().nunique()
+            rec_unique = pd.Series(pdf_rec[c]).dropna().nunique()
+        except Exception:
+            continue
+        cardinality = max(ref_unique, rec_unique)
+        if 1 < cardinality <= AUTO_CAT_CARDINALITY:
+            out.add(c)
+    return out
 
 def to_pdf_sample(sdf, cols, n=SAMPLE_MAX, seed=42):
     """Extrae una muestra estable (acotada) a pandas para un subconjunto de columnas.
@@ -467,13 +502,18 @@ def detect_and_export_loop():
                 sdf_ref = sdf_all.sample(False, 0.5, 13)
                 sdf_rec = sdf_all.subtract(sdf_ref)
 
-            num_cols = numeric_columns(sdf_all)
-            cat_cols = string_columns(sdf_all)
+            num_cols_all = numeric_columns(sdf_all)
 
-            pdf_num_ref = to_pdf_sample(sdf_ref, num_cols, n=SAMPLE_MAX, seed=42)
-            pdf_num_rec = to_pdf_sample(sdf_rec, num_cols, n=SAMPLE_MAX, seed=7)
+            pdf_num_ref = to_pdf_sample(sdf_ref, num_cols_all, n=SAMPLE_MAX, seed=42)
+            pdf_num_rec = to_pdf_sample(sdf_rec, num_cols_all, n=SAMPLE_MAX, seed=7)
+
+            auto_cat_cols = infer_low_cardinality_cats(num_cols_all, pdf_num_ref, pdf_num_rec)
+            string_cat_cols = string_columns(sdf_all)
+            cat_cols = sorted(set(string_cat_cols) | auto_cat_cols)
             pdf_cat_ref = to_pdf_sample(sdf_ref, cat_cols, n=SAMPLE_MAX, seed=42)
             pdf_cat_rec = to_pdf_sample(sdf_rec, cat_cols, n=SAMPLE_MAX, seed=7)
+
+            num_cols = [c for c in num_cols_all if c not in set(cat_cols)]
 
             drift_any = False
             pvals_row = {}
@@ -497,7 +537,7 @@ def detect_and_export_loop():
                 drift_any = drift_any or (p < ALPHA)
                 pvals_row[f"p_{c}"] = float(p)
 
-            score_col = find_score_column(num_cols)
+            score_col = find_score_column(num_cols_all)
             psi_val = 0.0
             if score_col and (score_col in pdf_num_rec.columns) and (score_col in pdf_num_ref.columns):
                 psi_val = psi(pdf_num_ref[score_col], pdf_num_rec[score_col], bins=10)

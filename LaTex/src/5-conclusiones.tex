@@ -75,9 +75,11 @@ El uso de \textbf{datos sintéticos} evitó exposición de información personal
 \label{sec:limitaciones}
 Desde un enfoque crítico, se identifican las siguientes \textbf{limitaciones}:
 \begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{Dominio simulado:} los resultados se obtienen sobre \textbf{transacciones bancarias sintéticas} para detección de fraude; otros casos de uso requieren generar variables y etiquetas específicas (p.\,ej., series de demanda o IoT) y recalibrar umbrales/SLAs antes de extrapolar el comportamiento del pipeline.
+  \item \textbf{Infraestructura:} despliegue \textbf{single-host} sin alta disponibilidad (SPOF en NameNode/Prometheus) ni cifrado/RBAC formal; no se midió tolerancia a fallos ni comportamiento bajo autoscaling.
+  \item \textbf{Metodología estadística:} detección basada en pruebas univariantes (KS/$\chi^2$/PSI) y \textbf{ventanas fijas}; no se evaluaron detectores multivariados ni sensibilidad a tamaños de ventana/alpha más conservadores.
   \item \textbf{Alcance del detector:} énfasis en \textbf{covariate drift} y \textbf{score–PSI}; el \textbf{concept/label drift} se aborda parcialmente y requiere extensiones supervisadas.
   \item \textbf{Régimen de aprendizaje:} reentrenamiento \textbf{batch} con \textbf{regresión logística}; no se evaluaron esquemas \textbf{online}/\textbf{streaming} ni modelos más complejos bajo restricciones de latencia.
-  \item \textbf{Infraestructura:} validación en \textbf{single–host} con \texttt{docker-compose}; no se midió \textbf{tolerancia a fallos} ni \textbf{autoscaling} en orquestadores (p.\,ej., Kubernetes).
   \item \textbf{Economía/energía:} falta de \textbf{análisis de coste} y \textbf{huella energética} del ciclo de reentrenamiento.
 \end{itemize}
 
