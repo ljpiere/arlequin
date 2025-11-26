@@ -16,6 +16,15 @@
 \usepackage{url}
 \usepackage{hyperref}
 \usepackage{makeidx}
+
+\usepackage{amsmath}
+\usepackage{algorithm}
+%\usepackage{algpseudocode}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18} % o la versión que uses
+
+% ESTA línea es la que define el entorno groupplot:
+\usepgfplotslibrary{groupplots}
 \usepackage{graphics}
 \usepackage{booktabs}
 \usepackage{tabularx}
@@ -149,7 +158,7 @@
 %%%%%%%%%%%%%%%%%%
 % FICHA RESUMEN
 %%%%%%%%%%%%%%%%%%
-\newpage{\ } 
+\clearpage
 \input{src/00-ficha_resumen}
 
 %%%%%%%%%%%%%%%%%%
@@ -166,9 +175,7 @@
 %%%% TABLE OF CONTENTS
 %%%% AND PREABLE
 %%%%%%%%%%%%%%%%%
-  
-\newpage{\ } 
-\thispagestyle{empty} 
+\cleardoublepage
 \tableofcontents 
 \listoffigures   \listoftables   \mainmatter
 

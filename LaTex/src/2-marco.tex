@@ -49,13 +49,16 @@ Para abordar estos desafíos, se han desarrollado técnicas de \textbf{detecció
 \paragraph{Formas de Detección de Data Drift}
 De acuerdo con la literatura \citep{Lu2019, Gama2014, BaenaGarcia2006}, se pueden distinguir los siguientes enfoques principales para detectar \textit{data drift}:
 \begin{itemize}
-    \item \textbf{Detección basada en estadísticos de distribución:} Compara la distribución de las variables (o la salida del modelo) en distintas ventanas de datos (\textit{sliding windows}), utilizando pruebas como Kolmogorov-Smirnov o la divergencia de Kullback-Leibler.
+    \item \textbf{Detección basada en estadísticos de distribución:} Compara la distribución de las variables (o la salida del modelo) en distintas ventanas de datos (\textit{sliding windows}), utilizando pruebas como Kolmogorov-Smirnov, $\chi^2$, divergencia de Kullback–Leibler y PSI. Estos enfoques son \textbf{no paramétricos} (salvo KL) y requieren supuestos mínimos: KS no impone forma de la distribución y contrasta CDFs; $\chi^2$ compara frecuencias categóricas; PSI resume la divergencia en un valor único tras un \textit{binning} explícito, lo que lo hace interpretable para operaciones. Su sensibilidad depende del tamaño de ventana y de la elección de umbrales ($\alpha$, $\tau_{\text{PSI}}$), que deben calibrarse por dominio para equilibrar falsos positivos y detección temprana.
     \item \textbf{Métodos de supervisión externa:} Se introduce un clasificador específico que compara los datos antiguos frente a los datos nuevos para determinar si ha ocurrido un cambio en la distribución o en la relación subyacente.
     \item \textbf{Monitoreo de métricas de rendimiento:} Se revisan periódicamente indicadores como la exactitud, \textit{precision}, \textit{recall} o la puntuación \textit{F1}, ya que la degradación en estas métricas puede evidenciar \textit{data drift} \citep{Bifet2010}.
     \item \textbf{Combinaciones híbridas:} Integran pruebas estadísticas con algoritmos de \textit{machine learning} para lograr una detección más robusta.
 \end{itemize}
 
-La elección de pruebas como Kolmogorov-Smirnov, Chi-cuadrado o el Population Stability Index (PSI) responde a su amplia utilización en la literatura de \textit{drift detection} y a su complementariedad. El test de Kolmogorov-Smirnov es sensible a variaciones en la forma de la distribución (media, varianza o asimetría) de variables continuas, mientras que la prueba Chi-cuadrado resulta idónea para identificar cambios en frecuencias categóricas \citep{Sethi2017}. Por su parte, el PSI es ampliamente adoptado en entornos productivos -particularmente en finanzas y riesgo crediticio- porque resume la magnitud de la desviación en un valor único fácilmente interpretable. Estas métricas permiten cubrir distintos tipos de variables y escenarios de \textit{drift}, equilibrando sensibilidad estadística y aplicabilidad práctica \citep{Gama2014, Zliobaite2016}.
+La elección de pruebas como Kolmogorov-Smirnov, Chi-cuadrado o el Population Stability Index (PSI) responde a su amplia utilización en la literatura de \textit{drift detection} y a su complementariedad. El test de Kolmogorov-Smirnov es sensible a variaciones en la forma de la distribución (media, varianza o asimetría) de variables continuas, mientras que la prueba Chi-cuadrado resulta idónea para identificar cambios en frecuencias categóricas \citep{Sethi2017}. Por su parte, el PSI —estándar en riesgo crediticio— es usable en otros dominios siempre que se definan \textit{bins} y umbrales operativos acordes al caso de uso (p.\,ej., umbrales más bajos en contextos volátiles o con alta estacionalidad). Estas métricas permiten cubrir distintos tipos de variables y escenarios de \textit{drift}, equilibrando sensibilidad estadística y aplicabilidad práctica \citep{Gama2014, Zliobaite2016}. En sistemas productivos se recomienda complementar su uso con control de multiplicidad (Holm/BH) y guías de gobernanza sobre tamaño de ventana y frecuencia de muestreo para mitigar falsos positivos.
+
+\paragraph{PSI: aplicabilidad y cautelas.}
+El \textbf{Population Stability Index} resume en un solo valor la divergencia entre distribuciones discretizadas y, por ello, es atractivo más allá del ámbito bancario: se ha usado en \textit{e-commerce}, telecom y manufactura para vigilar \textit{scores} o variables derivadas. Su validez depende del \textit{binning} (cuantiles o intervalos de negocio), de contar con soporte mínimo por cajón (5–10\,\% recomendado) y de calibrar umbrales por dominio (\(\tau\approx 0.1/0.2/0.3\) son guías en riesgo, pero pueden ajustarse en dominios con mayor volatilidad). Como no es una prueba exacta, conviene reportar PSI junto con KS/$\chi^2$ y usarlo como métrica de magnitud, no como único disparador cuando la cardinalidad o el \textit{binning} son inestables.
 
 \subsection{Contraste crítico y criterios de selección}
 Para maximizar validez práctica en operación, la selección del detector debe ponderar cinco criterios principales \citep{Lu2019, Gama2014, Bifet2010}; los desarrollos matemáticos y comparativas extendidas se trasladan al Anexo~\ref{ann:detectors}.
@@ -172,7 +175,25 @@ Por otro lado, el ecosistema tecnológico que habilita estos procesos se ha vist
 
 Además, si bien existen propuestas funcionales que abordan el problema del \textit{data drift}, la validación empírica de estos sistemas sigue siendo limitada. Hay una carencia de experimentos replicables que evalúen el desempeño integral de las soluciones en distintos sectores productivos, lo cual limita su aplicabilidad general y la construcción de benchmarks estandarizados \citep{Agarwal2023, Singh2023}.
 
-En total, se han revisado 19 estudios que abordan la detección del \textit{data drift} y la automatización del reentrenamiento. De ellos, la mayoría propone el uso de pruebas estadísticas, mientras que una fracción menor recurre a enfoques híbridos o modelos supervisados. A pesar de avances considerables en algunos frentes, se mantiene una brecha significativa en cuanto a la integración automatizada y escalable de estas soluciones en entornos productivos. Esta investigación se propone contribuir a ese vacío, desarrollando un sistema replicable que permita gestionar el \textit{data drift} de manera proactiva, automatizada y trazable en contextos reales.
+En total, se han revisado 19 estudios que abordan la detección del \textit{data drift} y la automatización del reentrenamiento. De ellos, \textbf{11 se apoyan principalmente en pruebas estadísticas univariadas/multivariadas} (KS, $\chi^2$, PSI, KL); \textbf{5 proponen esquemas híbridos} que combinan tests con clasificadores de cambio o detectores \textit{online}; y \textbf{3 usan modelos supervisados} como discriminadores entre ventanas de datos. Esta distribución confirma que las pruebas estadísticas siguen siendo el enfoque predominante, pero crece el interés en combinar señales para aumentar sensibilidad y robustez. A pesar de estos avances, persiste una brecha en la integración automatizada y escalable de dichas técnicas en pipelines productivos. Esta investigación se propone contribuir a ese vacío, desarrollando un sistema replicable que permita gestionar el \textit{data drift} de manera proactiva, automatizada y trazable en contextos reales.
+
+\begin{table}[htbp]
+\centering
+\caption{Clasificación del corpus revisado por enfoque de detección.}
+\label{tab:corpus-detectors}
+\small
+\begin{tabular}{l p{9cm} l}
+\toprule
+\textbf{Enfoque} & \textbf{Referencias representativas} & \textbf{#} \\
+\midrule
+Pruebas estadísticas (KS/$\chi^2$/PSI/KL) & \citep{Gama2014,Lu2019,Chawla2021,Sethi2017,Nguyen2023} & 11 \\
+Híbridos (tests + detectores \textit{online}/clasificadores de cambio) & \citep{BaenaGarcia2006,Bifet2010,Singh2023} & 5 \\
+Supervisados como discriminadores de ventana & \citep{Chatterjee2023,Agarwal2023} & 3 \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+\footnotesize El número total corresponde al corpus revisado; la tabla lista ejemplos representativos de cada categoría y no agota las 19 referencias. El detalle por estudio se documenta en el repositorio de lectura sistemática.
+\end{table}
 
 Diversas plataformas empresariales ofrecen actualmente capacidades para automatizar el monitoreo de modelos \citep{Bhatt2025}, la detección de \textit{data drift} y el reentrenamiento en entornos reales \citep{Berberi2025,Lwakatare2020}. Entre las más destacadas se encuentran AWS SageMaker, Google Vertex AI y Azure Machine Learning. En el caso de AWS SageMaker, la herramienta \texttt{Model Monitor} permite evaluar continuamente los datos de entrada y salida del modelo, generando alertas ante desviaciones relevantes, lo cual ha sido documentado en estudios de referencia sobre plataformas MLOps \citep{Berberi2025}. Sin embargo, su carácter cerrado y dependiente del ecosistema AWS limita su personalización para dominios con métricas particulares \citep{Bhatt2025}.
 

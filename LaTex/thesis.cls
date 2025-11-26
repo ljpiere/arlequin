@@ -83,7 +83,7 @@
 
 \newcommand{\makecoverletter}{
 \thispagestyle{empty}
-\ \newpage
+\clearpage
 \thispagestyle{empty}
 \noindent Santiago de Cali, \fecha. \\
 \vspace{2cm}\\
@@ -314,7 +314,7 @@ Proyecto de grado entregado para obtener el título de \\
 Dirigida por\\       
     \director           
 \end{tabular}}%
-  \vskip 1.5em%
+  \vskip 1em%
 \vspace{1cm}
 
 \end{center}\par

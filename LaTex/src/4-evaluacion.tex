@@ -30,6 +30,10 @@ Examina si la política de activación basada en \textit{edge-triggered} y \text
 \label{subsec:eval-tests}
 Para contrastar las hipótesis y diferencias entre condiciones se emplean pruebas \textbf{no paramétricas} (Mann–Whitney U) por pares de escenarios, dada la posible no-normalidad y tamaños de muestra moderados. Se evalúan F1 y PSI como métricas principales, y las latencias \textit{TTFD}/\textit{TTR}. Cuando aplica, se reporta ajuste por múltiples comparaciones (FDR de Benjamini–Hochberg).
 
+El énfasis en F1 y AUC responde a que el caso de estudio es un clasificador de fraude sobre \textbf{transacciones bancarias sintéticas}; se monitorea la capacidad de detectar movimientos sospechosos y evitar falsas alarmas. La arquitectura del pipeline y del \textit{drift-watcher} es independiente del tipo de tarea: la detección se basa únicamente en KS, $\chi^2$ y PSI, y el retrigger invoca el \texttt{JENKINS\_JOB} configurado. Para un modelo de regresión se sustituirían las métricas de validación por MAE/RMSE (o cualquier criterio de interés) y se configuraría \texttt{SCORE\_COL}/\texttt{POSITIVE\_THRESHOLD} para exponer la variable continua de salida, sin modificar la lógica de monitoreo. En casos de uso distintos (p.\,ej., demanda, mantenimiento predictivo, IoT), la interpretación de las alertas y de \texttt{predicted\_positive\_ratio} debe alinearse con el KPI operativo relevante y con las políticas de riesgo del dominio, pero el ciclo detectar $\rightarrow$ reentrenar $\rightarrow$ auditar permanece igual.
+
+Dentro del conjunto de métricas supervisadas (Precisión, Recall, FPR, etc.), \textbf{F1 y AUC} se seleccionaron como criterios principales porque el dominio de fraude presenta \textbf{clases altamente desbalanceadas} y costos distintos para falsos positivos/negativos. El F1 asegura que la recuperación del desempeño considere simultáneamente precisión y recall—un descenso en cualquiera de las dos afectaría el indicador—mientras que el AUC captura la calidad del ranking probabilístico antes de aplicar umbrales. El \textbf{recall} individual se monitorea y reporta en MLflow, pero no se usa como métrica primaria ya que maximizarlo aisladamente provocaría un aumento de falsos positivos y costos operativos (más bloqueos manuales), comprometiendo el SLO de intervención humana. Por ello, F1/AUC funcionan como métricas de aceptación, y el recall queda documentado como señal secundaria para diagnósticos.
+
 \begin{table}[htbp]
 \centering
 \caption{Pruebas de Mann–Whitney sobre F1 (job de evaluación: fase previa vs fase con \textit{drift}).}
@@ -78,6 +82,18 @@ El detalle exhaustivo de escenarios y variables se estableció en el Objetivo Es
   \item \textbf{Factor 2 — Etapa del modelo en E2:} métricas \textit{pre} vs. \textit{post} reentrenamiento, registradas por el mismo job de Jenkins (evaluación) y por el drift-watcher tras disparar la acción correctiva.
 \end{itemize}
 
+\paragraph{Procedimiento iterativo.}
+Cada ejecución experimental siguió el mismo ciclo controlado (aplicado más de 40 veces) y registrado en \texttt{/metrics\_test}:
+\begin{enumerate}\setlength\itemsep{1pt}
+  \item \textbf{Ingesta controlada.} Airflow ejecutó el ETL \texttt{generate\_data\_session.py}, escribiendo una nueva partición en HDFS y parametrizando \texttt{drift\_factor} ($0$ sin drift, $1$ con drift) para alternar escenarios en iteraciones consecutivas.
+  \item \textbf{Monitoreo y detección.} El \textit{drift-watcher} leyó las particiones más recientes dentro de su ventana móvil de 5\,min (\texttt{WINDOW\_MIN}), calculó KS/$\chi^2$/PSI y mantuvo un \textbf{TTFD} (tiempo de detección) sub-minutal. Cuando \texttt{drift\_factor}=1 se esperaba a que el watcher declarara una alerta y, con ella, disparara automáticamente el job \texttt{retrain-model} de Jenkins.
+  \item \textbf{Evaluación sin drift.} Cuando \texttt{drift\_factor}=0, se ejecutó el segundo pipeline de Jenkins (\texttt{eval-model}) en modo \textit{pre}/\textit{post} para medir el estado del modelo sin intervención del watcher, consolidando las métricas de referencia.
+  \item \textbf{Reentrenamiento y cierre.} Tras cada trigger (manual o automático), el job correspondiente entrenó/validó el modelo, publicó métricas (F1, Recall, AUC, PSI) y artefactos en MLflow, mientras los CSVs de \texttt{metrics\_test} capturaban la corrida específica (eval\_* para el pipeline manual, watcher\_* para el automático).
+  \item \textbf{Nueva iteración.} Finalizado el ciclo, el ETL se re-ejecutó alternando el valor de \texttt{drift\_factor} para volver a insertar datos y repetir la secuencia bajo la otra condición.
+\end{enumerate}
+
+Este procedimiento garantiza pares consecutivos de ingesta–detección–reentrenamiento con ventanas temporales explícitas: los \textbf{TTFD} (~270\,s mediana) cuantifican el tiempo entre la llegada de datos y la alerta del watcher, mientras que los \textbf{TTR} (~102\,s mediana) corresponden al tiempo del pipeline de Jenkins desde el disparo hasta el registro en MLflow. Ambas métricas provienen de los logs de \texttt{metrics\_test} y respaldan la estabilidad temporal del ciclo detectar $\rightarrow$ actuar $\rightarrow$ verificar.
+
 \paragraph{Protocolo y replicación.}
 Cada ejecución completa de los jobs se considera una réplica independiente; se realizaron $n=5$ repeticiones por condición reiniciando contenedores y reutilizando el mismo modelo inicial para asegurar comparabilidad. Cada réplica genera entre 14 y 20 ciclos de monitoreo con \texttt{SAMPLE\_MAX}=$1000$ y \texttt{LOOP\_SECONDS}=$30$. Se mantienen las salvaguardas descritas en OE3: umbrales $\alpha=0.01$ y $\tau_{\text{PSI}}=0.2$, regla de disparo $p<\alpha \lor \text{PSI}>\tau$, y mecanismos anti-\textit{flapping} (\texttt{TRIGGER\_EDGE\_ONLY}, \texttt{DRIFT\_COOLDOWN\_SECONDS}, \texttt{DRIFT\_CLEAR\_STREAK}). Las semillas determinísticas (\texttt{seed}=42,7) y la alternancia del orden E1/E2 mitigan efectos de calentamiento.
 
@@ -99,10 +115,6 @@ detección oportuna, recuperación del desempeño y estabilidad operativa.
 Las métricas instrumentadas (F1, AUC, Precisión, Recall, PSI, $p_{\min}$, TTFD, TTR, FPR y \texttt{drift\_factor}) son las mismas descritas en OE3; en esta etapa se emplean para contrastar hipótesis y cuantificar la eficiencia del pipeline. Los resultados por réplica se agregan mediante promedios e intervalos de confianza al 95\,\% calculados por \textit{bootstrap} ($B=1000$).  
 Para RQ2 se aplica una prueba de no–inferioridad ($\delta=0.02$) y para RQ1 una prueba unilateral de proporciones con intervalo de Wilson.  
 Las medidas de tamaño del efecto (Cohen’s~$d$ y Cliff’s~$\delta$) complementan la significancia estadística, aportando evidencia práctica del impacto del reentrenamiento y de las diferencias entre condiciones.
-
-\paragraph{Definición operativa de TTFD y TTR.}
-\textbf{TTFD (Time To First Detection)} es el intervalo entre la última observación etiquetada como “normal” y la primera corrida que activa la regla $p<\alpha$ o $\mathrm{PSI}>\tau$; se estima a partir de \texttt{training\_log.csv} siguiendo la noción de latencia de detección descrita en \cite{Sethi2017,Chawla2021}.  
-\textbf{TTR (Time To Recovery)} corresponde al intervalo entre la detección y la finalización del reentrenamiento automático (etapas \texttt{post} en Jenkins), análogo al \textit{mean time to recovery} en MLOps/DevOps \citep{Amershi2019}. Ambos KPIs se reportan como medianas (TTFD$_{50}$, TTR$_{50}$) y sustentan las hipótesis H1 y H3.
 
 \paragraph{Definición operativa de TTFD y TTR.}
 \textbf{TTFD (Time To First Detection)} es el intervalo entre la última observación etiquetada como “normal” y la primera corrida que activa la regla $p<\alpha$ o $\mathrm{PSI}>\tau$; se estima a partir de \texttt{training\_log.csv} siguiendo la noción de latencia de detección descrita en \cite{Sethi2017,Chawla2021}.\\
@@ -149,7 +161,7 @@ Cada experimento se repitió cinco veces y se compararon los resultados en térm
     xtick={0.001,0.01,0.05},
     ymajorgrids, grid style={dotted}
 ]
-\addplot[mark=*] coordinates {(0.001,0.2) (0.01,0.8) (0.05,3.1)};
+\addplot[accent, mark=*, thick] coordinates {(0.001,0.2) (0.01,0.8) (0.05,3.1)};
 \end{axis}
 \end{tikzpicture}
 \caption{FPR vs. $\alpha$ (banda experimental).}
@@ -165,7 +177,7 @@ Cada experimento se repitió cinco veces y se compararon los resultados en térm
     xtick={500,1000,1500},
     ymajorgrids, grid style={dotted}
 ]
-\addplot[mark=*] coordinates {(500,180) (1000,270) (1500,330)};
+\addplot[dark, mark=*, thick] coordinates {(500,180) (1000,270) (1500,330)};
 \end{axis}
 \end{tikzpicture}
 \caption{TTFD mediano vs. tamaño de ventana.}
@@ -246,7 +258,7 @@ Los resultados obtenidos en los escenarios de prueba permiten contrastar de form
 
 \begin{table}[htbp]
 \centering
-\caption{Métricas consolidadas por escenario (F1 y PSI provienen de \texttt{training\_log.csv}; TTR de \texttt{jenkins\_runs.csv}).}
+\caption{Métricas consolidadas por escenario (F1 y PSI).}
 \label{tab:scenario-metrics}
 \begin{tabular}{lcccc}
 \toprule
@@ -270,6 +282,10 @@ Las 24 corridas del mismo job, ya con el \textit{drift} inducido, reducen F1 a $
 \paragraph{Escenario E3 — Post \textit{drift} (reentrenamiento automático).}
 Una vez que el \textit{drift watcher} toma el control, las 38 corridas registradas en \texttt{metrics\_test/watcher\_training\_log.csv} consolidan un F1 de $0.817\pm0.012$, recuperando parte de la brecha frente a E1. El PSI cae a $0.0028$, evidenciando la convergencia hacia la distribución base tras actualizar el modelo. Las nuevas alertas mantienen una latencia mediana de $271$\,s (8 transiciones detectadas), mientras que las etapas \texttt{post} en \texttt{watcher\_jenkins\_runs.csv} tardan $103$\,s (rango $90$--$124$\,s) con un consumo medio de $69$\,MB ($p_{95}=113$\,MB).
 
+\paragraph{Comparación porcentual.}
+La caída de F1 entre E1 y E2 es de \(\frac{0.811-0.825}{0.825}\approx -1.7\,\%\); tras el reentrenamiento, E3 queda a \(\frac{0.817-0.825}{0.825}\approx -1.0\,\%\) de la línea base y mejora \(\frac{0.817-0.811}{0.811}\approx +0.7\,\%\) frente al estado degradado. El PSI disminuye de $0.0067$ a $0.0028$ (\(\approx -58\,\%\)), señalando la corrección del cambio de distribución. Las latencias se mantienen prácticamente constantes: TTFD pasa de 270\,s a 271\,s (+0.4\,\%) y TTR de 102\,s a 103\,s (+1.0\,\%), lo que indica que la recuperación no penaliza el tiempo de respuesta.
+Estas diferencias porcentuales deben leerse junto con los IC/efectos ya reportados (Tabla~\ref{tab:scenario-metrics} y Tabla~\ref{tab:mw-tests}); los tamaños de efecto (Cliff $\delta$) y los IC por bootstrap evitan sobre-interpretar variaciones pequeñas en muestras moderadas.
+
 \paragraph{Estabilidad operativa.}
 La política \textit{edge-triggered} + \textit{cooldown} limita el número de ejecuciones consecutivas: durante la campaña de mediciones el máximo observado fue 9 activaciones/h (barrido del job de evaluación) y 4 activaciones/h en el flujo real del \textit{watcher}. Aun en los picos de memoria (hasta $608$\,MB en la fase previa del job de evaluación), el consumo se mantuvo por debajo del $17\,\%$ de la cuota de contenedor, y no se detectaron ciclos de \textit{flapping}. De esta forma, las métricas de la Tabla~\ref{tab:scenario-metrics} cubren simultáneamente desempeño (F1), desviación (PSI) y eficiencia temporal (TTFD/TTR) sin métricas pendientes.
 
@@ -292,16 +308,16 @@ La política \textit{edge-triggered} + \textit{cooldown} limita el número de ej
     tick label style={/pgf/number format/fixed}
 ]
 % Diagonal (clasificador aleatorio)
-\addplot[dashed] coordinates {(0,0) (1,1)}; \addlegendentry{Aleatorio}
+\addplot[dark, dashed] coordinates {(0,0) (1,1)}; \addlegendentry{Aleatorio}
 
 % ROC PRE (AUC ≈ 0.79)
-\addplot[thick] coordinates {
+\addplot[thick, dark] coordinates {
   (0,0) (0.03,0.12) (0.06,0.24) (0.10,0.36) (0.15,0.50)
   (0.22,0.62) (0.30,0.72) (0.40,0.80) (0.55,0.87) (0.75,0.93) (1,1)
 }; \addlegendentry{Pre-retrain (AUC $\approx 0.79$)}
 
 % ROC POST (AUC ≈ 0.92)
-\addplot[thick] coordinates {
+\addplot[thick, accent] coordinates {
   (0,0) (0.02,0.20) (0.04,0.40) (0.06,0.58) (0.08,0.72)
   (0.12,0.83) (0.18,0.90) (0.26,0.94) (0.40,0.97) (0.65,0.99) (1,1)
 }; \addlegendentry{Post-retrain (AUC $\approx 0.92$)}
@@ -326,7 +342,7 @@ La política \textit{edge-triggered} + \textit{cooldown} limita el número de ej
     tick label style={/pgf/number format/fixed}
 ]
 % Serie F1 (cambia con drift y se recupera)
-\addplot[thick] coordinates {
+\addplot[thick, accent] coordinates {
   (1,0.91) (2,0.91) (3,0.90) (4,0.90) (5,0.88)
   (6,0.83) (7,0.78) (8,0.73) % drift visible
   (9,0.80) (10,0.85) (11,0.87) (12,0.88) (13,0.89) (14,0.89)
@@ -344,7 +360,7 @@ La política \textit{edge-triggered} + \textit{cooldown} limita el número de ej
     ylabel={PSI (der.)},
     tick label style={/pgf/number format/fixed}
 ]
-\addplot[thick, dotted] coordinates {
+\addplot[thick, dark, dotted] coordinates {
   (1,0.05) (2,0.05) (3,0.06) (4,0.07) (5,0.12)
   (6,0.18) (7,0.21) (8,0.23) % supera umbral 0.2
   (9,0.19) (10,0.16) (11,0.12) (12,0.10) (13,0.08) (14,0.07)
@@ -380,7 +396,7 @@ La política \textit{edge-triggered} + \textit{cooldown} limita el número de ej
     ymajorgrids, grid style={dotted},
 ]
 % Duraciones promedio observadas en Jenkins
-\addplot coordinates {(Eval,102) (Watcher,105)};
+\addplot[ybar, fill=accent!35, draw=accent] coordinates {(Eval,102) (Watcher,105)};
 \end{axis}
 \end{tikzpicture}
 \caption{TTR promedio observado en las ejecuciones de evaluación y del \textit{watcher}.}
@@ -423,9 +439,9 @@ Con base en la evidencia cuantitativa:
   ymin=0, ymax=0.5, bar width=10pt
 ]
 % proporciones por bin (ejemplo coherente con PSI≈0.23)
-\addplot[ybar, fill=black!10] coordinates {(1,0.22) (2,0.21) (3,0.20) (4,0.19) (5,0.18)};
+\addplot[ybar, fill=accent!30, draw=accent] coordinates {(1,0.22) (2,0.21) (3,0.20) (4,0.19) (5,0.18)};
 \addlegendentry{Referencia $r_k$}
-\addplot[ybar, fill=black!40] coordinates {(1,0.12) (2,0.18) (3,0.22) (4,0.24) (5,0.24)};
+\addplot[ybar, fill=dark!30, draw=dark] coordinates {(1,0.12) (2,0.18) (3,0.22) (4,0.24) (5,0.24)};
 \addlegendentry{Corriente $c_k$}
 
 % línea horizontal PSI = 0.2/0.3 como referencia (texto en leyenda aparte)
@@ -452,10 +468,10 @@ En el ejemplo, $\mathrm{PSI}\approx 0.23$ supera el umbral de alerta $\tau=0.2$.
   legend style={at={(0.02,0.98)},anchor=north west,draw=none,fill=none}
 ]
 % ECDF referencia (suave para ilustrar)
-\addplot[thick] coordinates{(0,0) (0.1,0.08) (0.2,0.20) (0.3,0.35) (0.4,0.52) (0.5,0.68) (0.6,0.80) (0.7,0.90) (0.8,0.96) (0.9,0.99) (1,1)};
+\addplot[thick, accent] coordinates{(0,0) (0.1,0.08) (0.2,0.20) (0.3,0.35) (0.4,0.52) (0.5,0.68) (0.6,0.80) (0.7,0.90) (0.8,0.96) (0.9,0.99) (1,1)};
 \addlegendentry{CDF referencia}
 % ECDF corriente (desplazada)
-\addplot[thick, dotted] coordinates{(0,0) (0.1,0.04) (0.2,0.12) (0.3,0.25) (0.4,0.42) (0.5,0.60) (0.6,0.74) (0.7,0.86) (0.8,0.94) (0.9,0.98) (1,1)};
+\addplot[thick, dark, dotted] coordinates{(0,0) (0.1,0.04) (0.2,0.12) (0.3,0.25) (0.4,0.42) (0.5,0.60) (0.6,0.74) (0.7,0.86) (0.8,0.94) (0.9,0.98) (1,1)};
 \addlegendentry{CDF corriente}
 
 % Dmáx indicado (línea vertical + bracket)
@@ -485,11 +501,11 @@ activando alerta.}
   xtick={1,...,14}
 ]
 % p-min (entre columnas)
-\addplot[thick] coordinates{(1,0.45) (2,0.50) (3,0.40) (4,0.35) (5,0.20) (6,0.08) (7,0.02) (8,0.006) (9,0.03) (10,0.08) (11,0.20) (12,0.30) (13,0.40) (14,0.50)};
+\addplot[thick, accent] coordinates{(1,0.45) (2,0.50) (3,0.40) (4,0.35) (5,0.20) (6,0.08) (7,0.02) (8,0.006) (9,0.03) (10,0.08) (11,0.20) (12,0.30) (13,0.40) (14,0.50)};
 \addlegendentry{$p_{\min}$}
 
 % PSI (reescalado)
-\addplot[thick, dotted] coordinates{(1,0.05) (2,0.05) (3,0.06) (4,0.07) (5,0.12) (6,0.18) (7,0.21) (8,0.23) (9,0.19) (10,0.16) (11,0.12) (12,0.10) (13,0.08) (14,0.07)};
+\addplot[thick, dark, dashed] coordinates{(1,0.05) (2,0.05) (3,0.06) (4,0.07) (5,0.12) (6,0.18) (7,0.21) (8,0.23) (9,0.19) (10,0.16) (11,0.12) (12,0.10) (13,0.08) (14,0.07)};
 \addlegendentry{PSI}
 
 % bandas de umbral
