@@ -1,0 +1,10 @@
++ set -eu
++ cat .cid_py
++ CID_PY=1bdc45b62cc9
++ METRICS_DIR=/var/jenkins_home/workspace/retrain-model/metrics
++ mkdir -p /var/jenkins_home/workspace/retrain-model/metrics
++ RUNS_CSV=/var/jenkins_home/workspace/retrain-model/metrics/jenkins_runs.csv
++ [ ! -f /var/jenkins_home/workspace/retrain-model/metrics/jenkins_runs.csv ]
++ date +%s
++ start_ts=1764252055
++ docker stats --no-stream --format {{.CPUPerc}},{{.MemUsage}},{{.MemPerc}} 1bdc45b62cc9
