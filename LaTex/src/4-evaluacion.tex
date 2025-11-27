@@ -3,6 +3,11 @@
 
 El objetivo de esta evaluación es validar, en condiciones controladas y reproducibles, la eficacia del sistema propuesto para \textit{detectar} \textit{data drift} y \textit{recuperar} desempeño mediante reentrenamiento automatizado, con métricas medibles y trazables en MLflow/Prometheus \citep{Gama2014,Breck2019,Chawla2021}.
 
+\subsection{Reproducibilidad y artefactos de referencia}
+\label{subsec:eval-repo-video}
+
+Para garantizar la trazabilidad académica del experimento, se publica el código fuente completo del prototipo en \href{https://github.com/ljpcastroc/arlequin}{https://github.com/ljpcastroc/arlequin}. La demostración end-to-end del pipeline (detección de \textit{drift} $\rightarrow$ disparo automático de Jenkins $\rightarrow$ reentrenamiento y recuperación) se documenta en video en \href{https://youtu.be/veM20n46DP8}{https://youtu.be/veM20n46DP8}. Ambos recursos permiten replicar la configuración (\texttt{docker-compose}), los scripts de generación/monitoreo y la secuencia de ejecución mostrada en este capítulo.
+
 % (Bloque duplicado eliminado para evitar similitud excesiva)
 
 \subsection{Preguntas de investigación e hipótesis}
