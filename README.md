@@ -1,82 +1,60 @@
 # Arlequin – Sistema de reentrenamiento automatizado ante data drift
 
-Arlequin es un prototipo de investigación de maestría orientado a la detección temprana de data drift y al reentrenamiento automático de modelos de machine learning en entornos Big Data. El objetivo es garantizar que los modelos se mantengan precisos cuando la distribución de los datos de entrada cambia, minimizando la intervención humana y maximizando la trazabilidad y la eficiencia operativa.
+Arlequin es un prototipo de investigación orientado a la detección temprana de data drift y al reentrenamiento automático de modelos de ML en entornos Big Data. El objetivo es mantener la exactitud de los modelos cuando la distribución de entrada cambia, maximizando trazabilidad y reduciendo intervención manual.
+
+## Demo en video
+
+- Video de ejecución end-to-end: https://youtu.be/veM20n46DP8
 
 ## ¿Qué problema resuelve?
 
-En contextos como salud, finanzas, industria o comercio electrónico, los modelos de ML pueden perder exactitud cuando los datos en producción ya no siguen la misma distribución que los datos de entrenamiento. Arlequin propone:
+- Monitoreo continuo de desvíos estadísticos en producción (Kolmogorov–Smirnov, Chi-cuadrado, Kullback–Leibler, PSI).
+- Reentrenamiento y despliegue automático vía Jenkins cuando se detecta drift.
+- Registro completo de experimentos, artefactos y métricas con MLflow y CSVs operativos.
 
-- Monitoreo continuo de los datos de entrada para detectar desviaciones estadísticas significativas (pruebas de Kolmogorov–Smirnov, Chi‑cuadrado y Kullback–Leibler).
+## Arquitectura
 
-- Orquestación automática con Jenkins de pipelines que reentrenan, validan y despliegan nuevos modelos cuando se detecta data drift.
+- Generador de datos sintéticos (`scripts/generate_data_session.py`) que simula transacciones bancarias e inyecta drift controlado.
+- Almacenamiento en HDFS (NameNode + DataNode) y procesamiento con Spark.
+- Monitoreo con `scripts/drift_watch.py`, exportación a Prometheus y disparo HTTP a Jenkins (`retrain-model`).
+- Entrenamiento (`scripts/train_model.py`) y evaluación estadística (`scripts/eval_stats.py`) con artefactos en `metrics/`.
+- Diagramas Mermaid y explicación en `docs/architecture.md`; guía de evaluación en `docs/evaluation.md`.
 
-- Registro y trazabilidad de experimentos, modelos y métricas mediante MLflow.
+## Requisitos
 
-## Arquitectura y componentes principales
+- Docker y Docker Compose.
+- Python 3.8+ (para scripts auxiliares).
+- Java 8/11 para Hadoop/Spark.
+- Paquetes Python: ver `scripts/requirements-drift.txt`.
 
-La siguiente lista describe los componentes clave; encontrarás diagramas detallados en la carpeta docs/ (por crear):
-
-- **Generador de datos sintéticos (scripts/generate_data.py):** simula transacciones bancarias y permite inducir drift en los montos de las transacciones.
-
-- **Almacenamiento en HDFS:** los datos se persisten en un clúster pseudo‑distribuido de Hadoop (NameNode + DataNode). Los scripts start-namenode.sh y start-spark-*.sh permiten levantar los servicios dentro de contenedores.
-
-- **Procesamiento con Spark:** lectura y transformación de datos usando pyspark y preparación de datasets para entrenamiento.
-
-- **Script de entrenamiento (scripts/train_model.py):** genera etiquetas a partir de reglas o columnas existentes y entrena un modelo de regresión logística. Registra métricas y artefactos en MLflow.
-
-- **Script de detección de drift:** módulo que implementará pruebas estadísticas para detectar cambios significativos en la distribución de los datos y disparará el pipeline de reentrenamiento.
-
-- **Jenkins/CI:** define el pipeline de CI/CD que automatiza la detección de drift, el reentrenamiento y el registro de modelos.
-
-- **MLflow:** gestiona versiones de modelos, métricas y parámetros de experimentos.
-
-## Requisitos de software
-
-- Docker y Docker Compose para orquestar contenedores.
-
-- Python 3.8 o superior.
-
-- Java 8/11 (necesario para Hadoop/Spark).
-
-- Apache Hadoop ≥ 3.4 y Apache Spark ≥ 3.5.
-
-- Python packages (ver `scripts/requirements-drift.txt`).
-
-## Instalación y puesta en marcha
-
-1. Clonar el repositorio:
+## Puesta en marcha rápida
 
 ```bash
 git clone git@github.com:ljpcastroc/arlequin.git
 cd arlequin
 ```
 
-### Ejecutar DriftWatch con logging a CSV
-
-En un terminal (o como servicio), ejecuta DriftWatch exportando Prometheus y escribiendo PSI/p-values a CSV. Ejemplo dentro del contenedor `pyspark-client`:
+1) Levanta los servicios base (Hadoop, Spark, cliente PySpark, Jenkins, monitoreo y MLflow):
 
 ```bash
-export DRIFT_LOG_FILE=/tmp/arlequin-logs/drift_log.csv
-python3 /scripts/drift_watch.py
+docker compose up -d namenode datanode spark-master spark-worker pyspark-client jenkins grafana prometheus mlflow
 ```
 
-Notas:
-- No necesitas cambiar EVAL_SCENARIO: el watcher funciona de manera continua y compara ventanas móviles de 5 minutos (configurable con `DRIFT_WINDOW_MINUTES`). Referencia = [t-10, t-5), Reciente = [t-5, t).
-- El fichero se crea con cabecera automáticamente y agrega una fila por iteración del loop.
-- Para parar, Ctrl+C. El exporter Prometheus usa el puerto `EXPORTER_PORT` (8010 por defecto).
-
-### Generar datos con o sin drift desde spark-submit
-
-El generador acepta `--drift-factor` (o env `DRIFT_FACTOR`) para fijar el drift sin editar el código:
+2) Copia el generador y genera datos (E1 sin drift / E2 con drift):
 
 ```bash
+docker compose exec spark-master bash -lc "mkdir -p /opt/spark/app"
+SPARK=$(docker compose ps -q spark-master)
+docker cp scripts/generate_data_session.py "$SPARK":/opt/spark/app/generate_data_session.py
+
+# Base sin drift
 docker compose exec spark-master bash -lc "\
   /opt/spark/bin/spark-submit \
     --master spark://spark-master:7077 \
     --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000 \
     /opt/spark/app/generate_data_session.py --drift-factor 0.0"
 
-# con drift
+# Con drift
 docker compose exec spark-master bash -lc "\
   /opt/spark/bin/spark-submit \
     --master spark://spark-master:7077 \
@@ -84,119 +62,79 @@ docker compose exec spark-master bash -lc "\
     /opt/spark/app/generate_data_session.py --drift-factor 1.0"
 ```
 
-Parámetros adicionales opcionales: `--batches`, `--batch-size`, `--interval`.
+Parámetros opcionales: `--batches`, `--batch-size`, `--interval`, `--drift-factor` (o env `DRIFT_FACTOR`).
 
+## Monitoreo de drift (DriftWatch)
 
-## Ejecucion paso a paso (Windows/PowerShell)
+Ejecuta el watcher (en `pyspark-client` o como servicio `drift-watch`) exportando métricas y grabando PSI/p-valores a CSV:
 
-1) Copiar el generador al contenedor de Spark master
-
-```powershell
-docker compose exec spark-master bash -lc "mkdir -p /opt/spark/app"
-$SPARK = docker compose ps -q spark-master
-docker cp .\scripts\generate_data_session.py $SPARK`:/opt/spark/app/generate_data_session.py
+```bash
+export DRIFT_LOG_FILE=/tmp/arlequin-logs/drift_log.csv
+export DRIFT_WINDOW_MINUTES=5      # referencia=[t-10,t-5), reciente=[t-5,t)
+export DRIFT_COOLDOWN_SECONDS=300  # evita retriggers
+export TRIGGER_EDGE_ONLY=1         # solo en flanco de subida
+export DRIFT_ALPHA=0.01            # KS/Chi^2
+python3 /scripts/drift_watch.py
 ```
 
-2) Levantar los servicios principales
+- Exporta métricas Prometheus en `EXPORTER_PORT` (8010 por defecto).
+- Usa ventanas móviles; no requiere `EVAL_SCENARIO` manual.
+- `DRIFT_LOG_FILE` crea cabecera y agrega una fila por iteración.
 
-```powershell
-docker compose up -d namenode datanode spark-master spark-worker pyspark-client jenkins grafana prometheus mlflow
-```
+Para correr como contenedor:
 
-3) Configurar y lanzar el watcher (ventana movil)
-
-```powershell
-$env:DRIFT_WINDOW_MINUTES = "5"       # referencia=[t-10,t-5), reciente=[t-5,t)
-$env:DRIFT_COOLDOWN_SECONDS = "300"   # evita retriggers
-$env:TRIGGER_EDGE_ONLY = "1"          # solo al flanco de subida
-$env:DRIFT_ALPHA = "0.01"             # significancia para KS/Chi^2
-$env:DRIFT_LOG_FILE = "/tmp/arlequin-logs/drift_log.csv"  # opcional
-
+```bash
 docker compose up -d --no-deps --force-recreate drift-watch
 ```
 
-4) Generar datos de prueba
+## Pipeline de reentrenamiento y evaluación
 
-- Base sin drift (E1):
+- `drift_watch.py` compara las últimas dos ventanas y, si `p < DRIFT_ALPHA` o `PSI > PSI_ALERT`, dispara Jenkins (`retrain-model`) respetando `DRIFT_COOLDOWN_SECONDS` y `TRIGGER_EDGE_ONLY`.
+- Jenkins ejecuta `scripts/train_model.py`, registra en MLflow y copia CSVs a `metrics/` del workspace: `jenkins_runs.csv`, `training_log.csv`, `drift_log.csv`, `mannwhitney_results.csv`.
+- Evaluación manual opcional:
 
-```powershell
-docker compose exec spark-master bash -lc `
-"/opt/spark/bin/spark-submit \
-  --master spark://spark-master:7077 \
-  --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000 \
-  /opt/spark/app/generate_data_session.py --drift-factor 0.0"
-```
-
-- Con drift (E2):
-
-```powershell
-docker compose exec spark-master bash -lc `
-"/opt/spark/bin/spark-submit \
-  --master spark://spark-master:7077 \
-  --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000 \
-  /opt/spark/app/generate_data_session.py --drift-factor 1.0"
-```
-
-5) Comportamiento esperado
-- DriftWatch compara siempre las dos ultimas ventanas y, si detecta drift (p < `DRIFT_ALPHA` o PSI > `PSI_ALERT`), dispara Jenkins (`retrain-model`) respetando `DRIFT_COOLDOWN_SECONDS` y `TRIGGER_EDGE_ONLY`.
-- El pipeline entrena y evalua, dejando CSVs en `metrics/` del workspace: `jenkins_runs.csv`, `training_log.csv`, `drift_log.csv`, `mannwhitney_results.csv`.
-
-6) Evaluacion manual (opcional)
-
-```powershell
-python3 scripts/eval_stats.py `
-  --input metrics/training_log.csv `
-  --drift-input metrics/drift_log.csv `
+```bash
+python3 scripts/eval_stats.py \
+  --input metrics/training_log.csv \
+  --drift-input metrics/drift_log.csv \
   --out metrics/mannwhitney_results.csv --fdr
 ```
 
-## Logs operativos y evaluación 
+## Artefactos y trazabilidad
 
-- El script `scripts/train_model.py` ahora puede escribir un CSV de métricas si defines `EXPERIMENT_LOG_FILE` (ruta dentro del contenedor o del host). Se registran: `timestamp, scenario, mlflow_run_id, label_strategy, total_rows, positives, negatives, model, f1`.
-- El pipeline de Jenkins guarda consumo de CPU/Memoria del contenedor `pyspark-client` antes y después de cada build en `metrics/jenkins_runs.csv` y copia `training_log.csv` desde el contenedor a `metrics/`.
-- `scripts/drift_watch.py` ahora puede registrar directamente PSI y p-values por columna a CSV si defines `DRIFT_LOG_FILE`. También incluye las columnas `timestamp`, `scenario`, `model`, `pos_ratio`, `drift_any` y `score_col`. Esto conecta automáticamente con el evaluador.
-- Se añadió `scripts/eval_stats.py` para calcular pruebas de Mann–Whitney y tamaño de efecto de Cliff (δ) a partir de `metrics/training_log.csv`.
+- `scripts/train_model.py`: escribe métricas si defines `EXPERIMENT_LOG_FILE` (timestamp, scenario, mlflow_run_id, label_strategy, total_rows, positives, negatives, model, f1).
+- `scripts/drift_watch.py`: registra PSI y p-valores por columna (`DRIFT_LOG_FILE`) con columnas `timestamp, scenario, model, pos_ratio, drift_any, score_col`.
+- Jenkins guarda consumo de CPU/Memoria de `pyspark-client` en `metrics/jenkins_runs.csv`.
+- Resultados estadísticos combinados en `metrics/mannwhitney_results.csv` (Cliff’s delta y p-valores con/ sin FDR).
 
-Cómo probar rápidamente:
-- Ejecuta el job `retrain-model`. Tras finalizar, en el workspace del job encontrarás `metrics/jenkins_runs.csv` y, si el entrenamiento generó datos, `metrics/training_log.csv`.
-- Opcional: define `EVAL_SCENARIO` (por ejemplo, `E1`, `E2`, `E3`) en el entorno del job para etiquetar corridas.
-- Para obtener la tabla estadística combinando F1 (entrenamiento) y PSI (drift):
-  - Opción Jenkins (automática): el pipeline añade una etapa "Evaluate stats" que ejecuta `scripts/eval_stats.py` dentro del contenedor y guarda `metrics/mannwhitney_results.csv` en el workspace.
-  - Opción manual: `python3 scripts/eval_stats.py --input metrics/training_log.csv --drift-input metrics/drift_log.csv --out metrics/mannwhitney_results.csv --fdr`.
+## Scripts clave
+
+- `scripts/generate_data_session.py`: genera datos sintéticos con o sin drift.
+- `scripts/train_model.py`: entrena (regresión logística), registra en MLflow y CSV.
+- `scripts/drift_watch.py`: monitoreo de drift, exporta Prometheus y dispara Jenkins.
+- `scripts/eval_stats.py`: compara escenarios (E1/E2/E3) con Mann–Whitney y Cliff’s delta.
 
 ## Próximos pasos
 
-El proyecto está en desarrollo activo. Las siguientes características están planificadas:
+- Pruebas unitarias e integración (`tests/`).
+- Dashboards y diagramas adicionales (`docs/`).
+- Afinar thresholds y escenarios de drift controlado.
 
-(**Done**) Implementación del módulo detect_drift.py para aplicar pruebas de Kolmogorov–Smirnov, Chi‑cuadrado y Kullback–Leibler con umbrales configurables.
-
-(**Done**)Creación de un Jenkinsfile que automatice la detección de drift, el reentrenamiento y el registro de modelos.
-
-Incorporación de pruebas unitarias e integración para asegurar la calidad del código (carpeta tests/).
-
-Inclusión de diagramas de arquitectura y documentación adicional en docs/.
-
-
-## Estructura recomendada
+## Estructura rápida del repo
 
 ```bash
-├── .env.template        # Plantilla de variables de entorno
-├── docker-compose.yml   # Configuración de servicios (por crear)
-├── scripts/
-│   ├── generate_data.py  # Generación de datos sintéticos
-│   ├── train_model.py    # Entrenamiento de modelos
-│   └── detect_drift.py   # Detección de *data drift* (por implementar)
-├── jenkins/             # Configuración de Jenkins (pipeline automatizado)
-├── grafana/             # Configuración de dashboards (opcional)
-├── docs/                # Documentación, diagramas y cronograma
-└── tests/               # Pruebas unitarias e integración (por crear)
+├── docker-compose.yml
+├── scripts/              # generación, entrenamiento, monitoreo, evaluación
+├── jenkins/              # pipeline automatizado
+├── grafana/              # dashboards
+├── docs/                 # diagramas Mermaid y guías
+└── tests/                # pruebas (en progreso)
 ```
 
 ## Contribuciones
 
-Las contribuciones son bienvenidas. Por favor abre un issue para reportar errores o proponer mejoras. Para cambios importantes, crea un pull request describiendo la motivación y los cambios propuestos.
+Las contribuciones son bienvenidas. Abre un issue para bugs o propuestas; para cambios grandes, envía un PR explicando motivación y alcance.
 
 ## Licencia
 
-Este proyecto se publica bajo la Licencia [MIT](https://opensource.org/license/MIT)
-. Puedes usar, modificar y distribuir el código siempre que mantengas los avisos de copyright y licencia.
+MIT. Puedes usar, modificar y distribuir el código manteniendo los avisos de copyright y licencia.
