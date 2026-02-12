@@ -151,7 +151,7 @@ Cada experimento se repitió cinco veces y se compararon los resultados en térm
 
   \item \textbf{Sensibilidad a umbrales estadísticos:} se realiza un barrido sistemático sobre los valores $\alpha \in \{0.05,\,0.01,\,0.001\}$ y $\tau \in \{0.1,\,0.2,\,0.3\}$.  
   Se evalúa el impacto sobre TTFD, tasa de falsos positivos y métrica F1 post–reentrenamiento.  
-  Estos experimentos permiten identificar el punto de operación óptimo entre sensibilidad y estabilidad, configurando un equilibrio adecuado para los SLO-1 y SLO-3 definidos en la sección~\ref{subsec:eval-metrics}.
+  Estos experimentos permiten identificar el punto de operación óptimo entre sensibilidad y estabilidad, configurando un equilibrio adecuado para los SLO-1 y SLO-3..
 \end{enumerate}
 
 \begin{figure}[htbp]
@@ -256,7 +256,7 @@ Para el análisis temporal de eventos y la verificación de los indicadores defi
 
 
 
-\subsection{Resultados de la evaluación}
+\section{Resultados de la evaluación}
 \label{sec:eval-results}
 
 Los resultados obtenidos en los escenarios de prueba permiten contrastar de forma empírica las hipótesis formuladas y evaluar el comportamiento integral del sistema ante condiciones controladas de estabilidad y desviación de datos. Las métricas numéricas citadas a continuación se obtuvieron directamente de los archivos \texttt{metrics\_test/eval\_*} y \texttt{metrics\_test/watcher\_*}, tratados como una sola fuente para consolidar las corridas \textit{pre}, \textit{drift} y \textit{post-drift}. El prefijo \texttt{eval\_*} corresponde al job de Jenkins que evalúa el modelo antes y después de inducir el \textit{drift}; el prefijo \texttt{watcher\_*} captura las ejecuciones lanzadas automáticamente por el detector de \textit{drift} al reentrenar el modelo.
@@ -531,15 +531,14 @@ activando alerta.}
 
 
 
-\subsection{Discusión}
+\section{Discusión}
 \paragraph{Cierre interpretativo.} Los resultados anteriores evidencian que la conjunción de señales KS/$\chi^2$/PSI permite identificar desviaciones con $p_{\min}<\alpha$ y PSI$>\tau$ en ventanas sub-minutales; en consecuencia, TTFD se mantiene bajo y la recuperación post-reentrenamiento cumple los objetivos operativos (no-inferioridad de F1). Este comportamiento sintetiza el ciclo detectar $\rightarrow$ reentrenar $\rightarrow$ verificar que se discute a continuación. Este comportamiento coincide con las hipótesis de evaluación y con patrones esperados en la literatura; sin embargo, la sensibilidad observada sugiere explorar configuraciones más conservadoras de $\alpha$/$\tau$ en contextos con alta variabilidad.
 \label{subsec:eval-discussion}
 
 Las Figuras~\ref{fig:psi-bins}--\ref{fig:timeline-thresholds} muestran el efecto directo de los
 umbrales: (i) el PSI binned supera $\tau=0.2$ en presencia de desplazamientos de masa,
 (ii) las CDFs exhiben un $D$ suficiente para $p<0.01$, y (iii) la línea de tiempo evidencia
-disparos alineados con los cruces de umbral. Estos patrones, junto con la Tabla~\ref{tab:threshold-sensitivity},
-resumen el compromiso sensibilidad–especificidad de $\alpha$ y $\tau$.
+disparos alineados con los cruces de umbral.
 
 Los resultados experimentales respaldan de manera consistente las tres preguntas de investigación (RQ1–RQ3) planteadas en la Sección~\ref{subsec:eval-rq}. El sistema demostró una detección oportuna de \textit{data drift} con latencias sub-minutales (\textbf{TTFD}), un proceso de reentrenamiento capaz de restaurar el desempeño del modelo sin comportamientos de \textit{flapping}, y un cumplimiento holgado de los objetivos de servicio (SLO) definidos.  
 
@@ -547,7 +546,7 @@ La combinación de las pruebas estadísticas KS, $\chi^2$ y PSI evidenció su ut
 
 En conjunto, los resultados confirman que el enfoque de detección híbrida y automatización del reentrenamiento implementado en este trabajo es viable técnica y operacionalmente. Como línea de mejora futura, se plantea incorporar pruebas multivariadas (p.\,ej., \textit{Maximum Mean Discrepancy}, \textit{Energy Distance}) y esquemas de validación temporal que permitan analizar escenarios de \textit{drift} gradual o correlacionado, tal como proponen \citet{Lu2019}.
 
-\subsection{Amenazas a la validez}
+\section{Amenazas a la validez}
 \label{subsec:eval-threats}
 
 Si bien los resultados obtenidos son consistentes, se reconocen ciertas amenazas que podrían afectar la validez del estudio:
@@ -559,7 +558,7 @@ Si bien los resultados obtenidos son consistentes, se reconocen ciertas amenazas
   \item \textbf{Estrategias de mitigación:} uso de semillas fijas para control de aleatoriedad, limitación del tamaño de muestra (\texttt{SAMPLE\_MAX}) para evitar sesgos por sobre-muestreo, estimación de intervalos de confianza mediante \textit{bootstrap}, ejecución de estudios de ablación y registro exhaustivo de todas las corridas en MLflow para asegurar trazabilidad y replicabilidad.
 \end{itemize}
 
-\subsection{Reproducibilidad}
+\section{Reproducibilidad}
 \label{subsec:eval-reprod}
 
 Con el fin de garantizar la transparencia y replicabilidad de los resultados, se documentaron todas las condiciones experimentales y configuraciones de entorno empleadas:

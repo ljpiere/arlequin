@@ -4,28 +4,49 @@
 
 Este apartado recopila y organiza los fundamentos conceptuales y antecedentes relevantes al problema abordado, sirviendo de guía para orientar el enfoque del proyecto. Se analizan tanto las bases teóricas que sustentan la investigación como el estado actual de las soluciones y estudios relacionados, lo cual permite identificar vacíos y oportunidades en el contexto de la detección de \textit{data drift} y la automatización del reentrenamiento.
 
-\subsection{Bases Teóricas}
+\section{Bases Teóricas}
 Las bases teóricas del proyecto se sustentan en diversos pilares conceptuales que explican el comportamiento de los modelos de \textit{machine learning} en entornos dinámicos, la necesidad de sistemas adaptativos y los enfoques tecnológicos subyacentes \citep{Kodakandla2024}. Para guiar el desarrollo arquitectónico, se propone el \textbf{modelo conceptual} de la Figura~\ref{fig:marco-conceptual}, el cual enlaza las clases de \textit{drift}, las técnicas de detección y los componentes MLOps que permiten reaccionar de forma reproducible.
 
 \begin{figure}[htbp]
 \centering
-\resizebox{0.85\linewidth}{!}{
-\begin{tikzpicture}[node distance=12mm, >=latex]
-\tikzstyle{block}=[rectangle, rounded corners=3pt, draw=black, thick, fill=white, align=center, minimum width=30mm, minimum height=10mm]
+% Resizebox mantiene el diagrama ajustado al ancho de página
+\resizebox{0.95\linewidth}{!}{
+\begin{tikzpicture}[node distance=10mm and 18mm, >=latex]
+
+% Estilo global de los bloques
+\tikzstyle{block}=[rectangle, rounded corners=3pt, draw=black, thick, fill=white,
+                   align=center, minimum width=28mm, minimum height=12mm]
+
+% --- Nodos (Cajas) ---
 \node[block] (data) {Data Streams \\ (Covariate / Concept)};
-\node[block, right=25mm of data] (detectors) {Detectores \\ KS / $\chi^2$ / PSI};
-\node[block, right=25mm of detectors] (policy) {Políticas \\ Edge + Cooldown};
-\node[block, right=25mm of policy] (ci) {CI/CD \\ (Jenkins)};
-\node[block, right=25mm of ci] (trace) {Trazabilidad \\ (MLflow / Prometheus)};
-\draw[->, thick] (data) -- node[above]{\small Ventanas $\texttt{SAMPLE\_MAX}$}(detectors);
-\draw[->, thick] (detectors) -- node[above]{\small $p<\alpha$ o $\mathrm{PSI}>\tau$}(policy);
-\draw[->, thick] (policy) -- node[above]{\small Trigger}(ci);
-\draw[->, thick] (ci) -- node[above]{\small Modelos + métricas}(trace);
-\draw[->, thick, bend right=35] (trace.south) to node[below]{\small Feedback}(data.south);
-\end{tikzpicture}}
+\node[block, right=of data] (detectors) {Detectores \\ KS / $\chi^2$ / PSI};
+\node[block, right=of detectors] (policy) {Políticas \\ Edge + Cooldown};
+\node[block, right=of policy] (ci) {CI/CD \\ (Jenkins)};
+\node[block, right=of ci] (trace) {Trazabilidad \\ (MLflow / Prometheus)};
+
+% --- Flechas de flujo principal (Arriba) ---
+\draw[->, thick] (data) -- node[above, font=\footnotesize]{\texttt{SAMPLE\_MAX}} (detectors);
+\draw[->, thick] (detectors) -- node[above, font=\footnotesize]{$p<\alpha$ o PSI $>\tau$} (policy);
+\draw[->, thick] (policy) -- node[above, font=\footnotesize]{Trigger} (ci);
+\draw[->, thick] (ci) -- node[above, font=\footnotesize]{Modelos + métricas} (trace);
+
+% --- Flecha de Feedback Estilizada (Por debajo, estilo ortogonal) ---
+% Explicación de la ruta:
+% 1. Salir del sur de trace (trace.south)
+% 2. Bajar 1.3cm relativo (++(0,-1.3))
+% 3. Moverse horizontalmente hasta la coordenada X de 'data' (-|)
+% 4. Subir al sur de 'data' (data.south)
+\draw[->, thick, rounded corners=5pt] 
+    (trace.south) -- ++(0,-1.3) 
+    -| node[near start, above, font=\small] {Feedback Loop} 
+    (data.south);
+
+\end{tikzpicture}
+}
 \caption{Modelo conceptual: del \textit{drift} a la acción MLOps.}
 \label{fig:marco-conceptual}
 \end{figure}
+
 
 Este marco explicita la taxonomía adoptada:
 \begin{itemize}
@@ -35,7 +56,7 @@ Este marco explicita la taxonomía adoptada:
   \item \textbf{Capa de trazabilidad}: MLflow y Prometheus consolidan evidencia, habilitan auditorías y cierran el ciclo con retroalimentación.
 \end{itemize}
 
-\subsubsection{Machine Learning y Data Drift}
+\subsection{Machine Learning y Data Drift}
 Los modelos de \textit{machine learning} comúnmente parten de la premisa de que la distribución de los datos de entrenamiento se mantiene estable a lo largo del tiempo. En escenarios reales, esta condición casi nunca se cumple, pues los datos pueden experimentar variaciones, un fenómeno denominado \textbf{\textit{data drift}} o \textbf{\textit{concept drift}} \citep{Lu2019, Gama2014, Zliobaite2016}. El \textit{data drift} puede manifestarse de diversas maneras:
 
 \begin{itemize}
@@ -60,8 +81,8 @@ La elección de pruebas como Kolmogorov-Smirnov, Chi-cuadrado o el Population St
 \paragraph{PSI: aplicabilidad y cautelas.}
 El \textbf{Population Stability Index} resume en un solo valor la divergencia entre distribuciones discretizadas y, por ello, es atractivo más allá del ámbito bancario: se ha usado en \textit{e-commerce}, telecom y manufactura para vigilar \textit{scores} o variables derivadas. Su validez depende del \textit{binning} (cuantiles o intervalos de negocio), de contar con soporte mínimo por cajón (5–10\,\% recomendado) y de calibrar umbrales por dominio (\(\tau\approx 0.1/0.2/0.3\) son guías en riesgo, pero pueden ajustarse en dominios con mayor volatilidad). Como no es una prueba exacta, conviene reportar PSI junto con KS/$\chi^2$ y usarlo como métrica de magnitud, no como único disparador cuando la cardinalidad o el \textit{binning} son inestables.
 
-\subsection{Contraste crítico y criterios de selección}
-Para maximizar validez práctica en operación, la selección del detector debe ponderar cinco criterios principales \citep{Lu2019, Gama2014, Bifet2010}; los desarrollos matemáticos y comparativas extendidas se trasladan al Anexo~\ref{ann:detectors}.
+\section{Contraste crítico y criterios de selección}
+Para maximizar validez práctica en operación, la selección del detector debe ponderar cinco criterios principales.
 \begin{itemize}
   \item \textbf{Cobertura de variables:} identificar si el detector soporta variables continuas, categóricas o mixtas (p.\,ej., KS para continuas, $\chi^2$ para categóricas, PSI con \textit{binning}).
   \item \textbf{Modo de operación y latencia:} distinguir entre enfoques por ventanas \textit{batch}/deslizantes y detectores en flujo (\textit{online}) que reaccionan evento a evento (ADWIN, EDDM).
@@ -71,7 +92,7 @@ Para maximizar validez práctica en operación, la selección del detector debe 
 \end{itemize}
 El Cuadro~\ref{tab:comparativa-detectores} resume estos criterios y remite al anexo técnico para las fórmulas e implicaciones completas.
 
-\subsection{Cuadro comparativo de detectores}
+\section{Cuadro comparativo de detectores}
 \label{subsec:cuadro-detectores}
 El Cuadro~\ref{tab:comparativa-detectores} contrasta los detectores más usados por tipo de variable y costo computacional (orden relativo por ventana o por evento), según la literatura \citep{Gama2014, Lu2019, Bifet2010, BaenaGarcia2006, Sethi2017}.
 
@@ -127,7 +148,7 @@ Bajo/medio (amort. $\mathcal{O}(\log n)$) \\
 
 Notas: $k$ es el número de categorías o \textit{bins}. En práctica, el costo efectivo depende del tamaño de ventana, número de variables monitorizadas y política de muestreo. Para escenarios multivariados, se recomienda (i) combinación de pruebas univariantes con control de FDR, o (ii) detectores multivariados según el caso de uso (no desarrollados aquí por brevedad) \citep{Lu2019, Gama2014}.
 
-\subsubsection{MLOps y Automatización del Ciclo de Vida de los Modelos}
+\subsection{MLOps y Automatización del Ciclo de Vida de los Modelos}
 El paradigma \textbf{MLOps} integra las prácticas de \textit{DevOps} (Integración y Despliegue Continuo, CI/CD) con las necesidades específicas de entrenamiento, validación y mantenimiento de modelos de \textit{machine learning}:
 
 \begin{itemize}
@@ -136,7 +157,7 @@ El paradigma \textbf{MLOps} integra las prácticas de \textit{DevOps} (Integraci
     \item \textbf{Trazabilidad y versionado:} El uso de herramientas como MLflow facilita el registro y la comparación de experimentos, así como la documentación de las versiones de los modelos en cada iteración \citep{Chen2022}.
 \end{itemize}
 
-\subsubsection{Big Data y Tecnologías Emergentes}
+\subsection{Big Data y Tecnologías Emergentes}
 El manejo de grandes volúmenes de datos implica adoptar tecnologías de \textbf{Big Data}:
 \begin{itemize}
     \item \textbf{Procesamiento distribuido:} \textit{Frameworks} como \textit{Apache Spark} permiten análisis en \textit{batch} y en tiempo real de forma escalable \citep{Chen2022}.
@@ -144,7 +165,7 @@ El manejo de grandes volúmenes de datos implica adoptar tecnologías de \textbf
     \item \textbf{Monitorización y paneles de control:} Herramientas como Prometheus y Grafana ofrecen la capacidad de vigilar métricas de rendimiento y detectar anomalías en tiempo real, desencadenando acciones de reentrenamiento automático \citep{Zhao2021}.
 \end{itemize}
 
-\subsubsection{Adaptación y Aprendizaje en Línea}
+\subsection{Adaptación y Aprendizaje en Línea}
 Los métodos de \textbf{aprendizaje en línea} y \textbf{adaptación continua} permiten que los modelos se ajusten de manera incremental a medida que reciben datos:
 \begin{itemize}
     \item \textbf{Ventanas deslizantes (sliding windows):} Se da prioridad a los datos recientes para que el modelo refleje la distribución actual \citep{Kolter2007, Bifet2010}.
@@ -152,7 +173,7 @@ Los métodos de \textbf{aprendizaje en línea} y \textbf{adaptación continua} p
     \item \textbf{Reentrenamiento periódico o gatillado:} Se combina la detección de \textit{data drift} con la activación selectiva de un reentrenamiento parcial o completo, buscando optimizar recursos computacionales y tiempo de inactividad.
 \end{itemize}
 
-\subsection{Evaluación de Sistemas de Detección y Reentrenamiento}
+\section{Evaluación de Sistemas de Detección y Reentrenamiento}
 La eficacia de un sistema de detección de \textit{data drift} y automatización de reentrenamiento se valora en múltiples dimensiones \citep{Gama2014, Zliobaite2016}:
 \begin{itemize}
     \item \textbf{Métricas de rendimiento del modelo:} \textit{Precision}, \textit{recall}, \textit{F1-score}, \textit{AUC} (Área Bajo la Curva) y otras, para cuantificar la calidad de las predicciones antes y después de la actualización.
@@ -163,7 +184,7 @@ La eficacia de un sistema de detección de \textit{data drift} y automatización
 
 Combinar estas métricas y criterios de evaluación posibilita un análisis integral del sistema, permitiendo la implementación de mejoras que optimicen el rendimiento predictivo, reduzcan los costos operativos y garanticen una reacción ágil ante cambios en los datos.
 
-\subsection{Estado del Arte}
+\section{Estado del Arte}
 
 El análisis del estado del arte en la literatura académica y técnica permite identificar los principales enfoques, avances y limitaciones que existen actualmente en torno a la detección del \emph{data drift} y la automatización de pipelines MLOps en entornos Big Data.
 
@@ -182,18 +203,26 @@ En total, se han revisado 19 estudios que abordan la detección del \textit{data
 \caption{Clasificación del corpus revisado por enfoque de detección.}
 \label{tab:corpus-detectors}
 \small
-\begin{tabular}{l p{9cm} l}
+\begin{tabular}{l p{6.8cm} c}
 \toprule
-\textbf{Enfoque} & \textbf{Referencias representativas} & \textbf{#} \\
+\textbf{Enfoque} & \textbf{Referencias representativas} & \textbf{\#} \\
 \midrule
-Pruebas estadísticas (KS/$\chi^2$/PSI/KL) & \citep{Gama2014,Lu2019,Chawla2021,Sethi2017,Nguyen2023} & 11 \\
-Híbridos (tests + detectores \textit{online}/clasificadores de cambio) & \citep{BaenaGarcia2006,Bifet2010,Singh2023} & 5 \\
-Supervisados como discriminadores de ventana & \citep{Chatterjee2023,Agarwal2023} & 3 \\
+Pruebas estadísticas (KS/$\chi^2$/PSI/KL) & 
+\citep{Gama2014,Lu2019,Chawla2021,Sethi2017,Nguyen2023} & 11 \\
+
+Híbridos (tests + detectores \textit{online}/clasificadores de cambio) & 
+\citep{BaenaGarcia2006,Bifet2010,Singh2023} & 5 \\
+
+Supervisados como discriminadores de ventana & 
+\citep{Chatterjee2023,Agarwal2023} & 3 \\
 \bottomrule
 \end{tabular}
-\\[2pt]
-\footnotesize El número total corresponde al corpus revisado; la tabla lista ejemplos representativos de cada categoría y no agota las 19 referencias. El detalle por estudio se documenta en el repositorio de lectura sistemática.
+
+\vspace{2pt}
+\footnotesize
+El número total corresponde al corpus revisado; la tabla lista ejemplos representativos de cada categoría y no agota las 19 referencias. El detalle por estudio se documenta en el repositorio de lectura sistemática.
 \end{table}
+
 
 Diversas plataformas empresariales ofrecen actualmente capacidades para automatizar el monitoreo de modelos \citep{Bhatt2025}, la detección de \textit{data drift} y el reentrenamiento en entornos reales \citep{Berberi2025,Lwakatare2020}. Entre las más destacadas se encuentran AWS SageMaker, Google Vertex AI y Azure Machine Learning. En el caso de AWS SageMaker, la herramienta \texttt{Model Monitor} permite evaluar continuamente los datos de entrada y salida del modelo, generando alertas ante desviaciones relevantes, lo cual ha sido documentado en estudios de referencia sobre plataformas MLOps \citep{Berberi2025}. Sin embargo, su carácter cerrado y dependiente del ecosistema AWS limita su personalización para dominios con métricas particulares \citep{Bhatt2025}.
 

@@ -80,7 +80,7 @@ El sistema se diseñó para latencias sub-minutales de monitoreo, límites de mu
 
 
 \subsection{Propuesta técnica: arquitectura y flujo operacional}
-La arquitectura implementa un flujo mínimo viable (\textit{thin slice}) que conecta ingesta particionada en HDFS, cómputo distribuido en Spark, trazabilidad en MLflow y observabilidad con Prometheus/Grafana, dejando a Jenkins como la única vía de activación de reentrenos. Este recorte deliberado evita complejidad innecesaria (p.\,ej., malla de servicios o Kubernetes) y maximiza la inspeccionabilidad del experimento, criterio preferible en validaciones de MLOps académico \citep{Berberi2025,Kodakandla2024}. La Figura~\ref{fig:oe1-flujo} sintetiza el flujo.
+La arquitectura implementa un flujo mínimo viable (\textit{thin slice}) que conecta ingesta particionada en HDFS, cómputo distribuido en Spark, trazabilidad en MLflow y observabilidad con Prometheus/Grafana, dejando a Jenkins como la única vía de activación de reentrenos. Este recorte deliberado evita complejidad innecesaria (p.\,ej., malla de servicios o Kubernetes) y maximiza la inspeccionabilidad del experimento, criterio preferible en validaciones de MLOps académico \citep{Berberi2025,Kodakandla2024}.
 
 La Figura~\ref{fig:oe1-flujo} sintetiza el flujo operativo desde la ingesta orquestada hasta el monitoreo. La canalización produce \texttt{Parquet} particionado (\texttt{dt}/\texttt{hour}/\texttt{account\_type}) en HDFS; Prometheus \textit{scrapea} métricas de Spark, MLflow, Jenkins y del \textit{exporter} específico de \textit{drift} (OE2), consolidándolas en paneles de Grafana para evaluación y \textit{alerting}.
 
@@ -151,6 +151,7 @@ La Figura~\ref{fig:oe1-flujo} sintetiza el flujo operativo desde la ingesta orqu
 \end{tikzpicture}
 }
 \caption{Arquitectura de Observabilidad y MLOps.}
+\label{fig:oe1-flujo}
 \end{figure}
 
 
@@ -175,7 +176,7 @@ El desempeño del sistema se evalúa a partir de indicadores tanto técnicos com
 
 \subsection{Formulación estadística de las señales de \textit{drift}}
 
-Para mantener este objetivo enfocado en infraestructura (OE1), se limita el detalle estadístico a la \textbf{interfaz} que consume la arquitectura: el servicio de monitoreo expone valores-$p$ de KS/$\chi^2$ y el PSI como métrica agregada sobre \textit{scores}. Las \textbf{formulaciones y derivaciones completas} se documentan en el Marco de Referencia (Cap.~2) y en el diseño/validación de OE2 (Sec.~\ref{subsec:oe2} y Cap.~4), donde se definen hipótesis, umbrales (\(\alpha,\tau\)) y supuestos de operación. Aquí se declara únicamente el contrato operativo: las ventanas de referencia/reciente, los umbrales configurables en \texttt{.env} y el criterio OR de disparo ($p<\alpha$ o PSI $>\tau$) que alimenta la capa de control descrita en OE1.
+Para mantener este objetivo enfocado en infraestructura (OE1), se limita el detalle estadístico a la \textbf{interfaz} que consume la arquitectura: el servicio de monitoreo expone valores-$p$ de KS/$\chi^2$ y el PSI como métrica agregada sobre \textit{scores}. Las \textbf{formulaciones y derivaciones completas} se documentan en el Marco de Referencia (Cap.~2) y en el diseño/validación de OE2 (Sec.~\ref{sec:oe2} y Cap.~4), donde se definen hipótesis, umbrales (\(\alpha,\tau\)) y supuestos de operación. Aquí se declara únicamente el contrato operativo: las ventanas de referencia/reciente, los umbrales configurables en \texttt{.env} y el criterio OR de disparo ($p<\alpha$ o PSI $>\tau$) que alimenta la capa de control descrita en OE1.
 
 
 \subsection{Implementación e instrumentación}
@@ -349,7 +350,7 @@ Resumen conceptual del tablero de Grafana: serie temporal del PSI con su umbral,
 
 \textbf{Limitaciones (OE1).} Validación en \textbf{single host} sin autoscaling ni tolerancia a fallos; ausencia de \textbf{cifrado/ACLs} formales en los servicios; dependencia de \textbf{ventanas batch} (no \textit{streaming}); y cobertura limitada a \textbf{covariate drift} en la capa de monitoreo (la estadística detallada se aborda en OE2).
 
-\textbf{Trabajo futuro (infra).} (1) Desplegar en Kubernetes con Helm para alta disponibilidad y autoescalado; (2) separar plano de datos/observabilidad en redes distintas para reducir colas de \textit{scrape}; (3) introducir \textit{probes} y alertas de salud para Prometheus/Grafana/MLflow; (4) evaluar almacenamiento en nubes administradas (ADLS/S3) y exporters nativos; (5) incorporar cifrado en tránsito/descanso y RBAC para servicios y métricas.
+\textbf{Trabajo futuro (infraestructura).} (1) Desplegar en Kubernetes con Helm para alta disponibilidad y autoescalado; (2) separar plano de datos/observabilidad en redes distintas para reducir colas de \textit{scrape}; (3) introducir \textit{probes} y alertas de salud para Prometheus/Grafana/MLflow; (4) evaluar almacenamiento en nubes administradas (ADLS/S3) y exporters nativos; (5) incorporar cifrado en tránsito/descanso y RBAC para servicios y métricas.
 
 \subsection{Amenazas a la validez}
 
@@ -415,7 +416,7 @@ Para evitar redundancia, OE2 referencia la infraestructura, despliegue y observa
 El detector se valida sobre un \textbf{clasificador binario de fraude bancario} con clases desbalanceadas (fraude/no-fraude) y \textit{scores} probabilísticos; por ello se priorizan KS/$\chi^2$/PSI y métricas F1/AUC. En \textbf{otros dominios}, la lógica se conserva pero cambia la semántica: para regresión (p.\,ej., demanda, mantenimiento predictivo) se configuran \texttt{SCORE\_COL} y \texttt{POSITIVE\_THRESHOLD} para vigilar un umbral operativo (temperatura, inventario), y las métricas de aceptación pasan a MAE/RMSE; en clasificación multiclase se aplican KS/$\chi^2$/PSI por columna o por \textit{score} agregado y se ajustan umbrales y binning al dominio. El ciclo detectar $\rightarrow$ reentrenar $\rightarrow$ auditar permanece invariante, siempre que el modelo exponga su \textit{score} y registre artefactos en MLflow.
 
 \paragraph{Síntesis de diseño (OE2).}
-La Tabla~\ref{tab:oe2-detectores} resume la selección de detectores y umbrales operativos, en contraste con el cuadro teórico del Cap.\,2 (\autoref{subsec:cuadro-detectores}).
+La Tabla~\ref{tab:oe2-alternativas} resume la selección de detectores y umbrales operativos, en contraste con el cuadro teórico del Cap.\,2 (\autoref{tab:comparativa-detectores}).
 
 \begin{figure}[htbp]
 \centering
@@ -508,7 +509,7 @@ La Tabla~\ref{tab:oe2-detectores} resume la selección de detectores y umbrales 
 
 \end{tikzpicture}
 }
-\caption{Flujo OE2 optimizado y corregido.}
+\caption{Flujo de decisión para el prototipo Watcher - OE2.}
 \label{fig:oe2-flujo-final}
 \end{figure}
 
@@ -759,7 +760,7 @@ Este flujo cierra el ciclo de \textbf{detección–acción–verificación}, gar
 \subsection{Implementación e instrumentación práctica}
 \label{subsec:oe2-impl-practica}
 
-Para vincular el diseño de \autoref{fig:oe2-flujo} con artefactos ejecutables, este objetivo se materializa en tres scripts principales y un conjunto de métricas expuestas a Prometheus:
+Para vincular el diseño de \autoref{fig:oe2-flujo-final} con artefactos ejecutables, este objetivo se materializa en tres scripts principales y un conjunto de métricas expuestas a Prometheus:
 
 \begin{itemize}
   \item \texttt{generate\_data\_session.py}: genera datos transaccionales sintéticos con opción de inducir \textit{data drift} y escribe en HDFS particionado (dt/hour/account\_type) mediante Spark. % (datos de entrada controlados)
@@ -820,11 +821,6 @@ La \autoref{tab:oe2-env} resume las variables mínimas para parametrizar el comp
 Fuentes: implementación en \texttt{drift\_watch.py}, \texttt{train\_model.py} y documentación del repositorio Arlequín.
 \end{table}
 
-
-\paragraph{Trazabilidad con el diagrama.}
-Este encadenamiento \emph{datos recientes} $\rightarrow$ \emph{pruebas (KS, $\chi^2$, PSI)} $\rightarrow$ \emph{decisión} $\rightarrow$ \emph{trigger Jenkins} $\rightarrow$ \emph{train \& log en MLflow} $\rightarrow$ \emph{métricas en Prometheus/Grafana} implementa, de extremo a extremo, el flujo de \autoref{fig:oe2-flujo} y habilita auditoría técnica sobre cada evento de drift y su correspondiente acción correctiva.
-
-
 \subsection{Resultados y análisis}
 
 En los escenarios experimentales con \textbf{\textit{drift} inducido de forma controlada}, el detector presentó un desempeño coherente con los objetivos de diseño.  
@@ -835,64 +831,72 @@ Estas detecciones se tradujeron en la ejecución automática de los procesos de 
 Antes de OE2, la evaluación dependía exclusivamente del pipeline manual \texttt{eval-model} y requería inspección ad-hoc de métricas en MLflow para detectar degradaciones. Con el \texttt{drift\_watch.py} en operación continua se incorporaron tres efectos clave:
 \begin{enumerate}\setlength\itemsep{2pt}
   \item \textbf{Detección proactiva:} cada lote insertado por el ETL alimenta ventanas móviles de 5\,min. Al alcanzar \(p<0.01\) o \(\mathrm{PSI}>0.2\), el watcher dispara automáticamente \texttt{retrain-model}, reduciendo el TTFD observado de varios minutos (inspección manual) a una mediana de \(\approx 270\) s con varianza controlada (\(p_{95}\approx 310\) s).
-  \item \textbf{Instrumentación unificada:} las métricas \texttt{pvalue\{col\}}, \texttt{drift\_detected\{col\}}, \texttt{drift\_score\_psi} y \texttt{predicted\_positive\_ratio} se publican en Prometheus, habilitando paneles en Grafana que correlacionan la señal estadística con los KPIs operativos (CPU/RAM de Spark, ocupación de Jenkins). Esto facilitó el diagnóstico en tiempo real frente a cada iteración del experimento.
-  \item \textbf{Trazabilidad automática:} cada iteración genera artefactos en MLflow y registros CSV (\texttt{watcher\_training\_log.csv}, \texttt{watcher\_jenkins\_runs.csv}) sin intervención manual, permitiendo reconstruir la secuencia \textit{detector $\rightarrow$ reentrenamiento $\rightarrow$ validación} y comparar contra las ejecuciones puramente manuales (\texttt{eval\_*}).
+  \item \textbf{Instrumentación unificada:} las métricas \texttt{pvalue\{col\}}, \texttt{drift\_detected\{col\}}, \texttt{drift\_score\_psi} y \\ \texttt{predicted\_positive\_ratio} se publican en Prometheus, habilitando paneles en Grafana que correlacionan la señal estadística con los KPIs operativos (CPU/RAM de Spark, ocupación de Jenkins). Esto facilitó el diagnóstico en tiempo real frente a cada iteración del experimento.
+  \item \textbf{Trazabilidad automática:} cada iteración genera artefactos en MLflow y registros CSV \\ (\texttt{watcher\_training\_log.csv}, \texttt{watcher\_jenkins\_runs.csv}) sin intervención manual, permitiendo reconstruir la secuencia \textit{detector $\rightarrow$ reentrenamiento $\rightarrow$ validación} y comparar contra las ejecuciones puramente manuales (\texttt{eval\_*}).
 \end{enumerate}
 Como resultado, el ciclo completo dejó de depender de consultas manuales a Jenkins/MLflow y pasó a ser un bucle cerrado donde la misma infraestructura de OE1 recibe telemetría contextualizada y la expone para toma de decisiones.
 
 \paragraph{Integración dentro de la arquitectura.}
-El watcher consume tres entradas: (i) las particiones recientes de HDFS generadas por Airflow/Spark, (ii) la configuración operacional definida en variables de entorno (umbrales, intervalos, credenciales) y (iii) el historial de referencia almacenado en MLflow/HDFS. Sus salidas abarcan (a) métricas en Prometheus/Grafana, (b) triggers autenticados hacia Jenkins y (c) bitácoras en MLflow/CSV para auditoría. La Figura~\ref{fig:oe2-context} resume este contexto y evidencia el rol intermedio del watcher como “bisagra” entre la capa de datos (OE1) y los pipelines de reentrenamiento (OE3).
+El watcher consume tres entradas: (i) las particiones recientes de HDFS generadas por Airflow/Spark, (ii) la configuración operacional definida en variables de entorno (umbrales, intervalos, credenciales) y (iii) el historial de referencia almacenado en MLflow/HDFS. Sus salidas abarcan (a) métricas en Prometheus/Grafana, (b) triggers autenticados hacia Jenkins y (c) bitácoras en MLflow/CSV para auditoría. La Figura~\ref{fig:oe2-context-final} resume este contexto y evidencia el rol intermedio del watcher como “bisagra” entre la capa de datos (OE1) y los pipelines de reentrenamiento (OE3).
 
 \begin{figure}[htbp]
 \centering
+% Se usa resizebox para asegurar que no exceda el 95% del ancho de línea
+\resizebox{0.95\linewidth}{!}{ 
 \begin{tikzpicture}[
   font=\scriptsize,
   box/.style={draw, rounded corners=3pt, fill=gray!10,
-              minimum width=30mm, minimum height=9mm, align=center},
+              minimum width=28mm, minimum height=9mm, align=center},
   data/.style={draw, rounded corners=3pt, fill=blue!5,
-               minimum width=30mm, minimum height=9mm, align=center},
-  arrow/.style={-Latex, line width=0.45pt}
+              minimum width=28mm, minimum height=9mm, align=center},
+  arrow/.style={-Latex, line width=0.45pt},
+  labeltext/.style={font=\tiny, fill=white, inner sep=1pt}
 ]
 
   % --- Nodos principales ---
-  \node[data]                             (etl)    {Airflow + Spark\\(ETL / scoring)};
-  \node[data,   right=18mm of etl]        (hdfs)   {HDFS\\ventanas ref/rec};
+  \node[data]          (etl)   {Airflow + Spark\\(ETL / scoring)};
+  \node[data,  right=16mm of etl]      (hdfs)   {HDFS\\ventanas ref/rec};
 
-  \node[box,    below=14mm of hdfs]       (watch)  {\texttt{drift\_watch.py}\\PySpark + Exporter};
+  \node[box,   below=14mm of hdfs]      (watch)  {\texttt{drift\_watch.py}\\PySpark + Exporter};
 
-  \node[box,    above=12mm of hdfs]       (env)    {Variables de entorno\\(\(\alpha\), \(\tau\), credenciales)};
+  \node[box,   above=12mm of hdfs]      (env)    {Variables de entorno\\(\(\alpha\), \(\tau\), credenciales)};
 
-  \node[data,   below=16mm of watch]      (mlflow) {MLflow / CSV\\(logs, runs)};
+  \node[data,  below=16mm of watch]     (mlflow) {MLflow / CSV\\(logs, runs)};
 
-  \node[box,    right=20mm of watch]      (jenkins){Jenkins\\\texttt{retrain-model}};
+  % Reducimos la distancia horizontal ligeramente para ahorrar espacio
+  \node[box,   right=18mm of watch]     (jenkins){Jenkins\\\texttt{retrain-model}};
 
-  \node[box,    right=20mm of jenkins]    (prom)   {Prometheus/Grafana};
+  % Prometheus/Grafana: Salto de línea y ancho mínimo ajustado
+  \node[box,   right=18mm of jenkins, minimum width=24mm]   (prom)   {Prometheus\\/Grafana};
 
 
-  % --- Flechas (limpias, sin etiquetas superpuestas) ---
-  \draw[arrow] (etl) -- node[above,pos=0.5,yshift=1mm] {parquet} (hdfs);
+  % --- Flechas ---
+  
+  % ETL -> HDFS
+  \draw[arrow] (etl) -- node[labeltext,above,pos=0.5] {parquet} (hdfs);
 
-  \draw[arrow] (hdfs) -- node[right,pos=0.45,xshift=1.5mm] {muestras} (watch);
+  % HDFS -> Watch
+  \draw[arrow] (hdfs) -- node[labeltext,right,pos=0.45] {muestras} (watch);
 
-  % Variables de entorno sin etiqueta (para evitar solapamiento)
-  \draw[arrow] (env) -- (watch);
+  % Variables de entorno -> Watch (Rodea HDFS por la izquierda, corregido)
+  \draw[arrow] (env.south) -- ++(0,-1.0) -| (watch.north); 
+  
+  % Watch -> Jenkins (Trigger)
+  \draw[arrow] (watch) -- node[labeltext,above,pos=0.55] {trigger} (jenkins);
 
-  % Trigger Jenkins
-  \draw[arrow] (watch) -- node[above,pos=0.55,yshift=1mm] {trigger} (jenkins);
+  % Jenkins -> Prometheus/Grafana (Etiqueta simplificada)
+  \draw[arrow] (jenkins) -- node[labeltext,above,pos=0.55] {métricas} (prom);
 
-  % Drift watcher → Prometheus/Grafana (sin /metrics)
-  \draw[arrow] (watch) -- (prom);
+  % Jenkins -> MLflow (artefactos)
+  \draw[arrow] (jenkins.south) |- node[labeltext,right,pos=0.55] {artefactos} (mlflow.east);
 
-  % Jenkins → MLflow (artefactos)
-  \draw[arrow] (jenkins.south) |- node[right,pos=0.55,xshift=2mm] {artefactos} (mlflow.east);
-
-  % Drift watcher → MLflow
-  \draw[arrow] (watch) -- node[left,pos=0.5,xshift=-1mm] {CSV / MLflow} (mlflow);
+  % Drift watcher -> MLflow
+  \draw[arrow] (watch) -- node[labeltext,left,pos=0.5] {CSV / MLflow} (mlflow);
 
 \end{tikzpicture}
-
-\caption{Contexto operativo del \textit{drift-watcher}: entradas desde el ETL y la configuración, y salidas hacia Prometheus, Jenkins y MLflow.}
-\label{fig:oe2-context}
+}
+\caption{Contexto operativo del \textit{drift-watcher}: entradas desde el ETL y la configuración, y salidas hacia Prometheus, Jenkins y MLflow. (Rutas optimizadas y ajustadas a márgenes).}
+\label{fig:oe2-context-final}
 \end{figure}
 
 
@@ -914,7 +918,7 @@ Estos hallazgos validan la efectividad del enfoque propuesto y establecen la bas
 
 
 \subsection{Discusión}
-\paragraph{Cierre interpretativo.} En síntesis, la concurrencia de señales KS/$\chi^2$/PSI permitió detectar el cambio con TTFD bajo, y el acoplamiento con Jenkins habilitó una recuperación posterior del F1 tras el reentrenamiento, confirmando la coherencia del ciclo detectar $\rightarrow$ reentrenar $\rightarrow$ validar.
+En síntesis, la concurrencia de señales KS/$\chi^2$/PSI permitió detectar el cambio con TTFD bajo, y el acoplamiento con Jenkins habilitó una recuperación posterior del F1 tras el reentrenamiento, confirmando la coherencia del ciclo detectar $\rightarrow$ reentrenar $\rightarrow$ validar.
 Este comportamiento coincide con las hipotesis operativas de OE2 y con practicas reportadas de monitoreo de drift; sin embargo, la sensibilidad observada sugiere profundizar en la calibracion de $\alpha$ y $\tau$ para controlar sobrealertas.
 
 
@@ -1010,7 +1014,7 @@ Frecuencia de ciclo & Según configuración del lazo (\texttt{LOOP\_SECONDS}) \\
 Semillas & \texttt{seed} = 42, 7 (generación/perturbación) \\
 Escenarios & E1 (base), E2 (drift inducido), E3 (post-reentrenamiento) \\
 Réplicas & $n=5$ por escenario (promedio + IC95\%) \\
-Hardware & Completar: CPU / RAM / Almacenamiento del host \\
+Hardware & CPU: 4 cores - 8 threads, 3.8 GHz/ RAM: 2.84 GB / SSD: 45.69 GB \\
 Ejecución & Docker Compose; servicios: Spark, HDFS, Jenkins, MLflow, Prometheus \\
 Artefactos & Runs en MLflow, métricas en Prometheus, logs de Jenkins \\
 \bottomrule
@@ -1042,7 +1046,7 @@ Sea $M$ el modelo desplegado, $F1(\cdot)$ la métrica objetivo y $\Delta F1 = F1
 Además, se comprueba coherencia de las señales estadísticas:
 rechazo en KS/$\chi^2$ con $p_{\text{adj}}<\alpha$ y \mbox{PSI $>\tau$} durante E2.
 
-\paragraph{Variables (definiciones y tipo).}
+%\paragraph{Variables (definiciones y tipo).}
 \begin{table}[htbp]
 \centering
 \caption{Variables del experimento (observables por ciclo y agregadas por réplica).}
@@ -1095,60 +1099,87 @@ Así, el diseño experimental constituye una validación integral del ciclo auto
 
 El protocolo de validación se resume en la Figura~\ref{fig:oe3-protocolo}.
 
-% ==== Figura OE3 (validación con y sin drift) ====
+% ==== Figura OE3 CORREGIDA ====
 \begin{figure}[htbp]
 \centering
 \captionsetup{skip=8pt}
-\caption{Protocolo de validación: escenarios E1 (sin drift) y E2 (con drift).}
-\label{fig:oe3-protocolo}
-\resizebox{0.88\linewidth}{!}{%
-\begin{tikzpicture}[node distance=8mm and 14mm,
-                    every node/.style={font=\footnotesize},
-                    >=Latex]
+\caption{Protocolo de validación: corrección de espacios y flujo.}
+\label{fig:oe3-protocolo-fix}
+\resizebox{0.95\linewidth}{!}{%
+\begin{tikzpicture}[
+    node distance=10mm and 12mm, % Espaciado estándar
+    every node/.style={font=\footnotesize},
+    >=Latex
+]
 
-  % Estilos compactos
+  % --- Estilos ---
   \tikzset{
-    box/.style={draw, rounded corners=2pt, fill=gray!8, align=center,
-                minimum width=18mm, minimum height=6mm, text width=30mm, inner sep=2pt},
-    proc/.style={box},
-    arrow/.style={-Latex, line width=0.45pt},
-    band/.style={draw, rounded corners=3pt, inner sep=5mm},
-    note/.style={font=\scriptsize, inner sep=1pt, fill=white, align=center}
+    box/.style={
+        draw, rounded corners=2pt, fill=white, align=center,
+        minimum width=22mm, minimum height=8mm, 
+        text width=28mm, inner sep=3pt, drop shadow={opacity=0.1}
+    },
+    proc/.style={box, fill=gray!5},
+    final/.style={box, fill=blue!5, text width=35mm, line width=0.8pt},
+    arrow/.style={->, line width=0.6pt, rounded corners=3pt},
+    band/.style={
+        draw, dashed, rounded corners=5pt, inner sep=6mm, 
+        label={[anchor=north west, xshift=2mm, yshift=-1mm, font=\bfseries\scriptsize]north west:#1}
+    },
+    note/.style={font=\scriptsize\itshape, fill=white, inner sep=1pt, text=gray}
   }
 
-  % ----- E1: Sin drift -----
+  % ==========================================
+  % FILA 1: Experimento 1 (Línea Base)
+  % ==========================================
   \node[proc] (d1) {Ingesta base};
-  \node[proc, right=16mm of d1] (m1) {Monitoreo};
-  \node[proc, right=16mm of m1] (r1) {Registro de\\métricas};
+  \node[proc, right=of d1] (m1) {Monitoreo};
+  \node[proc, right=of m1] (r1) {Registro de\\métricas};
 
   \draw[arrow] (d1) -- (m1);
-  \draw[arrow] (m1) -- node[note, above]{\emph{sin alertas}} (r1);
+  \draw[arrow] (m1) -- node[note, above]{sin alertas} (r1);
 
-  \node[band, fit=(d1)(m1)(r1),
-        label={[align=center]above:Experimento 1: Sin drift (línea base)}] (E1) {};
-
-  % ----- E2: Con drift -----
-  \node[proc, below=16mm of d1] (d2) {Ingesta con\\alteraciones controladas};
-  \node[proc, right=16mm of d2] (m2) {Monitoreo};
-  \node[proc, right=16mm of m2] (j2) {Jenkins\\(retrain)};
-  \node[proc, right=16mm of j2] (t2) {Entrenamiento\\+ Validación};
-  \node[proc, right=16mm of t2] (r2) {Registro y\\comparación};
+  % ==========================================
+  % FILA 2: Experimento 2 (Drift Inducido)
+  % ==========================================
+  % CORRECCIÓN 1: Forzamos 2.5cm de distancia para evitar solapamiento
+  \node[proc, below=2.5cm of d1] (d2) {Ingesta con\\alteraciones};
+  \node[proc, right=of d2] (m2) {Monitoreo};
+  \node[proc, right=of m2] (j2) {Jenkins\\(retrain)};
+  \node[proc, right=of j2] (t2) {Entrenamiento\\+ Validación};
+  \node[proc, right=of t2] (r2) {Registro y\\comparación};
 
   \draw[arrow] (d2) -- (m2);
-  \draw[arrow] (m2) -- node[note, above]{\emph{alerta}} (j2);
+  \draw[arrow] (m2) -- node[note, above]{alerta} (j2);
   \draw[arrow] (j2) -- (t2);
   \draw[arrow] (t2) -- (r2);
 
-  \node[band, fit=(d2)(m2)(j2)(t2)(r2),
-        label={[align=center]above:Experimento 2: Con drift inducido}] (E2) {};
+  % ==========================================
+  % FILA 3: Análisis Final
+  % ==========================================
+  % Ubicamos la caja centrada entre el flujo de E2
+  \node[final, below=12mm of j2] (cmp) {Análisis comparativo\\(pre/post)};
 
-  % ----- Análisis comparativo -----
-  \node[proc, below=16mm of $(m1)!0.5!(t2)$, text width=36mm] (cmp)
-        {Análisis comparativo\\(pre/post)};
+  % ==========================================
+  % CONEXIONES
+  % ==========================================
+  
+  % CORRECCIÓN 2: Ruteo limpio al costado izquierdo (West)
+  % Salimos de r1 por la izquierda, bajamos por el hueco entre monitor y jenkins, y entramos a cmp
+  \draw[arrow] (r1.west) -| ($(m2.east)!0.5!(j2.west)$) |- (cmp.west);
 
-  % Conexiones limpias a "cmp"
-  \draw[arrow] (r1.south) -- ++(0,-4mm) -| (cmp.west);
-  \draw[arrow] (r2.south) -- ++(0,-4mm) -| (cmp.east);
+  % Conexión desde E2 (entra por la derecha/Este para equilibrar)
+  \draw[arrow] (r2.south) |- (cmp.east);
+
+  % ==========================================
+  % MARCOS (Dashed Boxes)
+  % ==========================================
+  
+  % Marco Exp 1
+  \node[band={Experimento 1: Sin drift (línea base)}, fit=(d1)(m1)(r1)] (E1) {};
+
+  % Marco Exp 2 (Ahora tiene espacio suficiente arriba)
+  \node[band={Experimento 2: Con drift inducido}, fit=(d2)(m2)(j2)(t2)(r2)] (E2) {};
 
 \end{tikzpicture}%
 }
@@ -1189,7 +1220,7 @@ El análisis de resultados se sustentó en dos grupos de indicadores complementa
 \end{itemize}
 
 \paragraph{Segmento de evaluación y flujo de métricas.}
-La Figura~\ref{fig:oe3-metrics} resume cómo interactúan las métricas en OE3: el \texttt{drift\_watch.py} genera señales estadísticas (PSI, $p$-valores, TTFD) que alimentan Prometheus/Grafana; cuando se supera el umbral configurado, Jenkins ejecuta \texttt{retrain-model} y registra artefactos en MLflow junto con el TTR; finalmente, el job \texttt{eval-model} consume el modelo actualizado para calcular F1/AUC/Prec/Rec y publicar los resultados en MLflow y en los CSV de métricas. Este recuadro hace explícito el acoplamiento entre métricas de \textbf{detección} (PSI/$p$), \textbf{operación} (TTFD/TTR) y \textbf{desempeño} (F1/AUC), permitiendo rastrear cada réplica de OE3 de forma auditada.
+La Figura~\ref{fig:oe3-metrics-final-top} resume cómo interactúan las métricas en OE3: el \texttt{drift\_watch.py} genera señales estadísticas (PSI, $p$-valores, TTFD) que alimentan Prometheus/Grafana; cuando se supera el umbral configurado, Jenkins ejecuta \texttt{retrain-model} y registra artefactos en MLflow junto con el TTR; finalmente, el job \texttt{eval-model} consume el modelo actualizado para calcular F1/AUC/Prec/Rec y publicar los resultados en MLflow y en los CSV de métricas. Este recuadro hace explícito el acoplamiento entre métricas de \textbf{detección} (PSI/$p$), \textbf{operación} (TTFD/TTR) y \textbf{desempeño} (F1/AUC), permitiendo rastrear cada réplica de OE3 de forma auditada.
 
 \begin{figure}[htbp]
 \centering
@@ -1214,18 +1245,29 @@ La Figura~\ref{fig:oe3-metrics} resume cómo interactúan las métricas en OE3: 
 
   \node[box, above=14mm of mlflow] (eval) {\texttt{eval-model}\\F1, Prec/Rec};
 
-  % --- Flechas sin etiquetas largas ---
+  % --- Flechas Corregidas ---
+  
+  % watch -> prom
   \draw[arrow] (watch) -- (prom);
-  \draw[arrow] (watch) |- (jenkins);
-  \draw[arrow] (prom) |- (jenkins);
 
+  % 1. watch -> jenkins (Se mantiene por la izquierda - .west)
+  \draw[arrow] (watch.south) |- (jenkins.west);
+
+  % 2. prom -> jenkins (¡CORREGIDO! Entra por la parte superior - .north)
+  \draw[arrow] (prom.south) |- (jenkins.north); 
+
+  % jenkins -> mlflow 
   \draw[arrow] (jenkins) -- (mlflow);
+
+  % mlflow -> eval
   \draw[arrow] (mlflow) -- (eval);
-  \draw[arrow] (eval) |- (mlflow);
+
+  % eval -> mlflow 
+  \draw[arrow] (eval.south) |- (mlflow.north);
 
 \end{tikzpicture}
-\caption{Interacción de métricas en OE3: detección, operación y evaluación en el proceso automatizado de reentrenamiento.}
-\label{fig:oe3-metrics}
+\caption{Interacción de métricas en OE3: detección, operación y evaluación en el proceso automatizado de reentrenamiento. (Conexión de Prometheus movida al borde superior).}
+\label{fig:oe3-metrics-final-top}
 \end{figure}
 
 

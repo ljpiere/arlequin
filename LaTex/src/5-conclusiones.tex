@@ -18,21 +18,21 @@ En síntesis, la evidencia obtenida valida que la integración de \textbf{Spark/
 \section{Conclusiones por objetivos (OE1--OE3)}
 Para asegurar trazabilidad con los objetivos del proyecto, se sintetizan los hallazgos por objetivo específico, con referencia a cuadros y figuras de resultados.
 
-\paragraph{OE1 \;\textemdash\; Infraestructura escalable y monitorización continua \;\checkmark}
+\paragraph{OE1 \;\textemdash\; Infraestructura escalable y monitorización continua}
 \textbf{RQ1} (detección oportuna) y \textbf{H1} se apoyan en esta infraestructura: al exponer métricas y ejecutar el \textit{cooldown}, se logró mantener la tasa de falsas alarmas <1\,\% y un TTFD mediano de 270\,s (Sec.~\ref{subsec:eval-results}). La combinación de Spark/HDFS, Jenkins y Prometheus permite sostener la operación y responder de forma auditable.
 \begin{itemize}\setlength\itemsep{2pt}
   \item \textbf{Logro:} despliegue reproducible (Docker Compose) del \textit{stack} abierto (Spark/HDFS, Jenkins, MLflow, Prometheus/Grafana) con \textbf{exporters} y tableros operativos. Ver Cap.\,3 (Sec.~\ref{sec:oe1}) y Tabla~\ref{tab:oe1-diseno}.
   \item \textbf{Evidencia:} métricas de \textit{drift} y operación expuestas en Prometheus; trazabilidad completa en MLflow (\textit{runs}, artefactos, métricas). Fig.~\ref{fig:eval-figures}.
 \end{itemize}
 
-\paragraph{OE2 \;\textemdash\; Detección automática y reentrenamiento \;\checkmark}
+\paragraph{OE2 \;\textemdash\; Detección automática y reentrenamiento}
 \textbf{RQ2} (recuperación del desempeño) y \textbf{H2} quedan validados: la diferencia E2 pre vs. post arrojó $p=5.07\times 10^{-3}$ y $|\delta|=0.54$ (Sec.~\ref{subsec:eval-results}), lo que demuestra que el gatillo KS/$\chi^2$/PSI más el reentrenamiento automático restablecen F1 a niveles no inferiores al baseline.
 \begin{itemize}\setlength\itemsep{2pt}
   \item \textbf{Logro:} detección híbrida (KS/$\chi^2$/PSI) con \textbf{gatillo} de reentrenamiento (edge + \textit{cooldown}).
   \item \textbf{Evidencia:} \textit{TTFD}=\,45\,s (p99 $\le$\,60\,s) y \textit{TTR}=\,2--3\,min; PSI=\,0.23\,$>$\,0.2 en E2; recuperación de F1 a 0.89 (IC$_{95\%}$ [0.88, 0.90]) cumpliendo no-inferioridad vs. E1. Ver Tabla~\ref{tab:eval-resumen} y Fig.~\ref{fig:latency-bars}.
 \end{itemize}
 
-\paragraph{OE3 \;\textemdash\; Validación experimental y rigor estadístico \;\checkmark}
+\paragraph{OE3 \;\textemdash\; Validación experimental y rigor estadístico}
 \textbf{RQ3} (estabilidad operativa) y \textbf{H3} se confirman: el diseño experimental (Sec.~\ref{subsec:eval-rq}) demostró que el pipeline mantiene TTR $\approx$102--103\,s y evita \textit{flapping} (36 ejecuciones por debajo del SLO), con evidencia estadística (Mann–Whitney, tamaños de efecto) registrada en Tabla~\ref{tab:mw-tests}.
 \begin{itemize}\setlength\itemsep{2pt}
   \item \textbf{Logro:} diseño experimental con réplicas ($n=5$), IC$_{95\%}$ por \textit{bootstrap} y pruebas no paramétricas (Mann--Whitney) con tamaño del efecto (Cliff $\delta$).

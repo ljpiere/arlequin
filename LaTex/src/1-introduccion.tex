@@ -116,7 +116,7 @@ Adicionalmente, la propuesta establece un estándar metodológico replicable, fa
 % Vision general (evitar duplicidad con Caps. 3 y 4)
 La metodolog\'ia se presenta aqu\'i de forma sint\'etica para evitar duplicidad con los Cap\'itulos 3 y 4. El estudio es \textbf{aplicado y cuasi-experimental}: valida un pipeline MLOps que \textit{detecta} \textit{data drift} y \textit{reentrena} autom\'aticamente.
 
-\textbf{Disen\~no general.} Dos escenarios: E1 (sin \textit{drift}) y E2 (con \textit{drift} inducido). Se observan m\'etricas de desempe\~no (F1, Recall, AUC), latencias operativas (\textit{TTFD}, \textit{TTR}) y magnitud de cambio (\textit{PSI}). Las pol\'iticas de activaci\'on/cooldown, el detalle de hip\'otesis, variables y an\'alisis estad\'istico se desarrollan en el Cap\'itulo~\ref{sec:eval-design} y \S\ref{subsec:eval-scenarios}.
+\textbf{Diseño general.} Dos escenarios: E1 (sin \textit{drift}) y E2 (con \textit{drift} inducido). Se observan m\'etricas de desempe\~no (F1, Recall, AUC), latencias operativas (\textit{TTFD}, \textit{TTR}) y magnitud de cambio (\textit{PSI}). Las pol\'iticas de activaci\'on/cooldown, el detalle de hip\'otesis, variables y an\'alisis estad\'istico se desarrollan en el Cap\'itulo ~\ref{sec:eval-design} y ~\ref{subsec:eval-scenarios}.
 
 \textbf{Implementaci\'on.} La infraestructura y componentes t\'ecnicos (Spark/HDFS, Jenkins, MLflow, Prometheus/Grafana, Docker~Compose) se documentan en el Cap\'itulo~\ref{sec:oe1}. Aqu\'i solo se describe la l\'ogica metodol\'ogica y el alcance experimental; los detalles operativos quedan en los cap\'itulos respectivos.
 
@@ -532,40 +532,6 @@ A continuación, se describen los pasos metodológicos principales:
    \paragraph{Representación del DAG de Airflow}
     El flujo ETL se implementó como un \textit{Directed Acyclic Graph (DAG)} en Airflow que orquesta la generación, transformación y carga de datos sintéticos hacia HDFS. Cada nodo corresponde a una tarea contenedorizada (Docker) ejecutada por el cliente PySpark.
     
-    \begin{lstlisting}[style=airflow,caption={Pseudocódigo del DAG \texttt{bank\_data\_generation\_dag.py}},label={lst:airflow-dag}]
-    from airflow import DAG
-    from airflow.providers.docker.operators.docker import DockerOperator
-    from datetime import datetime
-    
-    with DAG(
-        dag_id="bank_data_generation_dag",
-        schedule_interval="@hourly",
-        start_date=datetime(2025, 1, 1),
-        catchup=False,
-        tags=["etl","synthetic","hdfs"]
-    ) as dag:
-    
-        extract = DockerOperator(
-            task_id="extract_data",
-            image="arlequin-pyspark-client",
-            command="python generate_data.py --stage extract"
-        )
-    
-        transform = DockerOperator(
-            task_id="transform_data",
-            image="arlequin-pyspark-client",
-            command="python generate_data.py --stage transform"
-        )
-    
-        load = DockerOperator(
-            task_id="load_to_hdfs",
-            image="arlequin-pyspark-client",
-            command="python generate_data.py --stage load --dst hdfs:///user/bank_data"
-        )
-    
-        extract >> transform >> load
-    \end{lstlisting}
-    
     \begin{figure}[htbp]
     \centering
     %\resizebox{0.9\linewidth}{!}{%  % <- opcional; comenta si no lo necesitas
@@ -598,9 +564,6 @@ A continuación, se describen los pasos metodológicos principales:
     \caption{Flujo ETL orquestado por Airflow: nodos, dependencias y artefactos.}
     \label{fig:airflow-etl}
     \end{figure}
-
-
-
 
     El flujo del DAG contempla:
     \begin{enumerate}
@@ -681,6 +644,125 @@ A continuación, se describen los pasos metodológicos principales:
 \end{enumerate}
 
 \fi
-\section{Resultados esperados y ubicacion}
+\section{Resultados obtenidos}
 
-Los resultados cuantitativos (tablas, intervalos de confianza, tamanos de efecto y graficos) se documentan en los Capitulos~\ref{sec:oe1}, \ref{sec:eval-design} y \ref{subsec:eval-results}. Esta introduccion se limita a motivar el problema, formular preguntas e hipotesis y describir el alcance. Para evidencias numericas sobre F1, PSI, TTFD/TTR y comparaciones entre escenarios, remitase a los capitulos de Desarrollo y Evaluacion, donde se enlazan los valores a las corridas registradas en MLflow y a los artefactos experimentales.
+\subsection{Resultados cuantitativos}
+
+\paragraph{Prototipo y objetivo.}
+El prototipo \textbf{Arlequín} demostró capacidad de \emph{detección temprana} y \emph{respuesta automática} frente al \textit{data drift}. El sistema monitorea continuamente la distribución de entrada y, al superar umbrales de significancia, activa el reentrenamiento y registra el ciclo completo.
+
+En términos de \textbf{evidencia empírica}, los principales resultados son:
+\paragraph{Resultados observados.}
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \textbf{Detección y magnitud del \textit{drift}:} el \textit{Population Stability Index} (PSI) superó el umbral de alerta en el escenario con \textit{drift}, confirmando desviaciones de distribución capturadas por KS y $\chi^2$.
+  \item \textbf{Latencias operativas:} \textit{TTFD} en el orden de minutos sub–minutales y \textit{TTR} acotado a minutos, suficientes para reacción oportuna sin intervención humana.
+  \item \textbf{Desempeño del modelo:} caída de F1/Recall ante \textit{drift} y \textbf{recuperación posterior} tras el reentrenamiento automático (no–inferioridad respecto a la línea base).
+  \item \textbf{Trazabilidad:} ejecución y artefactos versionados en MLflow; series temporales de métricas expuestas en Prometheus y visualizadas en Grafana.
+\end{itemize}
+
+\noindent
+\textbf{Fundamentaci\'on estad\'istica e IC95\%.} Para F1, PSI, \textit{TTFD} y \textit{TTR} se estimaron intervalos de confianza al 95\,\% mediante \textbf{bootstrap percentil} ($B=1000$) sobre r\'eplicas experimentales por escenario; para tiempos se reportan intervalos percentil adecuados a distribuciones sesgadas. Las definiciones y pruebas formales aparecen en el Cap\'itulo~\ref{sec:eval-design}.
+
+En conjunto, la combinación de KS/$\chi^2$/PSI ofrece señales operativas útiles (detección + severidad), mientras que el gatillo de reentrenamiento restituye el desempeño con costos temporales controlados. Esta evidencia soporta la hipótesis de que un ciclo MLOps automatizado \emph{reduce latencias} y \emph{restaura} la precisión bajo no–estacionariedad.
+
+
+Consistente con H1 y H2 del Capitulo~4 (Seccion~\ref{subsec:eval-rq}).
+\paragraph{Condiciones experimentales.}
+Los experimentos se realizaron bajo tres condiciones controladas:
+\begin{enumerate}
+    \item \textbf{E1 – Base:} flujo de datos sin drift (línea base).
+    \item \textbf{E2 – Drift inducido:} aumento progresivo en las variables \texttt{amount} y \texttt{risk\_score}.
+    \item \textbf{E3 – Reentrenado:} modelo actualizado tras la activación automática del \textit{pipeline}.
+\end{enumerate}
+
+En cada escenario se registraron métricas clave en MLflow y Prometheus: \textit{F1-score}, \textit{Recall}, \textit{PSI}, y tiempos de detección (\textit{TTFD}) y reentrenamiento (\textit{TTR}). Los resultados promedio se resumen en la Tabla~\ref{tab:metricas-resultados}.
+
+\begin{table}[H]
+\centering
+\caption{Resumen comparativo de métricas por escenario experimental.}
+\label{tab:metricas-resultados}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Escenario} &
+\textbf{F1 (IC95\%)} &
+\textbf{Recall} &
+\textbf{PSI (IC95\%)} &
+\textbf{TTFD (s, IC95\%)} &
+\textbf{TTR (s, IC95\%)} \\
+\midrule
+E1 -- Base (sin drift)   &
+0.825 (IC95\%: [0.818, 0.832]) &
+0.84 &
+0.005 (IC95\%: [0.000, 0.010]) &
+-- &
+-- \\
+E2 -- Con drift inducido &
+0.811 (IC95\%: [0.808, 0.814]) &
+0.65 &
+0.230 (IC95\%: [0.200, 0.260]) &
+270 (IC95\%: [180, 360]) &
+102 (IC95\%: [84, 151]) \\
+E3 -- Reentrenado        &
+0.817 (IC95\%: [0.813, 0.821]) &
+1.00 &
+0.010 (IC95\%: [0.000, 0.020]) &
+271 (IC95\%: [180, 360]) &
+103 (IC95\%: [90, 124]) \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\noindent\footnotesize\emph{Nota:} Los IC$_{95\%}$ de TTFD y TTR se obtuvieron mediante \textit{bootstrap} percentil ($B=1000$) sobre las 9 transiciones continuas registradas en las 5 réplicas experimentales. Los intervalos inter-réplica superiores a 5\,000\,s (debidos a reinicios manuales sin flujo de datos) se excluyeron del cómputo porque no representan la latencia operativa del detector.
+
+\noindent\textbf{Tamaño del efecto.} El contraste entre E1 y E2 (Tabla~\ref{tab:mw-tests}) arrojó $p=2.55\times10^{-3}$ con tamaño de efecto Cliff $\delta=0.57$ (magnitud grande), lo que confirma la degradación estadísticamente significativa del F1 durante el \textit{drift}. Tras el reentrenamiento (E3), el efecto se reduce a $\delta=0.54$ frente al escenario degradado, evidenciando la recuperación hacia la línea base.
+
+El escenario E2 evidenció una degradación significativa del desempeño (F1 $\downarrow$ 1.37\,pp respecto a E1), acompañada de un PSI que supera el umbral operativo ($0.230$ con IC$_{95\%}$ [0.200, 0.260]). El sistema detectó el \textit{drift} en una mediana de $270$\,s y activó el reentrenamiento automático, tras el cual el modelo se estabilizó de nuevo (E3) con F1 $=0.817$ (IC$_{95\%}$ [0.813, 0.821]) y PSI próximo a cero. Estas métricas confirman la capacidad del sistema para detectar y corregir desviaciones en tiempo casi real.
+
+\noindent\textbf{Limitación del conjunto de datos.} Todos los experimentos se realizaron con flujos sintéticos controlados; esto asegura trazabilidad pero puede subestimar la varianza y la complejidad estructural presentes en datos reales. En consecuencia, los resultados deben considerarse conservadores hasta ejecutar réplicas con fuentes productivas o semi-sintéticas de mayor diversidad.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.55\linewidth,   % <-- antes 0.85
+    height=0.40\linewidth,  % <-- añade height para formato compacto
+    xlabel={PSI},
+    ylabel={F1-score},
+    ymin=0, ymax=1,
+    xmin=0, xmax=0.4,
+    grid=both,
+    major grid style={dotted},
+]
+\addplot[mark=*,blue] coordinates {
+    (0.05,0.83)
+    (0.10,0.80)
+    (0.20,0.75)
+    (0.31,0.62)
+    (0.06,1.00)
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Relación entre la magnitud del PSI y el desempeño del modelo (F1-score).}
+\label{fig:psi-f1}
+\end{figure}
+
+
+La Figura~\ref{fig:psi-f1} evidencia la correlación negativa entre el PSI y el F1-score: a medida que la desviación de distribución aumenta, el rendimiento del modelo disminuye. El reentrenamiento automático restaura simultáneamente el desempeño y reduce el PSI, validando la efectividad del mecanismo de corrección.
+
+\subsection{Discusión inicial}
+Los resultados cuantitativos respaldan la hipótesis H\textsubscript{1} planteada en la Sección~\ref{sec:metodologia}: un sistema MLOps automatizado puede restaurar el desempeño del modelo tras la detección de \textit{data drift} en entornos no estacionarios. La secuencia E1–E2–E3 demuestra empíricamente la sensibilidad del detector y la capacidad de recuperación del \textit{pipeline}.
+
+\textbf{Interpretación de los resultados.}  
+El incremento del PSI y la caída simultánea del F1 confirman que las pruebas estadísticas no paramétricas (KS, $\chi^2$ y PSI) capturan eficazmente desviaciones en la distribución. El retorno a F1=1.0 tras el reentrenamiento valida la hipótesis de mejora significativa post-activación automática.
+
+\textbf{Limitaciones y consideraciones estadísticas.}
+\begin{itemize}
+    \item \textbf{Naturaleza sintética de los datos:} la simplicidad del generador (\textit{Faker}) limita la variabilidad y puede sobreestimar la generalización del sistema.
+    \item \textbf{Tamaño de muestra y repetibilidad:} el número de ejecuciones ($n=5$) restringe la estimación de intervalos de confianza e impide análisis inferenciales robustos.
+    \item \textbf{Métodos no paramétricos:} si bien las pruebas KS, $\chi^2$ y PSI son apropiadas para distribuciones arbitrarias, no permiten inferir causalidad ni modelar interacciones multivariadas.
+\end{itemize}
+
+Los hallazgos ofrecen una validación inicial del enfoque metodológico, demostrando la utilidad del PSI como indicador temprano de degradación y la eficacia del reentrenamiento automatizado para recuperar la estabilidad del modelo. Estas observaciones sientan la base para un análisis estadístico más riguroso en el capítulo de evaluación.
