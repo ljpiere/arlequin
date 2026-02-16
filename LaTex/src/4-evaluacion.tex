@@ -295,6 +295,9 @@ Estas diferencias porcentuales deben leerse junto con los IC/efectos ya reportad
 La política \textit{edge-triggered} + \textit{cooldown} limita el número de ejecuciones consecutivas: durante la campaña de mediciones el máximo observado fue 9 activaciones/h (barrido del job de evaluación) y 4 activaciones/h en el flujo real del \textit{watcher}. Aun en los picos de memoria (hasta $608$\,MB en la fase previa del job de evaluación), el consumo se mantuvo por debajo del $17\,\%$ de la cuota de contenedor, y no se detectaron ciclos de \textit{flapping}. De esta forma, las métricas de la Tabla~\ref{tab:scenario-metrics} cubren simultáneamente desempeño (F1), desviación (PSI) y eficiencia temporal (TTFD/TTR) sin métricas pendientes.
 
 
+\paragraph{Flexibilidad de la métrica de desempeño.}
+Si bien la validación de los resultados se ha fundamentado en el F1-score debido a su pertinencia para ponderar precisión y exhaustividad en conjuntos desbalanceados (como es típico en detección de fraude), es importante aclarar que la arquitectura del sistema es agnóstica a la métrica seleccionada. El diseño implementado es completamente parametrizable, lo que significa que el \textit{trigger} de reentrenamiento y los criterios de aceptación pueden configurarse para optimizar otras métricas según las necesidades del negocio, tales como la sensibilidad (\textit{recall}), la precisión o el AUC, sin alterar la lógica operativa del flujo MLOps.
+
 
 \begin{figure}[htbp]
 \small
